@@ -1,6 +1,8 @@
 #include "GameScene.h"
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
+#include "BattleScene.h"
+
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -42,13 +44,13 @@ public:
 
     // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
-        
+
         // 【修正 2】在函数内部获取屏幕尺寸
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
         filename = "06.png";
-        
+
         // 局部变量即可
         float start_x = 0;
         float start_y = 63;
@@ -78,14 +80,14 @@ public:
         Rect tileRect = Rect(start_x, start_y, tileWidth, tileHeight);
 
         auto tile = Sprite::create(filename, tileRect);
-        
+
         // 安全检查
-        if(tile) {
+        if (tile) {
             tile->getTexture()->setAliasTexParameters();
             tile->setScale(scaleAmount); // 确保 scaleAmount 在基类初始化了
-            
+
             // 设置位置
-            tile->setPosition(origin.x + visibleSize.width - 150, origin.y+visibleSize.height - 50);
+            tile->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
 
             // 添加到父节点
             parentNode->addChild(tile, 0);
@@ -166,7 +168,7 @@ public:
     Gem() : resource(5000) {};
     ~Gem() {};
 
-    void modify() override { 
+    void modify() override {
         gem_count = 500;
     }
 
@@ -230,6 +232,53 @@ Scene* GameScene::createScene()
     return GameScene::create();
 }
 
+
+void GameScene::setBattleButton()
+{
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    // 1. 创建文字标签
+    // 【关键修正】：直接使用 MenuItemFont::create，并指定 TTF 文件路径
+    // 这样可以避免手动创建 Label 时可能出现的坐标或属性问题。
+    auto startBattleItem = MenuItemFont::create(
+        "Ready To Fight", // 按钮显示的文字
+        CC_CALLBACK_1(GameScene::menuGotoBattleCallback, this)
+    );
+
+    // 设置字体：必须指定 TTF 文件路径和大小
+    // 这里的路径必须和 showText 中使用的路径一致
+    startBattleItem->setFontNameObj("fonts/Marker Felt.ttf");
+    startBattleItem->setFontSize(48);
+
+    // 设置颜色 (可选，防止颜色被 MenuItemFont 默认的白色或灰色覆盖)
+    startBattleItem->setColor(Color3B::WHITE);
+
+    // 设置位置：在大本营下方
+    startBattleItem->setPosition(
+        Vec2(origin.x + visibleSize.width / 2, origin.y + 200)
+    );
+
+    // 3. 创建菜单并添加
+    auto battleMenu = Menu::create(startBattleItem, NULL);
+    battleMenu->setPosition(Vec2::ZERO);
+
+    // Z-Order: 确保这个菜单层级足够高，不会被其他 Sprite 覆盖
+    this->addChild(battleMenu, 10); // 设置一个较高的 Z-order，例如 10
+
+}
+
+void GameScene::menuGotoBattleCallback(Ref* pSender)
+{
+    log("Starting Battle...");
+    // 1. 创建新的战斗场景
+    auto scene = BattleScene::createScene();
+
+    // 2. 切换场景
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+}
+
+
 bool GameScene::init()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -239,7 +288,7 @@ bool GameScene::init()
         return false;
     }
 
-    std::string filename = "TilesetField.png"; 
+    std::string filename = "TilesetField.png";
 
     float tileWidth = 22;  // 原图截取宽度
     float tileHeight = 22; // 原图截取高度
@@ -279,7 +328,7 @@ bool GameScene::init()
         }
     }
 
-    
+
     auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 36);
     backLabel->setTextColor(Color4B::YELLOW); // 黄色文字
 
@@ -333,8 +382,12 @@ bool GameScene::init()
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
     mygem.print(this);
 
+    this->setBattleButton(); // 【新增】调用战斗按钮布局函数
+
     return true;
 }
+
+
 // 【修改返回值】从 void 改为 Label*
 Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color4B color)
 {
@@ -362,12 +415,12 @@ void GameScene::setdby()
 
     Rect houseRect = Rect(120, 0, tileWidth, tileHeight);
 
-    auto house = Building::create("TilesetHouse.png",houseRect, "My House", 500);
+    auto house = Building::create("TilesetHouse.png", houseRect, "My House", 500);
     house->getTexture()->setAliasTexParameters();
     house->setScale(scaleAmount);
     house->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
 
-    
+
 
     // ============================================================
     // 【核心变化】设置回调函数
