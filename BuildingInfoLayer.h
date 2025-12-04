@@ -3,7 +3,10 @@
 
 #include "cocos2d.h"
 #include <functional> // 必须引用这个，用于回调
+// BuildingInfoLayer.h
 
+
+class Building;
 class BuildingInfoLayer : public cocos2d::Layer
 {
 public:
@@ -14,22 +17,21 @@ public:
 
     // 设置弹窗显示的信息
     // 参数：名字，当前等级，升级花费
-    void setBuildingData(std::string name, int level, int cost);
+    void setBuilding(Building* building);
 
     // 设置“点击升级按钮”后要执行的逻辑
     // std::function 是一种通用的函数包装器
-    void setUpgradeCallback(std::function<void()> callback);
+    virtual void update(float dt) override;
 
     // 关闭弹窗
     void closeLayer();
 
 private:
-    cocos2d::Label* _nameLabel;
-    cocos2d::Label* _levelLabel;
-    cocos2d::Label* _costLabel;
+    Building* _targetBuilding = nullptr; // 保存当前正在查看的建筑
 
-    // 保存外部传进来的升级逻辑
-    std::function<void()> _upgradeCallback;
+    cocos2d::Label* _infoLabel; // 显示 "Lv.1" 或 "Time: 10s"
+    cocos2d::MenuItemFont* _actionBtn; // "Upgrade" 或 "Speed Up"
+    bool _isShowingTimer = false;
 };
 
 #endif

@@ -2,7 +2,6 @@
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
 #include "BattleScene.h"
-
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -12,6 +11,7 @@ extern int coin_limit = 5000;
 extern int water_limit = 5000;
 extern int gem_limit = 5000;
 
+int my_house_level = 1;
 class resource
 {
 public:
@@ -34,31 +34,15 @@ public:
 
 class goldcoin : public resource
 {
-public:
-    goldcoin() : resource(5000) {};
-    ~goldcoin() {};
-
-    void modify() override { // 【建议】加上 override 关键字，编译器会帮你检查
-        // 修改逻辑
-    }
-
-    // 【修正】现在这就是真正的重写了，因为参数也是 Node*
-    void print(Node* parentNode) override {
-
-        // 【修正 2】在函数内部获取屏幕尺寸
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-        filename = "06.png";
-
-        // 局部变量即可
+private:
+    cocos2d::Sprite* _displaySprite = nullptr;
+    Rect calculateRect() {
         float start_x = 0;
         float start_y = 63;
         float tileWidth = 43;
         float tileHeight = 10;
 
-        float scaleAmount = 6.0f;
-        // 逻辑判断
+        // 复用你之前的逻辑
         if (coin_count > 0 && coin_count <= coin_limit / 4) {
             start_x = 137;
         }
@@ -75,33 +59,12 @@ public:
             start_x = 2;
         }
 
-        // 【修正 3 - 核心】必须在计算出 start_x 之后，现场创建 Rect
-        // 这样 Rect 里的数值才是最新的！
-        Rect tileRect = Rect(start_x, start_y, tileWidth, tileHeight);
-
-        auto tile = Sprite::create(filename, tileRect);
-
-        // 安全检查
-        if (tile) {
-            tile->getTexture()->setAliasTexParameters();
-            tile->setScale(scaleAmount); // 确保 scaleAmount 在基类初始化了
-
-            // 设置位置
-            tile->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
-
-            // 添加到父节点
-            parentNode->addChild(tile, 0);
-        }
+        return Rect(start_x, start_y, tileWidth, tileHeight);
     }
-
-    void update() {
-    }
-};
-class water : public resource
-{
 public:
-    water() : resource(5000) {};
-    ~water() {};
+    
+    goldcoin() : resource(5000) {};
+    ~goldcoin() {};
 
     void modify() override { // 【建议】加上 override 关键字，编译器会帮你检查
         // 修改逻辑
@@ -109,21 +72,55 @@ public:
 
     // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
-
+        
         // 【修正 2】在函数内部获取屏幕尺寸
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
         filename = "06.png";
+        
+        
+        Rect tileRect = this->calculateRect();
 
-        // 局部变量即可
+        _displaySprite = Sprite::create(filename, tileRect);
+        
+        // 安全检查
+        if(_displaySprite) {
+            _displaySprite->getTexture()->setAliasTexParameters();
+            _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
+            
+            // 设置位置
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y+visibleSize.height - 50);
+
+            // 添加到父节点
+            parentNode->addChild(_displaySprite, 0);
+        }
+    }
+    void refresh() {
+        if (_displaySprite != nullptr) {
+            // 1. 重新计算 Rect (因为 coin_count 已经变了)
+            Rect newRect = this->calculateRect();
+
+            // 2. 【核心】只修改精灵的显示区域，不用重新创建！
+            _displaySprite->setTextureRect(newRect);
+
+            // log("Coin icon refreshed!"); 
+        }
+    }
+    void update() {
+    }
+};
+class water : public resource
+{
+private:
+    cocos2d::Sprite* _displaySprite = nullptr;
+    Rect calculateRect() {
         float start_x = 0;
         float start_y = 20;
         float tileWidth = 43;
         float tileHeight = 10;
 
-        float scaleAmount = 6.0f;
-        // 逻辑判断
+        // 复用你之前的逻辑
         if (water_count > 0 && water_count <= water_limit / 4) {
             start_x = 137;
         }
@@ -140,39 +137,16 @@ public:
             start_x = 2;
         }
 
-        // 【修正 3 - 核心】必须在计算出 start_x 之后，现场创建 Rect
-        // 这样 Rect 里的数值才是最新的！
-        Rect tileRect = Rect(start_x, start_y, tileWidth, tileHeight);
-
-        auto tile = Sprite::create(filename, tileRect);
-
-        // 安全检查
-        if (tile) {
-            tile->getTexture()->setAliasTexParameters();
-            tile->setScale(scaleAmount); // 确保 scaleAmount 在基类初始化了
-
-            // 设置位置
-            tile->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 120);
-
-            // 添加到父节点
-            parentNode->addChild(tile, 0);
-        }
+        return Rect(start_x, start_y, tileWidth, tileHeight);
     }
-
-    void update() {
-    }
-};
-class Gem : public resource
-{
 public:
-    Gem() : resource(5000) {};
-    ~Gem() {};
+    water() : resource(5000) {};
+    ~water() {};
 
-    void modify() override {
-        gem_count = 500;
+    void modify() override { // 【建议】加上 override 关键字，编译器会帮你检查
+        // 修改逻辑
     }
 
-    // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
 
         // 【修正 2】在函数内部获取屏幕尺寸
@@ -181,14 +155,49 @@ public:
 
         filename = "06.png";
 
-        // 局部变量即可
+
+        Rect tileRect = this->calculateRect();
+
+        _displaySprite = Sprite::create(filename, tileRect);
+
+        // 安全检查
+        if (_displaySprite) {
+            _displaySprite->getTexture()->setAliasTexParameters();
+            _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
+
+            // 设置位置
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 120);
+
+            // 添加到父节点
+            parentNode->addChild(_displaySprite, 0);
+        }
+    }
+    void refresh() {
+        if (_displaySprite != nullptr) {
+            // 1. 重新计算 Rect (因为 coin_count 已经变了)
+            Rect newRect = this->calculateRect();
+
+            // 2. 【核心】只修改精灵的显示区域，不用重新创建！
+            _displaySprite->setTextureRect(newRect);
+
+            // log("Coin icon refreshed!"); 
+        }
+    }
+
+    void update() {
+    }
+};
+class Gem : public resource
+{
+private:
+    cocos2d::Sprite* _displaySprite = nullptr;
+    Rect calculateRect() {
         float start_x = 0;
         float start_y = 35;
         float tileWidth = 43;
         float tileHeight = 10;
 
-        float scaleAmount = 6.0f;
-        // 逻辑判断
+        // 复用你之前的逻辑
         if (gem_count > 0 && gem_count <= gem_limit / 4) {
             start_x = 137;
         }
@@ -205,22 +214,50 @@ public:
             start_x = 2;
         }
 
-        // 【修正 3 - 核心】必须在计算出 start_x 之后，现场创建 Rect
-        // 这样 Rect 里的数值才是最新的！
-        Rect tileRect = Rect(start_x, start_y, tileWidth, tileHeight);
+        return Rect(start_x, start_y, tileWidth, tileHeight);
+    }
+public:
+    Gem() : resource(5000) {};
+    ~Gem() {};
 
-        auto tile = Sprite::create(filename, tileRect);
+    void modify() override { 
+    }
+
+
+    void print(Node* parentNode) override {
+
+        // 【修正 2】在函数内部获取屏幕尺寸
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+        filename = "06.png";
+
+
+        Rect tileRect = this->calculateRect();
+
+        _displaySprite = Sprite::create(filename, tileRect);
 
         // 安全检查
-        if (tile) {
-            tile->getTexture()->setAliasTexParameters();
-            tile->setScale(scaleAmount); // 确保 scaleAmount 在基类初始化了
+        if (_displaySprite) {
+            _displaySprite->getTexture()->setAliasTexParameters();
+            _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
 
             // 设置位置
-            tile->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 182);
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 182);
 
             // 添加到父节点
-            parentNode->addChild(tile, 0);
+            parentNode->addChild(_displaySprite, 0);
+        }
+    }
+    void refresh() {
+        if (_displaySprite != nullptr) {
+            // 1. 重新计算 Rect (因为 coin_count 已经变了)
+            Rect newRect = this->calculateRect();
+
+            // 2. 【核心】只修改精灵的显示区域，不用重新创建！
+            _displaySprite->setTextureRect(newRect);
+
+            // log("Coin icon refreshed!"); 
         }
     }
 
@@ -231,8 +268,6 @@ Scene* GameScene::createScene()
 {
     return GameScene::create();
 }
-
-
 void GameScene::setBattleButton()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -277,8 +312,6 @@ void GameScene::menuGotoBattleCallback(Ref* pSender)
     // 2. 切换场景
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }
-
-
 bool GameScene::init()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -288,7 +321,7 @@ bool GameScene::init()
         return false;
     }
 
-    std::string filename = "TilesetField.png";
+    std::string filename = "TilesetField.png"; 
 
     float tileWidth = 22;  // 原图截取宽度
     float tileHeight = 22; // 原图截取高度
@@ -328,7 +361,7 @@ bool GameScene::init()
         }
     }
 
-
+    
     auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 36);
     backLabel->setTextColor(Color4B::YELLOW); // 黄色文字
 
@@ -361,33 +394,27 @@ bool GameScene::init()
     this->setdby();
 
     // ... 原有代码 ...
-    goldcoin myCoin;
-    myCoin.print(this);
+    myCoin =new goldcoin();
+    myCoin->print(this);
 
     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
-
-    // 【修改点】把创建出来的 Label 存进变量里！
     _coinTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 50, Color4B::WHITE);
 
-    water mywater;
+    mywater = new water();
+    mywater->print(this);
     txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
     // 【修改点】保存水 Label
     _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
-    mywater.print(this);
 
-    Gem mygem;
-    mygem.modify(); // 这里改了 gem_count
+    mygem= new Gem();
+    mygem->print(this);
     txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
     // 【修改点】保存宝石 Label
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
-    mygem.print(this);
 
     this->setBattleButton(); // 【新增】调用战斗按钮布局函数
-
     return true;
 }
-
-
 // 【修改返回值】从 void 改为 Label*
 Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color4B color)
 {
@@ -412,51 +439,54 @@ void GameScene::setdby()
     float tileWidth = 60;  // 原图截取宽度
     float tileHeight = 45; // 原图截取高度
     float scaleAmount = 4.0f;
-
     Rect houseRect = Rect(120, 0, tileWidth, tileHeight);
 
-    auto house = Building::create("TilesetHouse.png", houseRect, "My House", 500);
+    auto house = Building::create("TilesetHouse.png",houseRect, "My House", 500);
+    house->setLevel(my_house_level);
     house->getTexture()->setAliasTexParameters();
     house->setScale(scaleAmount);
     house->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
 
-
+    
 
     // ============================================================
     // 【核心变化】设置回调函数
     // 意思就是：告诉房子，“如果你升级成功扣了钱，记得通知我一下，我要刷新文字”
     // ============================================================
     house->setOnUpgradeCallback([=]() {
-
+        my_house_level = house->getLevel();
         // 这里的逻辑只负责刷新界面 UI，不再负责扣钱和升级了
         if (this->_coinTextLabel != nullptr) {
             std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
             this->_coinTextLabel->setString(txt);
         }
-        });
+        if (this->_gemTextLabel != nullptr) {
+            std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+            this->_gemTextLabel->setString(txt);
+        }
+        if (this->myCoin != nullptr) {
+            // 告诉金币对象：你的数量变了，快换个样子！
+            this->myCoin->refresh();
+        }
+        if (this->_waterTextLabel != nullptr) {
+            std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
+            this->_waterTextLabel->setString(txt);
+        }
+        if (this->mywater != nullptr) {
+            // 水上限变了，图标可能需要从“满堆”变成“半堆”，所以要刷新
+            this->mywater->refresh();
+        }
+        if (this->mygem != nullptr) {
+            
+            this->mygem->refresh();
+        }
+
+    });
 
     // 添加到场景 (注意：Building 本质上也是个 Sprite，所以直接 add)
     this->addChild(house, 0);
 }
-void GameScene::setresource()
-{
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    std::string filename = "TilesetHouse.png";
-    float tileWidth = 60;  // 原图截取宽度
-    float tileHeight = 45; // 原图截取高度
-    float scaleAmount = 4.0f;
-
-    Rect tileRect = Rect(120, 0, tileWidth, tileHeight);
-
-    auto tile = Sprite::create(filename, tileRect);
-    tile->getTexture()->setAliasTexParameters();
-    tile->setScale(scaleAmount);
-    tile->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-
-    this->addChild(tile, 0);
-}
 
 void GameScene::menuBackCallback(Ref* pSender)
 {

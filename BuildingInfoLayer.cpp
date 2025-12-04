@@ -1,14 +1,15 @@
 #include "BuildingInfoLayer.h"
-
+#include"Building.h"
 USING_NS_CC;
 
 bool BuildingInfoLayer::init()
 {
-    if (!Layer::init()) return false;
+    if (!Layer::init()) 
+        return false;
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
+    Vec2 centerPos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
     // 1. 添加一个半透明的黑色背景 (遮罩)
     // 这样弹窗出现时，背景变暗，且无法点击后面的东西
     auto shieldLayer = LayerColor::create(Color4B(0, 0, 0, 150)); // RGBA: 黑色，透明度150
@@ -30,63 +31,96 @@ bool BuildingInfoLayer::init()
         bg->setTextureRect(Rect(0, 0, 400, 300));
         bg->setColor(Color3B::WHITE);
     }
+    bg->getTexture()->setAliasTexParameters();
+    bg->setScale(4.0f);
     bg->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-    this->addChild(bg);
+    this->addChild(bg,0);
 
-    // 4. 初始化文字标签 (位置是相对于 bg 背景图的)
-    Size bgSize = bg->getContentSize();
+    // 创建一个通用的 Label，位置放中间
+    _infoLabel = Label::createWithSystemFont("", "Arial", 28);
+    _infoLabel->setPosition(centerPos.x, centerPos.y + 30);
 
-    _nameLabel = Label::createWithSystemFont("Name", "Arial", 30);
-    _nameLabel->setPosition(bgSize.width / 2, bgSize.height - 40);
-    _nameLabel->setTextColor(Color4B::BLACK);
-    bg->addChild(_nameLabel);
+    _infoLabel->setTextColor(Color4B::BLACK);
+    this->addChild(_infoLabel,1);
 
-    _levelLabel = Label::createWithSystemFont("Lv. 1", "Arial", 24);
-    _levelLabel->setPosition(bgSize.width / 2, bgSize.height - 80);
-    _levelLabel->setTextColor(Color4B::BLACK);
-    bg->addChild(_levelLabel);
+    _actionBtn = MenuItemFont::create("Button", [](Ref*) {});
+    _actionBtn->setColor(Color3B::BLUE);
 
-    _costLabel = Label::createWithSystemFont("Cost: 100", "Arial", 24);
-    _costLabel->setPosition(bgSize.width / 2, bgSize.height - 120);
-    _costLabel->setTextColor(Color4B::RED);
-    bg->addChild(_costLabel);
+    // 关闭按钮
+    auto closeBtn = MenuItemFont::create("Close", [=](Ref*) { this->closeLayer(); });
+    closeBtn->setColor(Color3B::RED);
+    closeBtn->setPosition(0, -80); // 相对菜单中心的偏移
 
-    // 5. 升级按钮
-    // 注意：Menu 要加在 bg 上，或者是 Layer 上。这里为了简单加在 Layer 上，坐标相对于屏幕
-    auto upgradeBtn = MenuItemFont::create("UPGRADE", [=](Ref* sender) {
-        // 如果设置了回调，就执行它
-        if (_upgradeCallback) {
-            _upgradeCallback();
-        }
-        });
-    upgradeBtn->setColor(Color3B::BLUE);
-    upgradeBtn->setPosition(0, -50); // 相对于 Menu 中心的偏移
+    auto menu = Menu::create(_actionBtn, closeBtn, NULL);
 
-    // 6. 关闭按钮
-    auto closeBtn = MenuItemFont::create("Close", [=](Ref* sender) {
-        this->closeLayer();
-        });
-    closeBtn->setColor(Color3B::BLACK);
-    closeBtn->setPosition(0, -100);
+    // 【修改点 E】菜单位置也设在屏幕中心稍微往下一点
+    menu->setPosition(centerPos.x, centerPos.y - 40);
 
-    auto menu = Menu::create(upgradeBtn, closeBtn, NULL);
-    // Menu 放在屏幕中心
-    menu->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-    this->addChild(menu);
+    // 【修改点 F】添加到 Layer，层级设为 1
+    this->addChild(menu, 1);
 
+    this->scheduleUpdate();
     return true;
 }
 
-void BuildingInfoLayer::setBuildingData(std::string name, int level, int cost)
+void BuildingInfoLayer::setBuilding(Building* building)
 {
-    _nameLabel->setString(name);
-    _levelLabel->setString("Level: " + std::to_string(level));
-    _costLabel->setString("Cost: " + std::to_string(cost));
+    _targetBuilding = building;
+
+    // 根据建筑当前状态，初始化界面
+    if (_targetBuilding->getState() == BuildingState::IDLE)
+    {
+        // 状态 A: 空闲 -> 显示升级按钮
+        _infoLabel->setString("Level: " + std::to_string(_targetBuilding->getLevel()) +
+            "\nCost: " + std::to_string(_targetBuilding->getNextLevelCost()));
+        _isShowingTimer = false;
+        _actionBtn->setString("Upgrade");
+        _actionBtn->setCallback([=](Ref* sender) {
+            // 点击升级
+            _targetBuilding->startUpgrade();
+            this->closeLayer(); // 关闭弹窗 (或者你可以做成不关闭，立马切换到状态B)
+            });
+    }
+    else
+    {
+        // 状态 B: 升级中 -> 显示加速按钮
+        _actionBtn->setString("Speed Up (" + std::to_string(_targetBuilding->getSpeedUpCost()) + " Gems)");
+        _isShowingTimer = true;
+        _actionBtn->setCallback([=](Ref* sender) {
+            // 点击加速
+            _targetBuilding->speedUp();
+            this->closeLayer();
+            });
+    }
 }
 
-void BuildingInfoLayer::setUpgradeCallback(std::function<void()> callback)
+void BuildingInfoLayer::update(float dt)
 {
-    _upgradeCallback = callback;
+    if (_targetBuilding)
+    {
+        // ==============================================================
+        // 【核心修复】
+        // 只有当“原本在显示倒计时”(_isShowingTimer == true) 
+        // 且“现在变回空闲了” (State == IDLE) 时，才自动关闭。
+        // ==============================================================
+        if (_isShowingTimer == true && _targetBuilding->getState() == BuildingState::IDLE)
+        {
+            this->closeLayer();
+            return;
+        }
+
+        // 刷新倒计时文字 (保持不变)
+        if (_targetBuilding->getState() == BuildingState::UPGRADING)
+        {
+            int seconds = (int)_targetBuilding->getRemainingTime();
+            char buf[64];
+            sprintf(buf, "Upgrading...\n%ds", seconds + 1);
+            _infoLabel->setString(buf);
+
+            // 可选：刷新加速价格
+            // _actionBtn->setString("Speed Up (" + std::to_string(_targetBuilding->getSpeedUpCost()) + ")");
+        }
+    }
 }
 
 void BuildingInfoLayer::closeLayer()

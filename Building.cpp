@@ -27,7 +27,9 @@ Building* Building::create(const std::string& filename, const Rect&rect,const st
 bool Building::init(const std::string& filename,const Rect&rect, const std::string& name, int baseCost)
 {
     // 初始化父类 Sprite
-    if (!Sprite::initWithFile(filename,rect)) return false;
+    if (!Sprite::initWithFile(filename,rect)) 
+        return false;
+    this->setTextureRect(rect);
 
     // 初始化数据
     _buildingName = name;
@@ -36,13 +38,14 @@ bool Building::init(const std::string& filename,const Rect&rect, const std::stri
 
     // 初始化点击事件
     this->initTouchListener();
-
+    // 【核心】开启 update 调度器，否则 update 函数不会运行
+    this->scheduleUpdate();
     return true;
 }
 
 void Building::setOnUpgradeCallback(std::function<void()> callback)
 {
-    _onUpgradeCallback = callback;
+    UpgradeCallback_coin = callback;
 }
 
 int Building::getNextLevelCost()
@@ -53,7 +56,74 @@ int Building::getNextLevelCost()
 
     // 或者是指数增长： return _baseCost * std::pow(2, _level - 1);
 }
+// 每帧自动调用
+void Building::update(float dt)
+{
+    if (_state == BuildingState::UPGRADING)
+    {
+        _timeLeft -= dt; // 扣除时间
 
+        if (_timeLeft <= 0) {
+            this->finishUpgrade(); // 时间到了，完成！
+        }
+    }
+}
+// 计算升级耗时 (比如：等级 * 5秒)
+int Building::getUpgradeTime() {
+    return _level * 5; // 1级升2级要5秒，测试用
+}
+
+// 计算加速需要的宝石 (比如：1秒 = 1宝石，或者固定 5 宝石)
+int Building::getSpeedUpCost() {
+    return std::ceil(_timeLeft/60); // 简单粗暴：剩下几秒就几个宝石
+}
+
+// 开始升级 (只扣钱，不加等级)
+void Building::startUpgrade()
+{
+    int cost = getNextLevelCost();
+    if (coin_count >= cost) {
+        coin_count -= cost;
+        coin_limit += 1500;
+        water_limit += 1500;
+        // 进入升级状态
+        _state = BuildingState::UPGRADING;
+        _totalTime = getUpgradeTime();
+        _timeLeft = _totalTime;
+
+        log("Upgrade Started! Time needed: %f", _totalTime);
+
+        // 刷新一下金币显示 (通过回调)
+        if (UpgradeCallback_coin)
+            UpgradeCallback_coin();
+    }
+}
+
+// 宝石加速
+void Building::speedUp()
+{
+    int cost = getSpeedUpCost();
+    if (gem_count >= cost) {
+        gem_count -= cost;
+        finishUpgrade(); // 瞬间完成
+    }
+    else {
+        log("Not enough gems!");
+    }
+}
+
+// 真正的完成升级
+void Building::finishUpgrade()
+{
+    _state = BuildingState::IDLE;
+    _timeLeft = 0;
+    _level++;
+
+    log("Upgrade Finished! Level is now %d", _level);
+
+    // 通知界面刷新 (如果有打开的弹窗，弹窗需要自己处理刷新，或者关闭重开)
+    if (UpgradeCallback_coin) UpgradeCallback_coin();
+}
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
@@ -63,56 +133,19 @@ void Building::initTouchListener()
         Vec2 pos = convertToNodeSpace(touch->getLocation()); // 转成相对坐标
         Rect rect = Rect(0, 0, getContentSize().width, getContentSize().height);
         return rect.containsPoint(pos); // 判断是否点中自己
-        };
+    };
 
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
 
         // 1. 创建弹窗
         auto infoLayer = BuildingInfoLayer::create();
 
-        // 2. 【关键修正】这里传入的是 this->_level
-        // 因为 Building 对象一直存在，所以每次点击时，_level 都是最新的！
-        int cost = this->getNextLevelCost();
-        infoLayer->setBuildingData(_buildingName, _level, cost);
-
-        // 3. 设置升级回调
-        infoLayer->setUpgradeCallback([=]() {
-            this->tryUpgrade(infoLayer);
-            });
+        
+        infoLayer->setBuilding(this);
 
         // 4. 添加到当前场景 (getParent() 就是 GameScene)
         Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
-        };
+    };
 
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
-}
-
-void Building::tryUpgrade(BuildingInfoLayer* layer)
-{
-    int cost = getNextLevelCost();
-
-    if (coin_count >= cost) {
-        // 扣钱
-        coin_count -= cost;
-
-        // 升级
-        _level++;
-
-        log("Upgrade Success! %s is now Level %d", _buildingName.c_str(), _level);
-
-        // 1. 刷新弹窗上的显示 (如果你希望弹窗不关闭)
-        // layer->setBuildingData(_buildingName, _level, getNextLevelCost()); 
-
-        // 2. 或者直接关闭弹窗 (这里我们选择关闭)
-        layer->closeLayer();
-
-        // 3. 【通知外部】执行外部给的回调 (比如刷新主界面的金币 Label)
-        if (_onUpgradeCallback) {
-            _onUpgradeCallback();
-        }
-    }
-    else {
-        log("Not enough coins! Need %d", cost);
-        // 这里可以加一个文字抖动或者飘字提示 "金币不足"
-    }
 }
