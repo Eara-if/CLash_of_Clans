@@ -2,6 +2,7 @@
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
 #include "BattleScene.h"
+#include "ShopScene.h" 
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -62,7 +63,7 @@ private:
         return Rect(start_x, start_y, tileWidth, tileHeight);
     }
 public:
-    
+
     goldcoin() : resource(5000) {};
     ~goldcoin() {};
 
@@ -72,25 +73,25 @@ public:
 
     // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
-        
+
         // 【修正 2】在函数内部获取屏幕尺寸
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
         filename = "06.png";
-        
-        
+
+
         Rect tileRect = this->calculateRect();
 
         _displaySprite = Sprite::create(filename, tileRect);
-        
+
         // 安全检查
-        if(_displaySprite) {
+        if (_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
             _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
-            
+
             // 设置位置
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y+visibleSize.height - 50);
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
 
             // 添加到父节点
             parentNode->addChild(_displaySprite, 0);
@@ -220,7 +221,7 @@ public:
     Gem() : resource(5000) {};
     ~Gem() {};
 
-    void modify() override { 
+    void modify() override {
     }
 
 
@@ -321,7 +322,7 @@ bool GameScene::init()
         return false;
     }
 
-    std::string filename = "TilesetField.png"; 
+    std::string filename = "TilesetField.png";
 
     float tileWidth = 22;  // 原图截取宽度
     float tileHeight = 22; // 原图截取高度
@@ -361,7 +362,7 @@ bool GameScene::init()
         }
     }
 
-    
+
     auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 36);
     backLabel->setTextColor(Color4B::YELLOW); // 黄色文字
 
@@ -394,7 +395,7 @@ bool GameScene::init()
     this->setdby();
 
     // ... 原有代码 ...
-    myCoin =new goldcoin();
+    myCoin = new goldcoin();
     myCoin->print(this);
 
     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
@@ -406,13 +407,14 @@ bool GameScene::init()
     // 【修改点】保存水 Label
     _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
 
-    mygem= new Gem();
+    mygem = new Gem();
     mygem->print(this);
     txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
     // 【修改点】保存宝石 Label
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
     this->setBattleButton(); // 【新增】调用战斗按钮布局函数
+    this->addShopButton(); //【新增】调用商场按钮布局函数
     return true;
 }
 // 【修改返回值】从 void 改为 Label*
@@ -441,13 +443,13 @@ void GameScene::setdby()
     float scaleAmount = 4.0f;
     Rect houseRect = Rect(120, 0, tileWidth, tileHeight);
 
-    auto house = Building::create("TilesetHouse.png",houseRect, "My House", 500);
+    auto house = Building::create("TilesetHouse.png", houseRect, "My House", 500);
     house->setLevel(my_house_level);
     house->getTexture()->setAliasTexParameters();
     house->setScale(scaleAmount);
     house->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
 
-    
+
 
     // ============================================================
     // 【核心变化】设置回调函数
@@ -477,11 +479,11 @@ void GameScene::setdby()
             this->mywater->refresh();
         }
         if (this->mygem != nullptr) {
-            
+
             this->mygem->refresh();
         }
 
-    });
+        });
 
     // 添加到场景 (注意：Building 本质上也是个 Sprite，所以直接 add)
     this->addChild(house, 0);
@@ -498,4 +500,55 @@ void GameScene::menuBackCallback(Ref* pSender)
     // 2. 切换场景 (带一个 0.5秒 的翻页特效)
     // 你可以试着换成 TransitionSlideInL::create(...) 试试不同的效果
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+}
+
+
+void GameScene::addShopButton() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    // 使用图片按钮而不是文字按钮
+    auto shopNormal = Sprite::create("ui/shop_normal.png"); // 你需要创建这个图片
+    auto shopSelected = Sprite::create("ui/shop_selected.png"); // 或者使用同一张图片
+
+    // 如果图片不存在，创建一个简单的按钮替代
+    if (!shopNormal) {
+        // 创建简单的圆形按钮
+        shopNormal = Sprite::create();
+        shopNormal->setTextureRect(Rect(0, 0, 150, 80));
+        shopNormal->setColor(Color3B(255, 200, 0)); // 金色
+
+        auto shopLabel = Label::createWithTTF("MARKET", "fonts/Marker Felt.ttf", 30);
+        shopLabel->setPosition(Vec2(75, 40));
+        shopLabel->setColor(Color3B::WHITE);
+        shopNormal->addChild(shopLabel);
+    }
+
+    if (!shopSelected) {
+        shopSelected = Sprite::create();
+        shopSelected->setTextureRect(Rect(0, 0, 85, 85));
+        shopSelected->setColor(Color3B(255, 150, 0)); // 更深的金色
+    }
+
+    auto shopItem = MenuItemSprite::create(
+        shopNormal,
+        shopSelected,
+        [](Ref* pSender) {
+            // 跳转到商城场景
+            auto scene = ShopScene::createScene();
+            Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+        }
+    );
+
+    // 设置按钮位置（左上角）
+    float x = origin.x + 150; // 左侧位置
+    float y = origin.y + visibleSize.height - 100; // 顶部位置
+
+    shopItem->setPosition(Vec2(x, y));
+
+    // 创建菜单容器
+    auto shopMenu = Menu::create(shopItem, NULL);
+    shopMenu->setPosition(Vec2::ZERO);
+    this->addChild(shopMenu, 200); // 使用更高的层级
+
 }

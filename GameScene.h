@@ -13,10 +13,11 @@ private:
     class water* mywater = nullptr;
     class Gem* mygem = nullptr;
 public:
-    
+
     // 创建场景的静态方法
     static cocos2d::Scene* createScene();
     void setBattleButton();
+    void addShopButton();
     // 初始化函数
     virtual bool init();
     void menuGotoBattleCallback(cocos2d::Ref* pSender); // 前往战斗场景
