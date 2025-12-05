@@ -24,22 +24,51 @@ Building* Building::create(const std::string& filename, const Rect&rect,const st
     return nullptr;
 }
 
-bool Building::init(const std::string& filename,const Rect&rect, const std::string& name, int baseCost)
+bool Building::init(const std::string& filename, const Rect& rect, const std::string& name, int baseCost)
 {
-    // 初始化父类 Sprite
-    if (!Sprite::initWithFile(filename,rect)) 
-        return false;
-    this->setTextureRect(rect);
+    
+    if (rect.equals(Rect::ZERO))
+    {
+        // initWithFile 只传文件名，就是加载整张图
+        if (!Sprite::initWithFile(filename)) return false;
+    }
+    else
+    {
+        // 否则，按照 rect 进行裁剪
+        if (!Sprite::initWithFile(filename, rect)) return false;
+        // 注意：有些版本的 Cocos 在带 rect 初始化时不需要再 setTextureRect，
+        // 但为了保险起见，保持现状或根据实际显示调整
+    }
+    //// ============================================================
+    //// 【新增】添加底下的绿色草地
+    //// ============================================================
+    //// 假设你用的是 TilesetField.png，我们截取一块不同颜色的草地
+    //// 请根据你的图片实际情况调整 Rect 的坐标 (比如 x=32 可能是深色草地)
+    //auto grass = Sprite::create("TilesetField.png", Rect(32, 0, 32, 32));
 
-    // 初始化数据
+    //if (grass) {
+    //    // 1. 设置位置：放在房子的脚下中心
+    //    // contentSize.width / 2 是中心，0 是底部
+    //    grass->setPosition(this->getContentSize().width / 2, 0);
+
+    //    // 2. 稍微放大一点，像个院子
+    //    grass->setScale(2.0f);
+
+    //    // 3. 【核心】设置 Z-Order 为 -1
+    //    // 这样草地就会显示在房子（默认为0）的后面！
+    //    this->addChild(grass, -1);
+    //}
+    //// ============================================================
+
     _buildingName = name;
     _baseCost = baseCost;
-    _level = 1; // 默认 1 级
+    _level = 1;
+    _state = BuildingState::IDLE;
+    _timeLeft = 0;
 
-    // 初始化点击事件
     this->initTouchListener();
-    // 【核心】开启 update 调度器，否则 update 函数不会运行
     this->scheduleUpdate();
+
     return true;
 }
 
@@ -127,25 +156,79 @@ void Building::finishUpgrade()
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
-    listener->setSwallowTouches(true);
+    listener->setSwallowTouches(true);   //吞噬，底下的东西不会再被点击
 
+    // 1. 手指按下
     listener->onTouchBegan = [=](Touch* touch, Event* event) {
-        Vec2 pos = convertToNodeSpace(touch->getLocation()); // 转成相对坐标
-        Rect rect = Rect(0, 0, getContentSize().width, getContentSize().height);
-        return rect.containsPoint(pos); // 判断是否点中自己
-    };
+        Vec2 touchPos = touch->getLocation();
 
+        // 判断是否点到了房子
+        // 把触摸点转换成相对于房子的坐标
+        Vec2 nodePos = this->convertToNodeSpace(touchPos);
+        Rect rect = Rect(0, 0, getContentSize().width, getContentSize().height);
+
+        if (rect.containsPoint(nodePos))
+        {
+            // 【核心逻辑】记录偏移量
+            // 这样拖拽时，房子不会瞬间瞬移到手指中心，而是保持相对位置
+            _touchOffset = this->getPosition() - touchPos;
+
+            // 重置拖拽标记
+            _isDragging = false;
+
+            // 稍微放大一点，给玩家反馈“我按住它了”
+            this->setScale(4.2f); // 假设原来是 4.0f，稍微变大一点
+
+            return true;
+        }
+        return false;
+        };
+
+    // 2. 手指移动
+    listener->onTouchMoved = [=](Touch* touch, Event* event) {
+
+        // 计算移动后的新位置
+        Vec2 newPos = touch->getLocation() + _touchOffset;
+
+        // 设置位置
+        this->setPosition(newPos);
+
+        // 【判断】如果手指移动距离超过 10 像素，就算作“拖拽”
+        // 这样可以防止手抖导致的误判
+        if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f)
+        {
+            _isDragging = true;
+
+            // 【可选】拖拽时动态调整层级 (Z-Order)
+            // 在 2D 游戏中，通常 Y 越小（越靠下），Z 应该越大（遮挡后面的）
+            // this->getParent()->reorderChild(this, 10000 - newPos.y);
+        }
+        };
+
+    // 3. 手指松开
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
 
-        // 1. 创建弹窗
-        auto infoLayer = BuildingInfoLayer::create();
+        // 恢复原来的大小 (假设原来是 4.0f)
+        this->setScale(4.0f);
 
-        
-        infoLayer->setBuilding(this);
+        // ============================================================
+        // 【核心区分】是点击还是拖拽？
+        // ============================================================
+        if (_isDragging)
+        {
+            // A. 如果是拖拽：什么都不做，就停在这里
+            log("Moved building to: %f, %f", this->getPositionX(), this->getPositionY());
 
-        // 4. 添加到当前场景 (getParent() 就是 GameScene)
-        Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
-    };
+            // 【进阶提示】你可以在这里加代码，把新坐标保存到数据库或全局变量
+        }
+        else
+        {
+            // B. 如果不是拖拽 (位移很小)：说明是点击，打开升级弹窗
+            auto infoLayer = BuildingInfoLayer::create();
+            infoLayer->setBuilding(this);
+            Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
+        }
+        };
 
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }

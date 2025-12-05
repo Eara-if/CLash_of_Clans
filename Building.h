@@ -33,6 +33,8 @@ public:
     void speedUp();       // 宝石加速 (扣宝石，瞬间完成)
     int getNextLevelCost();
 private:
+    bool _isDragging;
+    cocos2d::Vec2 _touchOffset;
     std::string _buildingName;
     int _level;
     int _baseCost;

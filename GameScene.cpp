@@ -2,7 +2,6 @@
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
 #include "BattleScene.h"
-#include "ShopScene.h" 
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -13,6 +12,7 @@ extern int water_limit = 5000;
 extern int gem_limit = 5000;
 
 int my_house_level = 1;
+int my_junying_level = 1;
 class resource
 {
 public:
@@ -63,7 +63,7 @@ private:
         return Rect(start_x, start_y, tileWidth, tileHeight);
     }
 public:
-
+    
     goldcoin() : resource(5000) {};
     ~goldcoin() {};
 
@@ -73,25 +73,25 @@ public:
 
     // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
-
+        
         // 【修正 2】在函数内部获取屏幕尺寸
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
         filename = "06.png";
-
-
+        
+        
         Rect tileRect = this->calculateRect();
 
         _displaySprite = Sprite::create(filename, tileRect);
-
+        
         // 安全检查
-        if (_displaySprite) {
+        if(_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
             _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
-
+            
             // 设置位置
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y+visibleSize.height - 50);
 
             // 添加到父节点
             parentNode->addChild(_displaySprite, 0);
@@ -117,7 +117,7 @@ private:
     cocos2d::Sprite* _displaySprite = nullptr;
     Rect calculateRect() {
         float start_x = 0;
-        float start_y = 20;
+        float start_y = 19;
         float tileWidth = 43;
         float tileHeight = 10;
 
@@ -194,7 +194,7 @@ private:
     cocos2d::Sprite* _displaySprite = nullptr;
     Rect calculateRect() {
         float start_x = 0;
-        float start_y = 35;
+        float start_y = 34;
         float tileWidth = 43;
         float tileHeight = 10;
 
@@ -221,7 +221,7 @@ public:
     Gem() : resource(5000) {};
     ~Gem() {};
 
-    void modify() override {
+    void modify() override { 
     }
 
 
@@ -317,52 +317,91 @@ bool GameScene::init()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-    if (!Scene::init())
-    {
-        return false;
+    
+    _tiledMap = TMXTiledMap::create("Grass.tmx");
+    if (_tiledMap) {
+        // 2. 设置锚点和位置 (从左下角开始)
+        _tiledMap->setAnchorPoint(Vec2::ZERO);
+        _tiledMap->setPosition(Vec2::ZERO);
+
+        // 3. 【可选】设置缩放
+        // 如果你觉得地图太小，可以放大 (比如 2.0f)
+        // 注意：Tilemap 放大可能会有黑边缝隙，这是正常现象，可以通过修改 ccConfig.h 解决，暂时先不管
+        _tiledMap->setScale(1.0f);
+
+        // 4. 添加到场景最底层 (-99)
+        this->addChild(_tiledMap, -99);
     }
+    else {
+        log("Error: Failed to load map! Check filename and Resources folder.");
+    }
+    // 1. 获取对象层 (假设你在 Tiled 里把层命名为 "Objects")
+// 如果你的层名是 "Trees"，请自行修改
+    // 1. 获取对象层 (请确保 "Objects" 和 Tiled 里的层名一致！)
+    auto objectGroup = _tiledMap->getObjectGroup("Objects");
 
-    std::string filename = "TilesetField.png";
+    if (objectGroup) {
+        ValueVector objects = objectGroup->getObjects();
 
-    float tileWidth = 22;  // 原图截取宽度
-    float tileHeight = 22; // 原图截取高度
-    // 使用刚才测试成功的坐标 (假设是方案A)
-    Rect tileRect = Rect(6, 105, tileWidth, tileHeight);
+        for (const auto& v : objects) {
+            ValueMap dict = v.asValueMap();
 
-    // 【新增】放大倍数 (比如 2.0 就是放大两倍，3.0 就是三倍)
-    float scaleAmount = 4.0f;
+            // ============================================================
+            // 【核心修改】不再写死文件名，而是读取 Tiled 里的自定义属性
+            // ============================================================
 
-    // 【关键】计算新的步长 (实际铺设时的间距)
-    // 如果图片放大了2倍，那么我们铺下一块砖的时候，就要多跨越2倍的距离
-    float stepX = tileWidth * scaleAmount;
-    float stepY = tileHeight * scaleAmount;
-    // =============================================
+            // 2. 检查这个对象是否有 "fileName" 这个属性
+            if (dict.find("fileName") != dict.end())
+            {
+                // 3. 读取属性值 (比如 "map/background/tree.png")
+                std::string path = dict["fileName"].asString();
 
-    // --- 双重循环开始 ---
-    // 注意：这里的 x += stepX 和 y += stepY 是修改的关键！
-    for (float x = origin.x; x < origin.x + visibleSize.width; x += stepX)
-    {
-        for (float y = origin.y; y < origin.y + visibleSize.height; y += stepY)
-        {
-            auto tile = Sprite::create(filename, tileRect);
+                // 4. 使用读到的路径创建精灵
+                auto sprite = Sprite::create(path);
 
-            // 1. 设置锚点为左下角 (保持不变)
-            tile->setAnchorPoint(Vec2::ZERO);
+                if (sprite) {
+                    // ============================================================
+                    // 【核心修改】添加这一行！
+                    // 将锚点设为左下角 (0, 0)，对齐 Tiled 的坐标系
+                    // ============================================================
+                    sprite->setAnchorPoint(Vec2::ZERO);
+                    sprite->getTexture()->setAliasTexParameters();
+                    // --- 下面是通用的位置和缩放逻辑 ---
 
-            // 2. 【新增】设置放大倍数
-            tile->setScale(scaleAmount);
+                    float x = dict["x"].asFloat();
+                    float y = dict["y"].asFloat();
 
-            // 3. 设置位置
-            tile->setPosition(x, y);
+                    // 设置位置 (现在 x,y 对应的就是图片的左下角了，位置就准了)
+                    sprite->setPosition(x, y);
 
-            // 4. 保持像素清晰 (对于放大操作特别重要！)
-            tile->getTexture()->setAliasTexParameters();
+                    // 处理缩放 (如果在 Tiled 里拉伸过)
+                    if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
+                        float width = dict["width"].asFloat();
+                        float height = dict["height"].asFloat();
 
-            this->addChild(tile, -1);
+                        // 目标尺寸 / 原图尺寸 = 缩放倍率
+                        sprite->setScaleX(width / sprite->getContentSize().width);
+                        sprite->setScaleY(height / sprite->getContentSize().height);
+                    }
+
+                    // 处理旋转 (如果在 Tiled 里旋转过)
+                    if (dict.find("rotation") != dict.end()) {
+                        sprite->setRotation(dict["rotation"].asFloat());
+                    }
+
+                    // 5. 添加到地图上
+                    _tiledMap->addChild(sprite);
+
+                    // 设置层级 (Y越大越靠后，简单的遮挡关系)
+                    sprite->setLocalZOrder(10000 - (int)y);
+                }
+                else {
+                    // 如果图片路径写错了，打印报错方便调试
+                    log("Error: Can't load image: %s", path.c_str());
+                }
+            }
         }
     }
-
-
     auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 36);
     backLabel->setTextColor(Color4B::YELLOW); // 黄色文字
 
@@ -392,10 +431,19 @@ bool GameScene::init()
     // 【关键点 B】设置层级为 100 (确保在背景之上)
     this->addChild(menu, 100);
 
-    this->setdby();
+    // 定义大本营的参数
+    Rect houseRect = Rect(120, 0, 60, 45);
+    Vec2 housePos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
+
+    // 调用通用函数！
+    // 注意：传入 my_house_level 这个全局变量
+    this->setbuilding("TilesetHouse.png", houseRect, "My House", my_house_level, 500, housePos);
+
+    Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2+200, origin.y + visibleSize.height / 2);
+    this->setbuilding("junying.png", Rect::ZERO, "My junying", my_junying_level, 200, junyingPos);
 
     // ... 原有代码 ...
-    myCoin = new goldcoin();
+    myCoin =new goldcoin();
     myCoin->print(this);
 
     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
@@ -407,14 +455,13 @@ bool GameScene::init()
     // 【修改点】保存水 Label
     _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
 
-    mygem = new Gem();
+    mygem= new Gem();
     mygem->print(this);
     txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
     // 【修改点】保存宝石 Label
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
     this->setBattleButton(); // 【新增】调用战斗按钮布局函数
-    this->addShopButton(); //【新增】调用商场按钮布局函数
     return true;
 }
 // 【修改返回值】从 void 改为 Label*
@@ -432,61 +479,62 @@ Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color
 // 引入我们新写的封装好的类
 #include "Building.h" 
 
-void GameScene::setdby()
+// GameScene.cpp
+
+// 【注意】函数头的参数列表必须和 .h 文件一字不差
+void GameScene::setbuilding(const std::string& filename, const Rect& rect, const std::string& name, int level, int cost, Vec2 position)
 {
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    // 1. 创建建筑
+    auto building = Building::create(filename, rect, name, cost);
 
-    std::string filename = "TilesetHouse.png";
-    float tileWidth = 60;  // 原图截取宽度
-    float tileHeight = 45; // 原图截取高度
-    float scaleAmount = 4.0f;
-    Rect houseRect = Rect(120, 0, tileWidth, tileHeight);
+    // 2. 设置属性
+    building->setLevel(level);
+    building->setScale(4.0f);
+    building->getTexture()->setAliasTexParameters();
+    building->setPosition(position);
 
-    auto house = Building::create("TilesetHouse.png", houseRect, "My House", 500);
-    house->setLevel(my_house_level);
-    house->getTexture()->setAliasTexParameters();
-    house->setScale(scaleAmount);
-    house->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
+    // 3. 设置升级回调
+    // 【修正点】注意这个 Lambda 是 [=]()，括号里不要填参数！
+    // 之前的报错 C2440 就是因为你可能在这里面填了参数
+    building->setOnUpgradeCallback([=]() {
 
+        // A. 如果是大本营，同步全局等级
+        if (name == "My House") {
+            extern int my_house_level;
+            my_house_level = building->getLevel();
 
+            extern int coin_limit, water_limit;
+            coin_limit += 1000;
+            water_limit += 1000;
+        }
 
-    // ============================================================
-    // 【核心变化】设置回调函数
-    // 意思就是：告诉房子，“如果你升级成功扣了钱，记得通知我一下，我要刷新文字”
-    // ============================================================
-    house->setOnUpgradeCallback([=]() {
-        my_house_level = house->getLevel();
-        // 这里的逻辑只负责刷新界面 UI，不再负责扣钱和升级了
+        // B. 刷新金币 UI
         if (this->_coinTextLabel != nullptr) {
             std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
             this->_coinTextLabel->setString(txt);
         }
-        if (this->_gemTextLabel != nullptr) {
-            std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
-            this->_gemTextLabel->setString(txt);
-        }
         if (this->myCoin != nullptr) {
-            // 告诉金币对象：你的数量变了，快换个样子！
             this->myCoin->refresh();
         }
+
+        // C. 刷新水 UI
         if (this->_waterTextLabel != nullptr) {
             std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
             this->_waterTextLabel->setString(txt);
         }
         if (this->mywater != nullptr) {
-            // 水上限变了，图标可能需要从“满堆”变成“半堆”，所以要刷新
             this->mywater->refresh();
         }
-        if (this->mygem != nullptr) {
 
-            this->mygem->refresh();
+        // D. 刷新宝石 UI
+        if (this->_gemTextLabel != nullptr) {
+            std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+            this->_gemTextLabel->setString(txt);
         }
-
         });
 
-    // 添加到场景 (注意：Building 本质上也是个 Sprite，所以直接 add)
-    this->addChild(house, 0);
+    // 4. 添加到场景
+    this->addChild(building, 1);
 }
 
 
@@ -500,55 +548,4 @@ void GameScene::menuBackCallback(Ref* pSender)
     // 2. 切换场景 (带一个 0.5秒 的翻页特效)
     // 你可以试着换成 TransitionSlideInL::create(...) 试试不同的效果
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
-}
-
-
-void GameScene::addShopButton() {
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    // 使用图片按钮而不是文字按钮
-    auto shopNormal = Sprite::create("ui/shop_normal.png"); // 你需要创建这个图片
-    auto shopSelected = Sprite::create("ui/shop_selected.png"); // 或者使用同一张图片
-
-    // 如果图片不存在，创建一个简单的按钮替代
-    if (!shopNormal) {
-        // 创建简单的圆形按钮
-        shopNormal = Sprite::create();
-        shopNormal->setTextureRect(Rect(0, 0, 150, 80));
-        shopNormal->setColor(Color3B(255, 200, 0)); // 金色
-
-        auto shopLabel = Label::createWithTTF("MARKET", "fonts/Marker Felt.ttf", 30);
-        shopLabel->setPosition(Vec2(75, 40));
-        shopLabel->setColor(Color3B::WHITE);
-        shopNormal->addChild(shopLabel);
-    }
-
-    if (!shopSelected) {
-        shopSelected = Sprite::create();
-        shopSelected->setTextureRect(Rect(0, 0, 85, 85));
-        shopSelected->setColor(Color3B(255, 150, 0)); // 更深的金色
-    }
-
-    auto shopItem = MenuItemSprite::create(
-        shopNormal,
-        shopSelected,
-        [](Ref* pSender) {
-            // 跳转到商城场景
-            auto scene = ShopScene::createScene();
-            Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
-        }
-    );
-
-    // 设置按钮位置（左上角）
-    float x = origin.x + 150; // 左侧位置
-    float y = origin.y + visibleSize.height - 100; // 顶部位置
-
-    shopItem->setPosition(Vec2(x, y));
-
-    // 创建菜单容器
-    auto shopMenu = Menu::create(shopItem, NULL);
-    shopMenu->setPosition(Vec2::ZERO);
-    this->addChild(shopMenu, 200); // 使用更高的层级
-
 }
