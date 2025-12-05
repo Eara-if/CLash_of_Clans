@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="65" height="36" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="24">
+ <tileset firstgid="1" source="Grassland.tsx"/>
+ <tileset firstgid="15" source="Grassland.tsx"/>
+ <tileset firstgid="16" source="TilesetNature.tsx"/>
+ <layer id="5" name="Meta" width="65" height="36" visible="0">
+  <data encoding="base64" compression="zlib">
+   eJzt00EKgDAMAEGf6f9f4kmQ0h7EBBozA4IgSrLU4wAAAAAA+O4crm7G/Tt20KB3g9XuGmhQYf+oWSufgajZ/9RgfPb2/a4NVt+q0uCW2aCK2cyR/8KOLbLnrtLgeZ81664NZmd+11mzRJ3TCxXpNwE=
+  </data>
+ </layer>
+ <layer id="10" name="1" width="65" height="36">
+  <data encoding="base64" compression="zlib">
+   eJztw0ENAAAMA6FzUP9uZ2JPSFg1VVVVVVVVVVXVhwdRnIkd
+  </data>
+ </layer>
+ <objectgroup id="4" name="Objects">
+  <object id="4" gid="16" x="199.242" y="748.121" width="100" height="94"/>
+  <object id="6" gid="16" x="184.212" y="849.697" width="100" height="94">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="11" gid="16" x="253.909" y="822.424" width="124.242" height="130.364">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="22" name="tree1" gid="16" x="1684.21" y="800" width="157.576" height="163.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="8" gid="16" x="338.758" y="755.758" width="118.182" height="118.242">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="12" gid="17" x="214.303" y="678.909" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="13" gid="17" x="129.455" y="742.545" width="98.6667" height="95.6364">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="23" gid="17" x="1593.09" y="809.212" width="98.6667" height="95.6364">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="16" gid="72" x="62.7879" y="809.212" width="86.5455" height="86.5455"/>
+  <object id="20" gid="72" x="129.455" y="818.303" width="65.3333" height="62.303">
+   <properties>
+    <property name="flieName" value="Stone.png"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>
