@@ -18,6 +18,10 @@ public:
     // 受伤函数：外部调用这个函数来扣血
     void takeDamage(int damage);
 
+    // 1. 获取当前血量 (供士兵AI检查目标是否存活)
+    int getCurrentHp() const { return _currentHp; }
+
+
 private:
     int _currentHp;      // 当前血量
     int _maxHp;          // 总血量

@@ -36,14 +36,14 @@ bool EnemyBuilding::init(const std::string& filename, const std::string& hpBarFi
         // 计算每一格的宽度 (一共4个状态)
         float frameWidth = textureWidth / 4.0f;
 
-        // 初始状态：显示第一格 (满血)
-        // Rect(x, y, w, h) -> x=0 表示最左边
-        _healthBar->setTextureRect(Rect(3, 0, frameWidth, textureHeight));
+        // 初始状态：显示第 4 格 (满血)，x 坐标应为 3 * frameWidth
+        float startX = 3.0f * frameWidth;
+        _healthBar->setTextureRect(Rect(startX, 0, frameWidth, textureHeight));
 
         // 把血条放在建筑头顶
         // Vec2(内容宽度的一半, 内容高度 + 一点偏移)
-        _healthBar->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 50));
-        _healthBar->setScale(16.0f); 
+        _healthBar->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 20));
+        _healthBar->setScale(3.0f); 
 
         this->addChild(_healthBar);
     }
@@ -62,9 +62,12 @@ void EnemyBuilding::takeDamage(int damage)
     if (_currentHp == 0) {
         // 死亡逻辑 (比如播放爆炸动画，从父节点移除等)
         log("Building Destroyed!");
-        // this->removeFromParent(); // 暂时注释掉，不然测试时一下就没了
+         // 简单示例：变灰表示损毁
+        this->setColor(Color3B::GRAY);
+        // 或者直接移除： this->removeFromParent();
     }
 }
+
 
 void EnemyBuilding::updateHealthBar()
 {
