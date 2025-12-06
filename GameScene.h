@@ -2,7 +2,7 @@
 #define __GAME_SCENE_H__
 
 #include "cocos2d.h"
-
+#include"Building.h"
 class GameScene : public cocos2d::Scene
 {
 private:
@@ -23,7 +23,7 @@ public:
     void menuGotoBattleCallback(cocos2d::Ref* pSender); // 前往战斗场景
     void menuBackCallback(cocos2d::Ref* pSender);
     cocos2d::Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color4B color);
-    void setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int level, int cost, cocos2d::Vec2 position);
+    void setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int cost, BuildingType type1,cocos2d::Vec2 position);
     void setresource();
     // 这是一个宏，自动帮我们实现 create() 函数
     CREATE_FUNC(GameScene);

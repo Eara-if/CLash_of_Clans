@@ -11,8 +11,7 @@ extern int coin_limit = 5000;
 extern int water_limit = 5000;
 extern int gem_limit = 5000;
 
-int my_house_level = 1;
-int my_junying_level = 1;
+int army_limit = 10;
 class resource
 {
 public:
@@ -437,10 +436,10 @@ bool GameScene::init()
 
     // 调用通用函数！
     // 注意：传入 my_house_level 这个全局变量
-    this->setbuilding("TilesetHouse.png", houseRect, "My House", my_house_level, 500, housePos);
+    this->setbuilding("TilesetHouse.png", houseRect, "My House", 500, BuildingType::BASE,housePos);
 
     Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2+200, origin.y + visibleSize.height / 2);
-    this->setbuilding("junying.png", Rect::ZERO, "My junying", my_junying_level, 200, junyingPos);
+    this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS,junyingPos);
 
     // ... 原有代码 ...
     myCoin =new goldcoin();
@@ -482,13 +481,12 @@ Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color
 // GameScene.cpp
 
 // 【注意】函数头的参数列表必须和 .h 文件一字不差
-void GameScene::setbuilding(const std::string& filename, const Rect& rect, const std::string& name, int level, int cost, Vec2 position)
+void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name,  int cost, BuildingType type1, cocos2d::Vec2 position)
 {
     // 1. 创建建筑
-    auto building = Building::create(filename, rect, name, cost);
+    auto building = Building::create(filename, rect, name, cost,type1);
 
     // 2. 设置属性
-    building->setLevel(level);
     building->setScale(4.0f);
     building->getTexture()->setAliasTexParameters();
     building->setPosition(position);
@@ -498,15 +496,17 @@ void GameScene::setbuilding(const std::string& filename, const Rect& rect, const
     // 之前的报错 C2440 就是因为你可能在这里面填了参数
     building->setOnUpgradeCallback([=]() {
 
-        // A. 如果是大本营，同步全局等级
-        if (name == "My House") {
-            extern int my_house_level;
-            my_house_level = building->getLevel();
-
-            extern int coin_limit, water_limit;
-            coin_limit += 1000;
-            water_limit += 1000;
-        }
+            if (type1 == BuildingType::BASE) {
+                extern int coin_limit, water_limit;
+                coin_limit += 1500;
+                water_limit += 1500;
+            }
+        // 2. 如果是兵营 -> 加人口上限 (假设有个全局变量 army_limit)
+            else if (type1 == BuildingType::BARRACKS) {
+                extern int army_limit;
+                army_limit += 10;
+                log("Army limit increased to %d", army_limit);
+            }
 
         // B. 刷新金币 UI
         if (this->_coinTextLabel != nullptr) {

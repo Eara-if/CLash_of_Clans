@@ -12,10 +12,11 @@ extern int coin_limit;
 extern int water_limit;
 extern int gem_limit;
 
-Building* Building::create(const std::string& filename, const Rect&rect,const std::string& name, int baseCost)
+
+Building* Building::create(const std::string& filename, const Rect& rect, const std::string& name, int baseCost, BuildingType type)
 {
     Building* ret = new (std::nothrow) Building();
-    if (ret && ret->init(filename, rect,name, baseCost))
+    if (ret && ret->init(filename, rect, name, baseCost, type)) // 传入 type
     {
         ret->autorelease();
         return ret;
@@ -24,7 +25,7 @@ Building* Building::create(const std::string& filename, const Rect&rect,const st
     return nullptr;
 }
 
-bool Building::init(const std::string& filename, const Rect& rect, const std::string& name, int baseCost)
+bool Building::init(const std::string& filename, const Rect& rect, const std::string& name, int baseCost, BuildingType type1)
 {
     
     if (rect.equals(Rect::ZERO))
@@ -39,32 +40,13 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
         // 注意：有些版本的 Cocos 在带 rect 初始化时不需要再 setTextureRect，
         // 但为了保险起见，保持现状或根据实际显示调整
     }
-    //// ============================================================
-    //// 【新增】添加底下的绿色草地
-    //// ============================================================
-    //// 假设你用的是 TilesetField.png，我们截取一块不同颜色的草地
-    //// 请根据你的图片实际情况调整 Rect 的坐标 (比如 x=32 可能是深色草地)
-    //auto grass = Sprite::create("TilesetField.png", Rect(32, 0, 32, 32));
 
-    //if (grass) {
-    //    // 1. 设置位置：放在房子的脚下中心
-    //    // contentSize.width / 2 是中心，0 是底部
-    //    grass->setPosition(this->getContentSize().width / 2, 0);
-
-    //    // 2. 稍微放大一点，像个院子
-    //    grass->setScale(2.0f);
-
-    //    // 3. 【核心】设置 Z-Order 为 -1
-    //    // 这样草地就会显示在房子（默认为0）的后面！
-    //    this->addChild(grass, -1);
-    //}
-    //// ============================================================
-
-    _buildingName = name;
-    _baseCost = baseCost;
-    _level = 1;
-    _state = BuildingState::IDLE;
-    _timeLeft = 0;
+    type = type1; // 【保存类型】
+    a_level = 1;
+    buildingName = name;
+    baseCost1 = baseCost;
+    state = BuildingState::IDLE;
+    timeLeft = 0;
 
     this->initTouchListener();
     this->scheduleUpdate();
@@ -81,50 +63,92 @@ int Building::getNextLevelCost()
 {
     // 【核心逻辑】花费随等级增长
     // 比如：1级升2级=500，2级升3级=1000，3级升4级=1500
-    return _baseCost * _level;
+    return baseCost1 * a_level;
 
     // 或者是指数增长： return _baseCost * std::pow(2, _level - 1);
 }
 // 每帧自动调用
 void Building::update(float dt)
 {
-    if (_state == BuildingState::UPGRADING)
+    if (state == BuildingState::UPGRADING)
     {
-        _timeLeft -= dt; // 扣除时间
+        timeLeft -= dt; // 扣除时间
 
-        if (_timeLeft <= 0) {
+        if (timeLeft <= 0) {
             this->finishUpgrade(); // 时间到了，完成！
         }
     }
 }
 // 计算升级耗时 (比如：等级 * 5秒)
 int Building::getUpgradeTime() {
-    return _level * 5; // 1级升2级要5秒，测试用
+    return a_level * 5; // 1级升2级要5秒，测试用
 }
 
 // 计算加速需要的宝石 (比如：1秒 = 1宝石，或者固定 5 宝石)
 int Building::getSpeedUpCost() {
-    return std::ceil(_timeLeft/60); // 简单粗暴：剩下几秒就几个宝石
+    return std::ceil(timeLeft/60); // 简单粗暴：剩下几秒就几个宝石
 }
+// Building.cpp
 
+float Building::getTimeLeft()
+{
+    // 返回剩下的时间
+    // 如果小于0，就返回0，防止显示负数
+    return (timeLeft > 0) ? timeLeft : 0;
+}
 // 开始升级 (只扣钱，不加等级)
+// 引入全局变量 (你需要根据你的实际变量名修改这里)
+extern int coin_count;
+extern int water_count;
+
 void Building::startUpgrade()
 {
-    int cost = getNextLevelCost();
-    if (coin_count >= cost) {
-        coin_count -= cost;
-        coin_limit += 1500;
-        water_limit += 1500;
-        // 进入升级状态
-        _state = BuildingState::UPGRADING;
-        _totalTime = getUpgradeTime();
-        _timeLeft = _totalTime;
+    // 1. 基本检查：如果已经在升级，或者满了，就不能再升
+    if (state != BuildingState::IDLE) return;
 
-        log("Upgrade Started! Time needed: %f", _totalTime);
+    // 2. 计算本次升级需要的花费
+    // (假设你有一个 getNextLevelCost 函数计算花费)
+    int cost = this->getNextLevelCost();
 
-        // 刷新一下金币显示 (通过回调)
-        if (UpgradeCallback_coin)
-            UpgradeCallback_coin();
+    // 3. 【核心修复】根据建筑类型扣除对应的资源
+    // 假设：大本营和防御塔花金币，兵营花水
+    bool isEnough = false;
+
+    if (type == BuildingType::BARRACKS) {
+        // 兵营：扣水
+        if (water_count >= cost) {
+            water_count -= cost; // 扣费
+            isEnough = true;
+            log("Spent %d Water for upgrade.", cost);
+        }
+        else {
+            log("Not enough Water!");
+        }
+    }
+    else {
+        // 其他(大本营/金矿等)：扣金币
+        if (coin_count >= cost) {
+            coin_count -= cost; // 扣费
+            isEnough = true;
+            log("Spent %d Coin for upgrade.", cost);
+        }
+        else {
+            log("Not enough Coin!");
+        }
+    }
+
+    // 4. 只有钱够了，才开始升级倒计时
+    if (isEnough) {
+        state = BuildingState::UPGRADING;
+
+        // 设置时间 (比如 基础时间 * 等级)
+        timeLeft = 5.0f * a_level;
+
+        log("Upgrade started... Time left: %f", timeLeft);
+    }
+    else {
+        // 钱不够，这里可以做一个弹窗提示或者播放一个错误音效
+        log("Cannot upgrade: Insufficient resources.");
     }
 }
 
@@ -141,18 +165,6 @@ void Building::speedUp()
     }
 }
 
-// 真正的完成升级
-void Building::finishUpgrade()
-{
-    _state = BuildingState::IDLE;
-    _timeLeft = 0;
-    _level++;
-
-    log("Upgrade Finished! Level is now %d", _level);
-
-    // 通知界面刷新 (如果有打开的弹窗，弹窗需要自己处理刷新，或者关闭重开)
-    if (UpgradeCallback_coin) UpgradeCallback_coin();
-}
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
@@ -171,10 +183,10 @@ void Building::initTouchListener()
         {
             // 【核心逻辑】记录偏移量
             // 这样拖拽时，房子不会瞬间瞬移到手指中心，而是保持相对位置
-            _touchOffset = this->getPosition() - touchPos;
+            touchOffset = this->getPosition() - touchPos;
 
             // 重置拖拽标记
-            _isDragging = false;
+            isDragging = false;
 
             // 稍微放大一点，给玩家反馈“我按住它了”
             this->setScale(4.2f); // 假设原来是 4.0f，稍微变大一点
@@ -188,7 +200,7 @@ void Building::initTouchListener()
     listener->onTouchMoved = [=](Touch* touch, Event* event) {
 
         // 计算移动后的新位置
-        Vec2 newPos = touch->getLocation() + _touchOffset;
+        Vec2 newPos = touch->getLocation() + touchOffset;
 
         // 设置位置
         this->setPosition(newPos);
@@ -197,7 +209,7 @@ void Building::initTouchListener()
         // 这样可以防止手抖导致的误判
         if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f)
         {
-            _isDragging = true;
+            isDragging = true;
 
             // 【可选】拖拽时动态调整层级 (Z-Order)
             // 在 2D 游戏中，通常 Y 越小（越靠下），Z 应该越大（遮挡后面的）
@@ -214,7 +226,7 @@ void Building::initTouchListener()
         // ============================================================
         // 【核心区分】是点击还是拖拽？
         // ============================================================
-        if (_isDragging)
+        if (isDragging)
         {
             // A. 如果是拖拽：什么都不做，就停在这里
             log("Moved building to: %f, %f", this->getPositionX(), this->getPositionY());
@@ -231,4 +243,24 @@ void Building::initTouchListener()
         };
 
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+}
+void Building::finishUpgrade()
+{
+    // 1. 只有正在升级才能结算
+    if (state != BuildingState::UPGRADING) return;
+
+    // 2. 状态变回空闲
+    state = BuildingState::IDLE;
+    timeLeft = 0;
+
+    // 3. 等级 +1
+    a_level++;
+
+    // 4. 【核心】在这里调用回调！
+    // 这时候才会执行 GameScene 里写的 coin_limit += 1500 代码
+    if (UpgradeCallback_coin) {
+        UpgradeCallback_coin();
+    }
+    
+    log("Upgrade finished! Level is now %d", a_level);
 }
