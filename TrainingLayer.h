@@ -13,8 +13,8 @@ public:
 
 private:
     // 辅助函数：创建一个兵种的训练卡片
-    void createTroopCard(std::string name, std::string image, int cost, int index, cocos2d::Vec2 startPos);
-
+    void createTroopCard(std::string name, std::string image, int index, cocos2d::Vec2 startPos);
+    cocos2d::Label* showText(std::string content, float x, float y, cocos2d::Color4B color);
     // 刷新界面上的数量显示
     void refreshLabels();
 

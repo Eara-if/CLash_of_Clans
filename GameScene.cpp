@@ -556,7 +556,6 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
         }
         // 2. 如果是兵营 -> 加人口上限 (假设有个全局变量 army_limit)
         else if (type1 == BuildingType::BARRACKS) {
-            extern int army_limit;
             army_limit += 10;
             log("Army limit increased to %d", army_limit);
         }

@@ -3,6 +3,7 @@
 #include"Building.h"
 
 USING_NS_CC;
+extern int army_limit;
 
 bool BuildingInfoLayer::init()
 {
@@ -87,7 +88,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
     {
         // ÏÔÊ¾ÐÅÏ¢
         std::string info = "Barracks Lv." + std::to_string(level) +
-            "\nCap: " + std::to_string(level * 20) +
+            "\nCap: " + std::to_string(army_limit) +
             "\nCost: " + std::to_string(cost) + " Water";
         _infoLabel->setString(info);
 
