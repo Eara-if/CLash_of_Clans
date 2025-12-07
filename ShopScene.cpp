@@ -13,6 +13,8 @@ extern int coin_limit;
 extern int water_limit;
 extern int gem_limit;
 
+extern cocos2d::Vector<Building*> g_allPurchasedBuildings;
+
 Scene* ShopScene::createScene() {
     return ShopScene::create();
 }
@@ -35,7 +37,7 @@ bool ShopScene::init() {
         // 计算需要缩放的比例
         float scaleX = visibleSize.width / bgSize.width;
         float scaleY = visibleSize.height / bgSize.height;
-         
+
         // 设置缩放以填满整个屏幕
         bgSprite->setScaleX(scaleX);
         bgSprite->setScaleY(scaleY);
@@ -85,6 +87,7 @@ bool ShopScene::init() {
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 2);
 
+
     return true;
 }
 
@@ -94,7 +97,7 @@ void ShopScene::createMenu() {
 
     // ================= 创建商品菜单项 =================
 
-    // 1. 城墙 (225x88) - 直接显示整张图片
+    // 1. 城墙  - 直接显示整张图片
     Sprite* wallNormal = Sprite::create("city_wall.png");
     Sprite* wallSelected = Sprite::create("city_wall.png");
 
@@ -119,8 +122,8 @@ void ShopScene::createMenu() {
         wallSelected,
         CC_CALLBACK_1(ShopScene::onWallPurchase, this)
     );
-     
-    // 2. 金矿 (910x1024) - 直接显示整张图片
+
+    // 2. 金矿 - 直接显示整张图片
     Sprite* goldMineNormal = Sprite::create("Mine.png");
     Sprite* goldMineSelected = Sprite::create("Mine.png");
 
@@ -145,7 +148,7 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onGoldMinePurchase, this)
     );
 
-    // 3. 圣水收集器 (1013x916) - 直接显示整张图片
+    // 3. 圣水收集器 - 直接显示整张图片
     Sprite* waterCollectorNormal = Sprite::create("waterwell.png");
     Sprite* waterCollectorSelected = Sprite::create("waterwell.png");
 
@@ -168,7 +171,7 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onWaterCollectorPurchase, this)
     );
 
-    // 4. 弓箭塔 (781x1024) - 图集，使用setTextureRect截取特定部分
+    // 4. 弓箭塔
     // 首先创建精灵但不设置纹理
     Sprite* archerTowerNormal = Sprite::create("TilesetTowers.png");
     Sprite* archerTowerSelected = Sprite::create("TilesetTowers.png");
@@ -192,7 +195,7 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onArcherTowerPurchase, this)
     );
 
-    // 5. 加农炮 (824x862) - 直接显示整张图片
+    // 5. 加农炮
     Sprite* cannonNormal = Sprite::create("Cannon.png");
     Sprite* cannonSelected = Sprite::create("Cannon.png");
 
@@ -225,12 +228,12 @@ void ShopScene::createMenu() {
     itemOrder.push_back(cannonItem);         // 最右边
 
     // 2. 计算水平居中布局
-    float centerY = origin.y + visibleSize.height *0.5; // 屏幕垂直中心
+    float centerY = origin.y + visibleSize.height * 0.5; // 屏幕垂直中心
     float totalItems = (float)itemOrder.size();           // 商品总数 (5)
     float horizontalSpacing = visibleSize.width * 0.15f;  // 按钮间距 (占屏宽15%)
     // 计算起始X坐标，让整排按钮在屏幕中水平居中
     float totalWidth = (totalItems - 1) * horizontalSpacing;
-    float startX = origin.x + (visibleSize.width - totalWidth) / 2.0f+50;
+    float startX = origin.x + (visibleSize.width - totalWidth) / 2.0f + 50;
 
     // 3. 循环设置每个按钮的位置
     for (int i = 0; i < itemOrder.size(); ++i) {
@@ -241,7 +244,7 @@ void ShopScene::createMenu() {
         }
     }
     // ==================== 按钮位置设置结束 ====================
-    
+
    // ==================== 设置商品信息标签（跟随按钮位置）====================
 // 商品信息数据（必须与itemOrder的顺序严格对应！）
     std::vector<ShopItem> itemInfos = {
@@ -263,7 +266,7 @@ void ShopScene::createMenu() {
 
                 // 1. 商品名称标签 (按钮上方)
                 auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 28);
-                nameLabel->setPosition(Vec2(btnPos.x-50, btnPos.y + 80)); // 上方偏移
+                nameLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y + 80)); // 上方偏移
                 nameLabel->setColor(Color3B::WHITE);
                 this->addChild(nameLabel, 2);
 
@@ -343,12 +346,74 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                 water_count -= item.waterCost;
                 gem_count -= item.gemCost;
 
+                // ==== 核心修改：创建建筑对象 ====
+                Building* newBuilding = nullptr;
+                std::string filename;
+                cocos2d::Rect rect = Rect::ZERO;
+                std::string buildingName;
+                BuildingType buildingtype;
+                int buildingbasecost = 0;
+
+                switch (type) {
+                    case ShopItemType::WALL:
+                        filename = "city_wall.png";
+                        buildingName = "Wall";
+                        buildingtype = BuildingType::WALL;
+                        break;
+                    case ShopItemType::GOLD_MINE:
+                        filename = "Mine.png";
+                        buildingName = "Gold Mine";
+                        buildingtype = BuildingType::MINE;
+                        buildingbasecost = 300;
+                        break;
+                    case ShopItemType::WATER_COLLECTOR:
+                        filename = "waterwell.png";
+                        buildingName = "Water Collector";
+                        buildingtype = BuildingType::MINE;
+                        buildingbasecost = 300;
+                        break;
+                    case ShopItemType::ARCHER_TOWER:
+                        filename = "TilesetTowers.png";
+                        buildingName = "Archer Tower";
+                        buildingtype = BuildingType::DEFENSE;
+                        buildingbasecost = 100;
+                        break;
+                    case ShopItemType::CANNON:
+                        filename = "Cannon.png";
+                        buildingName = "Cannon";
+                        buildingtype = BuildingType::DEFENSE;
+                        buildingbasecost = 100;
+                        break;
+                }
+
+                if (!filename.empty()) {
+                    newBuilding = Building::create(filename, rect, buildingName, buildingbasecost, buildingtype);
+                    if (newBuilding) {
+                        newBuilding->setScale(0.5f);
+                        newBuilding->getTexture()->setAliasTexParameters();
+                        // 【关键修改】：添加到全局容器而不是创建新场景
+                        // 保留一次以确保在传递给GameScene时不被释放
+                        newBuilding->retain();
+                        g_allPurchasedBuildings.pushBack(newBuilding);
+                        newBuilding->release(); // GameScene将持有它
+                    }
+                }
+                // ==== 核心修改结束 ====
+
                 // 显示购买成功
                 showPurchaseMessage(true, item.name);
 
                 // 更新资源显示
                 updateResourceLabels();
 
+                // 【关键修改】：直接返回到GameScene，不再创建新场景
+                this->runAction(Sequence::create(
+                    DelayTime::create(0.5f),
+                    CallFunc::create([this]() {
+                        Director::getInstance()->popScene();
+                        }),
+                    nullptr
+                ));
                 return true;
             }
             else {
@@ -376,7 +441,7 @@ void ShopScene::showPurchaseMessage(bool success, const std::string& itemName) {
         color = Color4B::GREEN;
     }
     else {
-        message = "Insufficient resources, unable to purchase " + itemName +"!";
+        message = "Insufficient resources, unable to purchase " + itemName + "!";
         color = Color4B::RED;
     }
 
@@ -450,6 +515,7 @@ void ShopScene::updateResourceLabels() {
 }
 
 void ShopScene::menuBackCallback(Ref* pSender) {
-    auto scene = GameScene::createScene();
-    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+    Director::getInstance()->popScene();
 }
+
+

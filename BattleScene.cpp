@@ -63,8 +63,8 @@ bool BattleScene::init()
 
 void BattleScene::menuBackToGameScene(Ref* pSender)
 {
-    auto scene = GameScene::createScene();
-    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+    // 返回GameScene，使用popScene
+    Director::getInstance()->popScene();
 }
 
 void BattleScene::loadEnemyMap()
@@ -213,7 +213,7 @@ void BattleScene::onSoldierIconClicked()
         // 浮动交互效果
         auto action = RepeatForever::create(Sequence::create(
             ScaleTo::create(0.5f, 10.5f),
-            ScaleTo::create(0.5f,9.5f),
+            ScaleTo::create(0.5f, 9.5f),
             nullptr
         ));
         _soldierIcon->runAction(action);

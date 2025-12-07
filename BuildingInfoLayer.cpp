@@ -6,7 +6,7 @@ USING_NS_CC;
 
 bool BuildingInfoLayer::init()
 {
-    if (!Layer::init()) 
+    if (!Layer::init())
         return false;
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -36,14 +36,14 @@ bool BuildingInfoLayer::init()
     bg->getTexture()->setAliasTexParameters();
     bg->setScale(4.0f);
     bg->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-    this->addChild(bg,0);
+    this->addChild(bg, 0);
 
     // 创建一个通用的 Label，位置放中间
     _infoLabel = Label::createWithSystemFont("", "Arial", 28);
     _infoLabel->setPosition(centerPos.x, centerPos.y + 30);
 
     _infoLabel->setTextColor(Color4B::BLACK);
-    this->addChild(_infoLabel,1);
+    this->addChild(_infoLabel, 1);
 
     _actionBtn = MenuItemFont::create("Button", [](Ref*) {});
     _actionBtn->setColor(Color3B::BLUE);
@@ -112,9 +112,9 @@ void BuildingInfoLayer::setBuilding(Building* building)
         menu->addChild(trainBtn);
     }
     // ============================================================
-    // 情况 B：其他建筑 (显示金币花费)
+    // 情况 B：其他建筑（除了城墙，城墙不可升级） (显示金币花费)
     // ============================================================
-    else if (_targetBuilding->getState() == BuildingState::IDLE)
+    else if (_targetBuilding->getType() != BuildingType::WALL &&_targetBuilding->getState() == BuildingState::IDLE)
     {
         // 显示信息
         _infoLabel->setString("Level: " + std::to_string(level) +
@@ -130,11 +130,13 @@ void BuildingInfoLayer::setBuilding(Building* building)
     // ============================================================
     // 情况 C：正在升级中 (重新打开弹窗时)
     // ============================================================
-    else
+    else if(_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::UPGRADING)
     {
         // 如果一打开发现正在升级，直接进入倒计时监控模式
         this->handleUpgradeTimer();
     }
+    else{}
+
 }
 // 把它加在 setBuilding 后面
 void BuildingInfoLayer::handleStartUpgrade()

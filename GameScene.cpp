@@ -2,6 +2,8 @@
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
 #include "BattleScene.h"
+#include "Building.h" 
+#include "ShopScene.h"
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -10,6 +12,8 @@ extern int gem_count = 500;
 extern int coin_limit = 5000;
 extern int water_limit = 5000;
 extern int gem_limit = 5000;
+
+cocos2d::Vector<Building*> g_allPurchasedBuildings;// 新增：全局已购买建筑容器
 
 int army_limit = 10;
 class resource
@@ -62,7 +66,7 @@ private:
         return Rect(start_x, start_y, tileWidth, tileHeight);
     }
 public:
-    
+
     goldcoin() : resource(5000) {};
     ~goldcoin() {};
 
@@ -72,25 +76,25 @@ public:
 
     // 【修正】现在这就是真正的重写了，因为参数也是 Node*
     void print(Node* parentNode) override {
-        
+
         // 【修正 2】在函数内部获取屏幕尺寸
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
         filename = "06.png";
-        
-        
+
+
         Rect tileRect = this->calculateRect();
 
         _displaySprite = Sprite::create(filename, tileRect);
-        
+
         // 安全检查
-        if(_displaySprite) {
+        if (_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
             _displaySprite->setScale(6.0f); // 确保 scaleAmount 在基类初始化了
-            
+
             // 设置位置
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y+visibleSize.height - 50);
+            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
 
             // 添加到父节点
             parentNode->addChild(_displaySprite, 0);
@@ -220,7 +224,7 @@ public:
     Gem() : resource(5000) {};
     ~Gem() {};
 
-    void modify() override { 
+    void modify() override {
     }
 
 
@@ -264,10 +268,59 @@ public:
     void update() {
     }
 };
-Scene* GameScene::createScene()
-{
-    return GameScene::create();
+
+Scene* GameScene::createScene(Building* purchasedBuilding) {
+    auto scene = Scene::create();
+    auto layer = GameScene::create(); // 创建 GameScene 实例
+
+    // 【关键修改】不再将建筑添加到新场景，而是保存到全局容器
+    if (layer && purchasedBuilding) {
+        // 确保建筑被正确管理
+        purchasedBuilding->retain();
+        g_allPurchasedBuildings.pushBack(purchasedBuilding);
+        purchasedBuilding->release(); // GameScene现在持有它
+    }
+
+    scene->addChild(layer);
+    return scene;
 }
+
+void GameScene::addPurchasedBuilding(Building* building) {
+    if (!building) return;
+
+    // 如果建筑已经在全局容器中，确保它不被重复添加
+    if (g_allPurchasedBuildings.contains(building)) {
+        // 从父节点移除（如果已经添加到了某个场景）
+        if (building->getParent()) {
+            building->removeFromParent();
+        }
+    }
+    else {
+        // 添加到全局容器
+        building->retain();
+        g_allPurchasedBuildings.pushBack(building);
+        building->release();
+    }
+
+    this->addChild(building, 10); // 添加到场景，层级与原有建筑一致
+    _allBuildings.pushBack(building); // 存入容器，方便统一管理
+
+    // 可以设置一个初始位置，例如屏幕中心
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    building->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+
+    // 【重要】设置建筑的回调，用于资源更新等
+    building->setOnUpgradeCallback([=]() {
+        // 这里可以放置建筑升级时更新主界面资源的逻辑
+        // 可以参考你原有的 setbuilding 函数中的回调
+        if (_coinTextLabel) {
+            std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
+            _coinTextLabel->setString(txt);
+        }
+        // ... 更新其他UI ...
+        });
+}
+
 void GameScene::setBattleButton()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -309,14 +362,14 @@ void GameScene::menuGotoBattleCallback(Ref* pSender)
     // 1. 创建新的战斗场景
     auto scene = BattleScene::createScene();
 
-    // 2. 切换场景
-    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+    // 2. 切换场景，使用pushScene保留当前场景
+    Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
 }
 bool GameScene::init()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-    
+
     _tiledMap = TMXTiledMap::create("Grass.tmx");
     if (_tiledMap) {
         // 2. 设置锚点和位置 (从左下角开始)
@@ -430,19 +483,20 @@ bool GameScene::init()
     // 【关键点 B】设置层级为 100 (确保在背景之上)
     this->addChild(menu, 100);
 
-    // 定义大本营的参数
-    Rect houseRect = Rect(120, 0, 60, 45);
     Vec2 housePos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
 
     // 调用通用函数！
     // 注意：传入 my_house_level 这个全局变量
-    this->setbuilding("TilesetHouse.png", houseRect, "My House", 500, BuildingType::BASE,housePos);
+    this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, housePos);
 
-    Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2+200, origin.y + visibleSize.height / 2);
-    this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS,junyingPos);
+    Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2 + 200, origin.y + visibleSize.height / 2);
+    this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, junyingPos);
+
+    // 添加所有已购买的建筑
+    this->addAllPurchasedBuildings();
 
     // ... 原有代码 ...
-    myCoin =new goldcoin();
+    myCoin = new goldcoin();
     myCoin->print(this);
 
     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
@@ -454,15 +508,17 @@ bool GameScene::init()
     // 【修改点】保存水 Label
     _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
 
-    mygem= new Gem();
+    mygem = new Gem();
     mygem->print(this);
     txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
     // 【修改点】保存宝石 Label
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
     this->setBattleButton(); // 【新增】调用战斗按钮布局函数
+    this->addShopButton(); // 【新增】调用商城按钮布局函
     return true;
 }
+
 // 【修改返回值】从 void 改为 Label*
 Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color4B color)
 {
@@ -475,19 +531,16 @@ Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color
     // 【新增】把创建好的 label 返回出去
     return label;
 }
-// 引入我们新写的封装好的类
-#include "Building.h" 
 
-// GameScene.cpp
 
 // 【注意】函数头的参数列表必须和 .h 文件一字不差
-void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name,  int cost, BuildingType type1, cocos2d::Vec2 position)
+void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int cost, BuildingType type1, cocos2d::Vec2 position)
 {
     // 1. 创建建筑
-    auto building = Building::create(filename, rect, name, cost,type1);
+    auto building = Building::create(filename, rect, name, cost, type1);
 
     // 2. 设置属性
-    building->setScale(4.0f);
+    building->setScale(0.5f);
     building->getTexture()->setAliasTexParameters();
     building->setPosition(position);
 
@@ -496,17 +549,17 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
     // 之前的报错 C2440 就是因为你可能在这里面填了参数
     building->setOnUpgradeCallback([=]() {
 
-            if (type1 == BuildingType::BASE) {
-                extern int coin_limit, water_limit;
-                coin_limit += 1500;
-                water_limit += 1500;
-            }
+        if (type1 == BuildingType::BASE) {
+            extern int coin_limit, water_limit;
+            coin_limit += 1500;
+            water_limit += 1500;
+        }
         // 2. 如果是兵营 -> 加人口上限 (假设有个全局变量 army_limit)
-            else if (type1 == BuildingType::BARRACKS) {
-                extern int army_limit;
-                army_limit += 10;
-                log("Army limit increased to %d", army_limit);
-            }
+        else if (type1 == BuildingType::BARRACKS) {
+            extern int army_limit;
+            army_limit += 10;
+            log("Army limit increased to %d", army_limit);
+        }
 
         // B. 刷新金币 UI
         if (this->_coinTextLabel != nullptr) {
@@ -548,4 +601,160 @@ void GameScene::menuBackCallback(Ref* pSender)
     // 2. 切换场景 (带一个 0.5秒 的翻页特效)
     // 你可以试着换成 TransitionSlideInL::create(...) 试试不同的效果
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+}
+
+void GameScene::addShopButton() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    // 使用图片按钮而不是文字按钮
+    auto shopNormal = Sprite::create("ui/shop_normal.png"); // 你需要创建这个图片
+    auto shopSelected = Sprite::create("ui/shop_selected.png"); // 或者使用同一张图片
+
+    // 如果图片不存在，创建一个简单的按钮替代
+    if (!shopNormal) {
+        // 创建简单的圆形按钮
+        shopNormal = Sprite::create();
+        shopNormal->setTextureRect(Rect(0, 0, 150, 80));
+        shopNormal->setColor(Color3B(255, 200, 0)); // 金色
+
+        auto shopLabel = Label::createWithTTF("MARKET", "fonts/Marker Felt.ttf", 30);
+        shopLabel->setPosition(Vec2(75, 40));
+        shopLabel->setColor(Color3B::WHITE);
+        shopNormal->addChild(shopLabel);
+    }
+
+    if (!shopSelected) {
+        shopSelected = Sprite::create();
+        shopSelected->setTextureRect(Rect(0, 0, 85, 85));
+        shopSelected->setColor(Color3B(255, 150, 0)); // 更深的金色
+    }
+
+    auto shopItem = MenuItemSprite::create(shopNormal, shopSelected,
+        [](Ref* pSender) {
+            // 使用pushScene而不是replaceScene
+            auto scene = ShopScene::createScene();
+            Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
+        }
+    );
+
+
+    // 设置按钮位置（左上角）
+    float x = origin.x + 150; // 左侧位置
+    float y = origin.y + visibleSize.height - 100; // 顶部位置
+
+    shopItem->setPosition(Vec2(x, y));
+
+    // 创建菜单容器
+    auto shopMenu = Menu::create(shopItem, NULL);
+    shopMenu->setPosition(Vec2::ZERO);
+    this->addChild(shopMenu, 200); // 使用更高的层级
+
+}
+
+// 新增：添加所有已购买建筑的函数
+void GameScene::addAllPurchasedBuildings() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && !building->getParent()) {
+            this->addChild(building, 10);
+
+            // 确保建筑有一个默认位置（如果当前位置是0,0）
+            if (building->getPositionX() == 0 && building->getPositionY() == 0) {
+                building->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+            }
+
+            // 重新设置升级回调
+            building->setOnUpgradeCallback([=]() {
+                if (_coinTextLabel) {
+                    std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
+                    _coinTextLabel->setString(txt);
+                }
+                if (_waterTextLabel) {
+                    std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
+                    _waterTextLabel->setString(txt);
+                }
+                if (_gemTextLabel) {
+                    std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+                    _gemTextLabel->setString(txt);
+                }
+                });
+
+            // 添加到本地容器
+            _allBuildings.pushBack(building);
+        }
+    }
+}
+
+// 新增：重写onEnter函数，确保从商城返回时建筑被正确添加
+void GameScene::onEnter() {
+    Scene::onEnter();
+
+    // 从商城返回时，更新资源显示
+    this->updateResourceDisplay();
+
+    // 从商城返回时，检查是否有新建筑需要添加
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && !building->getParent()) {
+            // 这个建筑还没有添加到场景中，添加它
+            this->addChild(building, 10);
+
+            auto visibleSize = Director::getInstance()->getVisibleSize();
+            if (building->getPositionX() == 0 && building->getPositionY() == 0) {
+                building->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+            }
+
+            // 设置回调
+            building->setOnUpgradeCallback([=]() {
+                if (_coinTextLabel) {
+                    std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
+                    _coinTextLabel->setString(txt);
+                }
+                if (_waterTextLabel) {
+                    std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
+                    _waterTextLabel->setString(txt);
+                }
+                if (_gemTextLabel) {
+                    std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+                    _gemTextLabel->setString(txt);
+                }
+                });
+
+            _allBuildings.pushBack(building);
+        }
+    }
+}
+
+// 新增：资源显示更新函数
+void GameScene::updateResourceDisplay() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    // 更新金币显示
+    if (_coinTextLabel) {
+        std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
+        _coinTextLabel->setString(txt);
+    }
+    if (myCoin) {
+        myCoin->refresh();
+    }
+
+    // 更新水显示
+    if (_waterTextLabel) {
+        std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
+        _waterTextLabel->setString(txt);
+    }
+    if (mywater) {
+        mywater->refresh();
+    }
+
+    // 更新宝石显示
+    if (_gemTextLabel) {
+        std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+        _gemTextLabel->setString(txt);
+    }
+    if (mygem) {
+        mygem->refresh();
+    }
 }

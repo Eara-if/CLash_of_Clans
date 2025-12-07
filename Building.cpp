@@ -27,7 +27,7 @@ Building* Building::create(const std::string& filename, const Rect& rect, const 
 
 bool Building::init(const std::string& filename, const Rect& rect, const std::string& name, int baseCost, BuildingType type1)
 {
-    
+
     if (rect.equals(Rect::ZERO))
     {
         // initWithFile 只传文件名，就是加载整张图
@@ -86,7 +86,7 @@ int Building::getUpgradeTime() {
 
 // 计算加速需要的宝石 (比如：1秒 = 1宝石，或者固定 5 宝石)
 int Building::getSpeedUpCost() {
-    return std::ceil(timeLeft/60); // 简单粗暴：剩下几秒就几个宝石
+    return std::ceil(timeLeft / 60); // 简单粗暴：剩下几秒就几个宝石
 }
 // Building.cpp
 
@@ -189,7 +189,7 @@ void Building::initTouchListener()
             isDragging = false;
 
             // 稍微放大一点，给玩家反馈“我按住它了”
-            this->setScale(4.2f); // 假设原来是 4.0f，稍微变大一点
+            this->setScale(0.55f); // 假设原来是 0.5f，稍微变大一点
 
             return true;
         }
@@ -220,8 +220,8 @@ void Building::initTouchListener()
     // 3. 手指松开
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
 
-        // 恢复原来的大小 (假设原来是 4.0f)
-        this->setScale(4.0f);
+        // 恢复原来的大小 (假设原来是 0.5f)
+        this->setScale(0.5f);
 
         // ============================================================
         // 【核心区分】是点击还是拖拽？
@@ -261,6 +261,6 @@ void Building::finishUpgrade()
     if (UpgradeCallback_coin) {
         UpgradeCallback_coin();
     }
-    
+
     log("Upgrade finished! Level is now %d", a_level);
 }
