@@ -58,8 +58,27 @@ bool BattleScene::init()
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 5);
 
+    this->scheduleUpdate(); // 开启每帧调用
+
     return true;
 }
+
+void BattleScene::update(float dt)
+{
+    // 遍历所有防御塔，让它们执行逻辑
+    for (auto node : _towers) {
+        // dynamic_cast 确保安全转换
+        auto tower = dynamic_cast<EnemyBuilding*>(node);
+        if (tower) {
+            // 传入当前所有士兵的列表
+            tower->updateTowerLogic(dt, _soldiers);
+        }
+    }
+
+    // 清理已死亡的士兵 (可选，防止列表越来越大或野指针)
+    // 建议在 Soldier::takeDamage 死亡时从 _soldiers 移除，或者在这里做清理
+}
+
 
 void BattleScene::menuBackToGameScene(Ref* pSender)
 {
@@ -132,7 +151,9 @@ void BattleScene::loadEnemyMap()
                     "map/buildings/Base.png",
                     "ui/Heart2.png",
                     hp,
-                    damagePerNotch
+                    damagePerNotch,
+                    0,
+					0.0f // Base 不攻击
                 );
 
                 if (_base) {
@@ -145,21 +166,25 @@ void BattleScene::loadEnemyMap()
             // ----------------------------------------------------
             // 处理 B: 防御塔 (tower)
             // ----------------------------------------------------
+            // 在解析 "tower" 的地方：
+
             else if (name == "tower") {
                 int hp = dict["HP"].asInt();
-                int atk = dict["Attack"].asInt();
-                if (hp == 0) hp = 50;
-                if (atk == 0) atk = 5;
+                int atk = dict["Attack"].asInt(); // 读出攻击力
+                float range = 200.0f; // 假设射程是 200，你也可以在 TMX 里配一个 "Range" 属性读出来
 
-                // 防御塔也有 4 个血条状态
-                int damagePerNotch = hp / 4; // 示例: 50 / 4 = 12 (整数除法)
+                // 计算 notch
+                int damagePerNotch = hp / 4;
                 if (damagePerNotch == 0) damagePerNotch = 1;
 
+                // 使用新的 create 函数
                 auto tower = EnemyBuilding::create(
                     "map/buildings/TilesetTowers.png",
                     "ui/Heart2.png",
                     hp,
-                    atk
+                    damagePerNotch,
+                    atk,   // 传入攻击力
+                    range  // 传入射程
                 );
 
                 if (tower) {
@@ -201,41 +226,50 @@ void BattleScene::createUI()
 
 void BattleScene::onSoldierIconClicked()
 {
-    if (_spawnCount >= MAX_SPAWN) {
-        showWarning("Max soldiers reached (10)!");
-        return;
-    }
-
-    // 切换放置模式
-    _isPlacingMode = !_isPlacingMode;
-
+    // 1. 【优先处理】：如果当前处于放置模式，点击表示退出/取消。
+    //    退出模式必须被允许，无论士兵数量是否已满。
     if (_isPlacingMode) {
-        // 浮动交互效果
-        auto action = RepeatForever::create(Sequence::create(
-            ScaleTo::create(0.5f, 10.5f),
-            ScaleTo::create(0.5f, 9.5f),
-            nullptr
-        ));
-        _soldierIcon->runAction(action);
-        _soldierIcon->setColor(Color3B::YELLOW); // 变色提示选中
+        _isPlacingMode = false;
 
-        // 【关键】绘制不可放置区域 (红色半透明)
-        _forbiddenAreaNode->clear();
-        for (const auto& rect : _forbiddenRects) {
-            // drawSolidRect 需要左下角和右上角坐标
-            _forbiddenAreaNode->drawSolidRect(
-                rect.origin,
-                Vec2(rect.getMaxX(), rect.getMaxY()),
-                Color4F(1.0f, 0.0f, 0.0f, 0.3f) // 红色，30%透明度
-            );
-        }
-    }
-    else {
-        // 取消模式
+        // 执行退出模式的 UI 逻辑
         _soldierIcon->stopAllActions();
-        _soldierIcon->setScale(0.8f);
+        _soldierIcon->setScale(10.0f); // 修复：确保退出时缩放回到初始值 10.0f
         _soldierIcon->setColor(Color3B::WHITE);
         _forbiddenAreaNode->clear(); // 清除红色区域
+
+        // 确保停止长按调度器
+        this->unschedule(CC_SCHEDULE_SELECTOR(BattleScene::spawnScheduler));
+
+        return; // 退出函数，完成取消操作。
+    }
+
+    // 2. 【检查数量】：如果当前未处于放置模式，点击表示进入。此时才检查数量限制。
+    if (_spawnCount >= MAX_SPAWN) {
+        showWarning("Max soldiers reached (10)!");
+        return; // 达到上限，阻止进入模式。
+    }
+
+    // 3. 【允许进入】：如果未达到上限，则进入放置模式。
+    _isPlacingMode = true;
+
+    // 执行进入模式的 UI 逻辑
+    // 浮动交互效果
+    auto action = RepeatForever::create(Sequence::create(
+        ScaleTo::create(0.5f, 10.5f),
+        ScaleTo::create(0.5f, 9.5f),
+        nullptr
+    ));
+    _soldierIcon->runAction(action);
+    _soldierIcon->setColor(Color3B::YELLOW); // 变色提示选中
+
+    // 【关键】绘制不可放置区域 (红色半透明)
+    _forbiddenAreaNode->clear();
+    for (const auto& rect : _forbiddenRects) {
+        _forbiddenAreaNode->drawSolidRect(
+            rect.origin,
+            Vec2(rect.getMaxX(), rect.getMaxY()),
+            Color4F(1.0f, 0.0f, 0.0f, 0.3f) // 红色，30%透明度
+        );
     }
 }
 
@@ -327,6 +361,10 @@ void BattleScene::trySpawnSoldier(Vec2 worldPos)
 
     _soldiers.pushBack(soldier);
     _spawnCount++;
+
+    // 【新增修改】成功放置一个士兵后，立即退出放置模式，清除红色区域
+    _isPlacingMode = false;
+    onSoldierIconClicked();
 }
 
 void BattleScene::showWarning(const std::string& msg)

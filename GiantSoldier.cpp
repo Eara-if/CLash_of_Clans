@@ -37,7 +37,7 @@ void GiantSoldier::setupProperties(SoldierType type)
     _moveSpeed = 80.0f;
 
     // 计算巨人的每格血量
-    const int NOTCH_COUNT = 4;
+    const int NOTCH_COUNT = 5;
     _damagePerNotch = _maxHp / NOTCH_COUNT;
     if (_damagePerNotch < 1) _damagePerNotch = 1;
 }

@@ -190,8 +190,8 @@ void Soldier::takeDamage(int damage)
 
 void Soldier::setupHealthBar()
 {
-    // 假设血条图片文件名为 "ui/Heart1.png"
-    _healthBar = Sprite::create("ui/Heart1.png");
+    // 血条图片文件名为 "ui/Heart.png"
+    _healthBar = Sprite::create("ui/Heart.png");
 
     // 【注意】_damagePerNotch 必须在子类的 setupProperties 中设置完毕后，才能调用此函数
 
@@ -201,18 +201,19 @@ void Soldier::setupHealthBar()
         float textureWidth = _healthBar->getContentSize().width;
         float textureHeight = _healthBar->getContentSize().height;
 
-        // 2. 计算每一格的宽度
-        float frameWidth = textureWidth / 4.0f;
+        // 2. 计算每一格的宽度 (5格)
+        float frameWidth = textureWidth / 5.0f;
 
-        // 3. 初始状态：显示满血（第 4 格，索引 3）
-        _healthBar->setTextureRect(Rect(3.0f * frameWidth, 0, frameWidth, textureHeight));
+        // 3. 初始状态：显示满血（第 5 格，索引 4）
+        // 索引 4 对应切图起点 4.0f * frameWidth。
+        _healthBar->setTextureRect(Rect(4.0f * frameWidth, 0, frameWidth, textureHeight)); // 4.0f 是正确的满血索引
 
         // 4. 设置血条位置 (相对士兵自身的中心和高度)
-        // 放在士兵头顶 (士兵本体缩放了 3.0f，因此 +40 的偏移量相对合适)
-        _healthBar->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 40));
+        // 放在士兵头顶 
+        _healthBar->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height));
 
         // 5. 血条缩放
-        _healthBar->setScale(1.5f / 3.0f); // 血条缩放 1.5f，但由于父节点缩放了 3.0f，所以这里要抵消
+        _healthBar->setScale(1.0f);
 
         this->addChild(_healthBar);
     }
@@ -222,23 +223,51 @@ void Soldier::updateHealthBar()
 {
     if (!_healthBar) return;
 
-    // 1. 计算损失的血量
+    const int NOTCH_COUNT = 5;
+
+    // 1. 计算剩余血量格子数
+    // 注意：这里我们通过剩余血量来计算“还剩多少格”，而不是“损失了多少格”。
+    int remainingHp = _currentHp;
+
+    // 假设 _damagePerNotch 是使血条减少一格所需要的伤害值，
+    // 那么 剩余格数 = (当前血量 / (总血量 / 5))，或者直接用 Notch 数量计算
+
+    // 计算剩余的 Notch (格) 数
+    // 采用更准确的计算方式，避免整数除法带来的问题：
+    // 当前血量占总血量的百分比，乘以总格数。
+    int currentNotches = roundf((float)remainingHp / (float)_maxHp * NOTCH_COUNT);
+
+    // 另一种更贴近你原有代码的计算方式 (使用 _damagePerNotch):
+    // 剩余格数 = 总格数 - 损失格数
+    // int lostHp = _maxHp - _currentHp;
+    // int lostNotches = lostHp / _damagePerNotch;
+    // int currentNotches = NOTCH_COUNT - lostNotches; 
+
+    // 如果你确定 _damagePerNotch 总是 _maxHp / 5，用百分比方法更通用。
+    // 这里我们使用基于 Notch 的逻辑，但确保它在 0 到 5 之间：
     int lostHp = _maxHp - _currentHp;
-
-    // 2. 计算损失了多少个 Notch (格)
     int lostNotches = lostHp / _damagePerNotch;
+    int actualNotches = NOTCH_COUNT - lostNotches;
 
-    // 3. 限制索引在 0 到 3 之间
-    const int NOTCH_COUNT = 4;
-    if (lostNotches >= NOTCH_COUNT) lostNotches = NOTCH_COUNT - 1;
+    // 2. 限制索引范围 [0, 5]，但实际切图索引是 [0, 4]
+    // 5 格血条对应 5 个状态图片，索引 0 到 4。
+    // 如果血量为 0，则索引为 0。如果血量为满，则索引为 4。
+    int frameIndex = actualNotches - 1;
 
-    // 4. 计算当前应该显示的血条索引 (假设 [空血] [1/4] [2/4] [满血]，索引 0 到 3)
-    int currentFrameIndex = (NOTCH_COUNT - 1) - lostNotches;
+    // 边界检查：确保索引在 0 到 4 之间
+    if (frameIndex < 0) frameIndex = 0;
+    if (frameIndex >= NOTCH_COUNT) frameIndex = NOTCH_COUNT - 1; // 确保索引不超过 4
 
-    // 5. 计算切图区域并设置
+    // 3. 计算切图区域并设置
     float textureWidth = _healthBar->getTexture()->getContentSize().width;
     float textureHeight = _healthBar->getTexture()->getContentSize().height;
     float frameWidth = textureWidth / NOTCH_COUNT;
 
-    _healthBar->setTextureRect(Rect(currentFrameIndex * frameWidth, 0, frameWidth, textureHeight));
+    // 【关键修改点】
+    // 由于您的图片是从左到右排列：[空][1格][2格][3格][满] (索引 0 -> 4)
+    // 且 frameIndex 已经正确计算了当前应该显示的索引 (0=空, 4=满)
+    // 所以切图的起点就是 frameIndex * frameWidth。
+
+    // 删掉原有的 (4 - currentFrameIndex) 逻辑，直接使用 frameIndex 即可
+    _healthBar->setTextureRect(Rect(frameIndex * frameWidth, 0, frameWidth, textureHeight));
 }
