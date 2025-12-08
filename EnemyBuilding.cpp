@@ -32,6 +32,9 @@ bool EnemyBuilding::init(const std::string& filename, const std::string& hpBarFi
     _currentHp = totalHp;
     _damagePerNotch = damagePerNotch;
 
+    // 【新增】初始化摧毁状态为 false
+    _isDestroyed = false;
+
     // 2. 创建血条
     _healthBar = Sprite::create(hpBarFilename);
     if (_healthBar)
@@ -67,6 +70,9 @@ bool EnemyBuilding::init(const std::string& filename, const std::string& hpBarFi
 
 void EnemyBuilding::updateTowerLogic(float dt, const cocos2d::Vector<Soldier*>& soldiers)
 {
+    // 【修改】1. 如果防御塔已被摧毁，直接返回
+    if (_isDestroyed) return;
+
     // 1. 如果不是防御塔(比如只是Base或者攻击力为0)，直接返回
     if (_attackPower <= 0) return;
 
@@ -102,6 +108,9 @@ void EnemyBuilding::updateTowerLogic(float dt, const cocos2d::Vector<Soldier*>& 
 
 void EnemyBuilding::fireMissile(Soldier* target)
 {
+    // 【修改】检查防御塔是否已被摧毁
+    if (_isDestroyed) return;
+
     // 1. 创建导弹 Sprite
     auto missile = Sprite::create("weapon/cannonball.png"); // 替换成你的导弹图片
     missile->setPosition(this->getContentSize().width / 2, this->getContentSize().height / 2 + 50); // 从塔中心发射
@@ -149,6 +158,9 @@ void EnemyBuilding::fireMissile(Soldier* target)
 
 void EnemyBuilding::takeDamage(int damage)
 {
+    // 【修改】如果已经被摧毁，不再处理伤害
+    if (_isDestroyed) return;
+
     _currentHp -= damage;
     if (_currentHp < 0) _currentHp = 0;
 
@@ -156,10 +168,15 @@ void EnemyBuilding::takeDamage(int damage)
     this->updateHealthBar();
 
     if (_currentHp == 0) {
+        // 标记为已摧毁
+        _isDestroyed = true;
+
         // 死亡逻辑 (比如播放爆炸动画，从父节点移除等)
         log("Building Destroyed!");
-         // 简单示例：变灰表示损毁
+        // 简单示例：变灰表示损毁
         this->setColor(Color3B::GRAY);
+        // 将攻击力设置为0，确保不会再攻击
+        _attackPower = 0;
         // 或者直接移除： this->removeFromParent();
     }
 }
@@ -186,5 +203,5 @@ void EnemyBuilding::updateHealthBar()
 
     // 设置显示的区域
     // x 坐标 = 索引 * 单格宽
-    _healthBar->setTextureRect(Rect((3-lostNotches) * frameWidth, 0, frameWidth, textureHeight));
+    _healthBar->setTextureRect(Rect((3 - lostNotches) * frameWidth, 0, frameWidth, textureHeight));
 }

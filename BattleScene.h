@@ -44,6 +44,10 @@ private:
     cocos2d::Vec2 _currentTouchPos;
     bool _isTouchingMap;
 
+    // 【新增】游戏状态
+    bool _isGameOver;
+    bool _isGamePaused;
+
     // TMX & 实体加载
     void loadEnemyMap();
 
@@ -53,6 +57,11 @@ private:
     void trySpawnSoldier(cocos2d::Vec2 worldPos);
     void showWarning(const std::string& msg);
     void spawnScheduler(float dt);
+
+    // 【新增】游戏结束逻辑
+    void checkGameEnd();
+    void showVictoryPopup();
+    void hideVictoryPopup();
 
     // 触摸事件
     bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);

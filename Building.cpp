@@ -48,6 +48,17 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
     state = BuildingState::IDLE;
     timeLeft = 0;
 
+    // 初始化生产相关变量
+    productionTimeLeft = 0;
+    productionAmount = 50; // 默认生产50资源
+    isReadyToCollect = false;
+    readyIndicator = nullptr;
+
+    // 如果是金矿或圣水收集器，开始生产
+    if (type == BuildingType::MINE|| type == BuildingType::WATER) {
+            startProduction();
+    }
+
     this->initTouchListener();
     this->scheduleUpdate();
 
@@ -78,6 +89,18 @@ void Building::update(float dt)
             this->finishUpgrade(); // 时间到了，完成！
         }
     }
+
+    // 生产倒计时
+    if (type == BuildingType::MINE || type == BuildingType::WATER) {
+        if (state == BuildingState::PRODUCING) {
+            productionTimeLeft -= dt;
+
+            if (productionTimeLeft <= 0) {
+                finishProduction();
+            }
+        }
+    }
+
 }
 // 计算升级耗时 (比如：等级 * 5秒)
 int Building::getUpgradeTime() {
@@ -88,7 +111,7 @@ int Building::getUpgradeTime() {
 int Building::getSpeedUpCost() {
     return std::ceil(timeLeft / 60); // 简单粗暴：剩下几秒就几个宝石
 }
-// Building.cpp
+
 
 float Building::getTimeLeft()
 {
@@ -96,6 +119,80 @@ float Building::getTimeLeft()
     // 如果小于0，就返回0，防止显示负数
     return (timeLeft > 0) ? timeLeft : 0;
 }
+
+// 开始生产
+void Building::startProduction()
+{
+    state = BuildingState::PRODUCING;
+    productionTimeLeft = 5.0f; // 5秒倒计时
+    isReadyToCollect = false;
+
+    // 移除可收集提示
+    if (readyIndicator) {
+        readyIndicator->removeFromParent();
+        readyIndicator = nullptr;
+    }
+
+    log("%s started production, time left: %f", buildingName.c_str(), productionTimeLeft);
+}
+
+// 生产完成
+void Building::finishProduction()
+{
+    state = BuildingState::READY;
+    isReadyToCollect = true;
+
+    // 添加可收集提示
+    if (!readyIndicator) {
+        readyIndicator = Sprite::create("ui/ready_indicator.png"); // 需要创建一个红色"!"图片
+        if (!readyIndicator) {
+            // 如果图片不存在，创建一个简单的红色感叹号
+            readyIndicator = Sprite::create();
+            auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
+            label->setColor(Color3B::RED);
+            label->setPosition(Vec2(15, 50));
+            readyIndicator->addChild(label);
+            readyIndicator->setContentSize(Size(30, 30));
+        }
+        readyIndicator->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 20));
+        this->addChild(readyIndicator, 100);
+    }
+
+    log("%s production ready! Collect %d resources.", buildingName.c_str(), productionAmount);
+}
+
+// 收集资源
+void Building::collectResources()
+{
+    if (state == BuildingState::READY && isReadyToCollect) {
+        if (buildingName == "Gold Mine") {
+            coin_count += productionAmount;
+            // 确保不超过上限
+            if (coin_count > coin_limit) coin_count = coin_limit;
+            log("Collected %d gold from Gold Mine. Total: %d", productionAmount, coin_count);
+        }
+        else if (buildingName == "Water Collector") {
+            water_count += productionAmount;
+            // 确保不超过上限
+            if (water_count > water_limit) water_count = water_limit;
+            log("Collected %d water from Water Collector. Total: %d", productionAmount, water_count);
+        }
+
+        // 重新开始生产
+        startProduction();
+    }
+}
+
+// 获取生产剩余时间
+float Building::getProductionTimeLeft() {
+    return productionTimeLeft;
+}
+
+// 获取可收集的资源量
+int Building::getProducedAmount() {
+    return productionAmount;
+}
+
 // 开始升级 (只扣钱，不加等级)
 // 引入全局变量 (你需要根据你的实际变量名修改这里)
 extern int coin_count;

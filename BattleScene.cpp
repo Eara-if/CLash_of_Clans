@@ -65,26 +65,130 @@ bool BattleScene::init()
 
 void BattleScene::update(float dt)
 {
+    // 如果游戏已结束或暂停，不执行游戏逻辑
+    if (_isGameOver || _isGamePaused) return;
+
+    // 检查游戏是否结束
+    checkGameEnd();
+
+    // 如果游戏已结束，不再执行后续逻辑
+    if (_isGameOver) return;
+
     // 遍历所有防御塔，让它们执行逻辑
     for (auto node : _towers) {
-        // dynamic_cast 确保安全转换
         auto tower = dynamic_cast<EnemyBuilding*>(node);
-        if (tower) {
-            // 传入当前所有士兵的列表
+        if (tower && !tower->isDestroyed()) {
             tower->updateTowerLogic(dt, _soldiers);
         }
     }
-
-    // 清理已死亡的士兵 (可选，防止列表越来越大或野指针)
-    // 建议在 Soldier::takeDamage 死亡时从 _soldiers 移除，或者在这里做清理
 }
-
 
 void BattleScene::menuBackToGameScene(Ref* pSender)
 {
-    // 返回GameScene，使用popScene
+    // 如果游戏已结束（显示胜利弹窗时），先清理弹窗
+    if (_isGameOver) {
+        hideVictoryPopup();
+        _isGameOver = false;
+        _isGamePaused = false;
+    }
+
     Director::getInstance()->popScene();
 }
+
+// 【新增】检查游戏是否结束
+void BattleScene::checkGameEnd()
+{
+    // 如果已经游戏结束，直接返回
+    if (_isGameOver) return;
+
+    // 检查大本营是否被摧毁
+    if (_base && _base->isDestroyed()) {
+        _isGameOver = true;
+
+        // 暂停游戏逻辑，但保持UI交互
+        _isGamePaused = true;
+
+        // 延迟显示胜利弹窗，让玩家看到大本营摧毁的效果
+        this->runAction(Sequence::create(
+            DelayTime::create(1.0f),
+            CallFunc::create([this]() {
+                this->showVictoryPopup();
+                }),
+            nullptr
+        ));
+    }
+}
+
+// 【新增】显示胜利弹窗
+void BattleScene::showVictoryPopup()
+{
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    Vec2 center = Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y);
+
+    // 1. 创建半透明黑色背景层（防止点击弹窗后的元素）
+    auto bgLayer = LayerColor::create(Color4B(0, 0, 0, 180), visibleSize.width, visibleSize.height);
+    bgLayer->setPosition(Vec2::ZERO);
+    bgLayer->setName("victory_bg_layer");
+    this->addChild(bgLayer, 100);
+
+    // 2. 创建弹窗背景
+    auto popupBg = Sprite::create("popup_bg.png");
+    if (!popupBg) {
+        // 如果图片不存在，创建一个替代的背景
+        popupBg = Sprite::create();
+        auto drawNode = DrawNode::create();
+        drawNode->drawSolidRect(Vec2(-150, -200), Vec2(150, 200), Color4F(0.2f, 0.2f, 0.2f, 0.95f));
+        popupBg->addChild(drawNode);
+        popupBg->setContentSize(Size(300, 400));
+    }
+
+    // 先获取原始内容尺寸
+    Size originalSize = popupBg->getContentSize();
+
+    // 将背景缩放到4倍
+    popupBg->setScale(4.0f);
+
+    // 计算缩放后的新尺寸
+    Size scaledSize = Size(originalSize.width * 4.0f, originalSize.height * 4.0f);
+
+    popupBg->setPosition(center);
+    popupBg->setName("victory_popup");
+    this->addChild(popupBg, 101);
+
+    // 3. 创建一个容器节点，将其添加到场景中，位置与背景中心对齐
+    auto container = Node::create();
+    container->setPosition(center);
+    this->addChild(container, 102); // 层级比背景高
+
+    // 4. 胜利标题 - 添加到容器中，而不是背景上
+    auto victoryLabel = Label::createWithTTF("VICTORY!", "fonts/Marker Felt.ttf", 36);
+    victoryLabel->setTextColor(Color4B::GREEN);
+    victoryLabel->setPosition(Vec2(0, scaledSize.height / 2 - 80));
+    container->addChild(victoryLabel);
+
+    // 5. 胜利信息 - 添加到容器中
+    auto messageLabel = Label::createWithTTF("Enemy Base Destroyed!", "fonts/Marker Felt.ttf", 28);
+    messageLabel->setTextColor(Color4B::YELLOW);
+    messageLabel->setPosition(Vec2(0, scaledSize.height / 2 - 140));
+    container->addChild(messageLabel);
+
+    // 7. 添加弹窗动画效果 - 背景和容器分别做动画
+    popupBg->setScale(0.1f);
+    popupBg->runAction(EaseBackOut::create(ScaleTo::create(0.3f, 4.0f)));
+
+    container->setScale(0.1f);
+    container->runAction(EaseBackOut::create(ScaleTo::create(0.3f, 1.0f)));
+}
+
+// 【新增】隐藏胜利弹窗
+void BattleScene::hideVictoryPopup()
+{
+    this->removeChildByName("victory_bg_layer");
+    this->removeChildByName("victory_popup");
+    this->removeChildByName("victory_content");
+}
+
 
 void BattleScene::loadEnemyMap()
 {
@@ -153,7 +257,7 @@ void BattleScene::loadEnemyMap()
                     hp,
                     damagePerNotch,
                     0,
-					0.0f // Base 不攻击
+                    0.0f // Base 不攻击
                 );
 
                 if (_base) {

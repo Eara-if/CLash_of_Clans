@@ -87,7 +87,6 @@ bool ShopScene::init() {
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 2);
 
-
     return true;
 }
 
@@ -97,14 +96,11 @@ void ShopScene::createMenu() {
 
     // ================= 创建商品菜单项 =================
 
-    // 1. 城墙  - 直接显示整张图片
+    // 1. 城墙
     Sprite* wallNormal = Sprite::create("city_wall.png");
     Sprite* wallSelected = Sprite::create("city_wall.png");
 
     if (wallNormal && wallSelected) {
-
-        // 直接使用Sprite对象，可以调用getTexture()
-        // 保持像素清晰
         if (wallNormal->getTexture()) {
             wallNormal->getTexture()->setAliasTexParameters();
         }
@@ -123,12 +119,11 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onWallPurchase, this)
     );
 
-    // 2. 金矿 - 直接显示整张图片
+    // 2. 金矿
     Sprite* goldMineNormal = Sprite::create("Mine.png");
     Sprite* goldMineSelected = Sprite::create("Mine.png");
 
     if (goldMineNormal && goldMineSelected) {
-
         if (goldMineNormal->getTexture()) {
             goldMineNormal->getTexture()->setAliasTexParameters();
         }
@@ -139,7 +134,6 @@ void ShopScene::createMenu() {
         goldMineNormal->setScale(0.5f);
         goldMineSelected->setScale(0.55f);
         goldMineSelected->setColor(Color3B(200, 200, 200));
-
     }
 
     auto goldMineItem = MenuItemSprite::create(
@@ -148,7 +142,7 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onGoldMinePurchase, this)
     );
 
-    // 3. 圣水收集器 - 直接显示整张图片
+    // 3. 圣水收集器
     Sprite* waterCollectorNormal = Sprite::create("waterwell.png");
     Sprite* waterCollectorSelected = Sprite::create("waterwell.png");
 
@@ -172,7 +166,6 @@ void ShopScene::createMenu() {
     );
 
     // 4. 弓箭塔
-    // 首先创建精灵但不设置纹理
     Sprite* archerTowerNormal = Sprite::create("TilesetTowers.png");
     Sprite* archerTowerSelected = Sprite::create("TilesetTowers.png");
 
@@ -218,79 +211,210 @@ void ShopScene::createMenu() {
         CC_CALLBACK_1(ShopScene::onCannonPurchase, this)
     );
 
-    // ==================== 设置按钮位置（水平居中排列）====================
-// 1. 定义排列顺序（从左到右）：金矿、圣水、城墙、弓箭塔、加农炮
-    std::vector<MenuItemSprite*> itemOrder;
-    itemOrder.push_back(goldMineItem);      // 最左边
-    itemOrder.push_back(waterCollectorItem); // 左二
-    itemOrder.push_back(wallItem);           // 中间
-    itemOrder.push_back(archerTowerItem);    // 右二
-    itemOrder.push_back(cannonItem);         // 最右边
+    // 6. 军营 (新增)
+    Sprite* barracksNormal = Sprite::create("junying.png");
+    Sprite* barracksSelected = Sprite::create("junying.png");
 
-    // 2. 计算水平居中布局
-    float centerY = origin.y + visibleSize.height * 0.5; // 屏幕垂直中心
-    float totalItems = (float)itemOrder.size();           // 商品总数 (5)
-    float horizontalSpacing = visibleSize.width * 0.15f;  // 按钮间距 (占屏宽15%)
+    if (barracksNormal && barracksSelected) {
+        if (barracksNormal->getTexture()) {
+            barracksNormal->getTexture()->setAliasTexParameters();
+        }
+        if (barracksSelected->getTexture()) {
+            barracksSelected->getTexture()->setAliasTexParameters();
+        }
+
+        barracksNormal->setScale(0.5f);
+        barracksSelected->setScale(0.55f);
+        barracksSelected->setColor(Color3B(200, 200, 200));
+    }
+
+    auto barracksItem = MenuItemSprite::create(
+        barracksNormal,
+        barracksSelected,
+        CC_CALLBACK_1(ShopScene::onBarracksPurchase, this)
+    );
+
+    // 7. 金币存储器 (新增)
+    Sprite* goldStorageNormal = Sprite::create("BarGold.png");
+    Sprite* goldStorageSelected = Sprite::create("BarGold.png");
+
+    if (goldStorageNormal && goldStorageSelected) {
+        if (goldStorageNormal->getTexture()) {
+            goldStorageNormal->getTexture()->setAliasTexParameters();
+        }
+        if (goldStorageSelected->getTexture()) {
+            goldStorageSelected->getTexture()->setAliasTexParameters();
+        }
+
+        goldStorageNormal->setScale(0.5f);
+        goldStorageSelected->setScale(0.55f);
+        goldStorageSelected->setColor(Color3B(200, 200, 200));
+    }
+
+    auto goldStorageItem = MenuItemSprite::create(
+        goldStorageNormal,
+        goldStorageSelected,
+        CC_CALLBACK_1(ShopScene::onGoldStoragePurchase, this)
+    );
+
+    // 8. 圣水存储器 (新增)
+    Sprite* waterStorageNormal = Sprite::create("Water.png");
+    Sprite* waterStorageSelected = Sprite::create("Water.png");
+
+    if (waterStorageNormal && waterStorageSelected) {
+        if (waterStorageNormal->getTexture()) {
+            waterStorageNormal->getTexture()->setAliasTexParameters();
+        }
+        if (waterStorageSelected->getTexture()) {
+            waterStorageSelected->getTexture()->setAliasTexParameters();
+        }
+
+        waterStorageNormal->setScale(0.5f);
+        waterStorageSelected->setScale(0.55f);
+        waterStorageSelected->setColor(Color3B(200, 200, 200));
+    }
+
+    auto waterStorageItem = MenuItemSprite::create(
+        waterStorageNormal,
+        waterStorageSelected,
+        CC_CALLBACK_1(ShopScene::onWaterStoragePurchase, this)
+    );
+
+    // ==================== 设置按钮位置（两行四列布局）====================
+    // 定义商品顺序（第一行）
+    std::vector<MenuItemSprite*> firstRowItems;
+    firstRowItems.push_back(goldMineItem);       // 第1列
+    firstRowItems.push_back(waterCollectorItem);  // 第2列
+    firstRowItems.push_back(wallItem);           // 第3列
+    firstRowItems.push_back(archerTowerItem);     // 第4列
+
+    // 定义商品顺序（第二行）
+    std::vector<MenuItemSprite*> secondRowItems;
+    secondRowItems.push_back(cannonItem);        // 第1列
+    secondRowItems.push_back(barracksItem);      // 第2列
+    secondRowItems.push_back(goldStorageItem);   // 第3列
+    secondRowItems.push_back(waterStorageItem);  // 第4列
+
+    // 计算布局参数
+    float totalItemsPerRow = 4.0f;               // 每行4个商品
+    float horizontalSpacing = visibleSize.width * 0.2f;  // 水平间距
+    float verticalSpacing = visibleSize.height * 0.25f;  // 垂直间距
+
+    // 第一行Y坐标
+    float firstRowY = origin.y + visibleSize.height * 0.6f+50;
+    // 第二行Y坐标
+    float secondRowY = origin.y + visibleSize.height * 0.3f+50;
+
     // 计算起始X坐标，让整排按钮在屏幕中水平居中
-    float totalWidth = (totalItems - 1) * horizontalSpacing;
-    float startX = origin.x + (visibleSize.width - totalWidth) / 2.0f + 50;
+    float totalWidth = (totalItemsPerRow - 1) * horizontalSpacing;
+    float startX = origin.x + (visibleSize.width - totalWidth) / 2.0f;
 
-    // 3. 循环设置每个按钮的位置
-    for (int i = 0; i < itemOrder.size(); ++i) {
-        MenuItemSprite* item = itemOrder[i];
+    // 设置第一行按钮位置
+    for (int i = 0; i < firstRowItems.size(); ++i) {
+        MenuItemSprite* item = firstRowItems[i];
         if (item) {
-            float posX = startX + i * horizontalSpacing;
-            item->setPosition(Vec2(posX, centerY));
+            float posX = startX + i * horizontalSpacing+60;
+            item->setPosition(Vec2(posX, firstRowY));
+        }
+    }
+
+    // 设置第二行按钮位置
+    for (int i = 0; i < secondRowItems.size(); ++i) {
+        MenuItemSprite* item = secondRowItems[i];
+        if (item) {
+            float posX = startX + i * horizontalSpacing+60;
+            item->setPosition(Vec2(posX, secondRowY));
         }
     }
     // ==================== 按钮位置设置结束 ====================
 
-   // ==================== 设置商品信息标签（跟随按钮位置）====================
-// 商品信息数据（必须与itemOrder的顺序严格对应！）
-    std::vector<ShopItem> itemInfos = {
-        {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins every hour", 1500, 500, 0, false},
-        {ShopItemType::WATER_COLLECTOR, "Water Collector", "Produce water every hour", 500, 1500, 0, false},
+    // ==================== 设置商品信息标签（跟随按钮位置）====================
+    // 商品信息数据（第一行）
+    std::vector<ShopItem> firstRowInfos = {
+        {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins", 1500, 500, 0, false},
+        {ShopItemType::WATER_COLLECTOR, "Water Collector", "Produce water", 500, 1500, 0, false},
         {ShopItemType::WALL, "Wall", "Protect your village", 1000, 0, 0, false},
-        {ShopItemType::ARCHER_TOWER, "Archer Tower", "Defensive architecture", 2000, 1000, 0, false},
-        {ShopItemType::CANNON, "Cannon", "Defensive architecture", 2500, 1500, 0, false}
+        {ShopItemType::ARCHER_TOWER, "Archer Tower", "Defensive architecture", 2000, 1000, 0, false}
     };
 
-    // 确保商品数量一致
-    if (itemOrder.size() == itemInfos.size()) {
-        for (int i = 0; i < itemOrder.size(); ++i) {
-            MenuItemSprite* itemBtn = itemOrder[i]; // 获取按钮
-            ShopItem& info = itemInfos[i];          // 获取对应信息
+    // 商品信息数据（第二行）
+    std::vector<ShopItem> secondRowInfos = {
+        {ShopItemType::CANNON, "Cannon", "Defensive architecture", 2500, 1500, 0, false},
+        {ShopItemType::BARRACKS, "Barracks", "Train troops", 1200, 800, 0, false},        // 新增
+        {ShopItemType::GOLD_STORAGE, "Gold Storage", "Store more coins", 800, 0, 0, false},   // 新增
+        {ShopItemType::WATER_STORAGE, "Water Storage", "Store more water", 0, 800, 0, false}  // 新增
+    };
 
-            if (itemBtn) {
-                Vec2 btnPos = itemBtn->getPosition(); // 关键：直接获取按钮的当前位置
+    // 设置第一行商品信息标签
+    for (int i = 0; i < firstRowItems.size(); ++i) {
+        MenuItemSprite* itemBtn = firstRowItems[i];
+        ShopItem& info = firstRowInfos[i];
 
-                // 1. 商品名称标签 (按钮上方)
-                auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 28);
-                nameLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y + 80)); // 上方偏移
-                nameLabel->setColor(Color3B::WHITE);
-                this->addChild(nameLabel, 2);
+        if (itemBtn) {
+            Vec2 btnPos = itemBtn->getPosition();
 
-                // 2. 价格标签 (按钮下方)
-                std::string priceText;
-                if (info.coinCost > 0) priceText += "Coin:" + std::to_string(info.coinCost) + " ";
-                if (info.waterCost > 0) priceText += "Water:" + std::to_string(info.waterCost) + " ";
-                if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
+            // 1. 商品名称标签 (按钮上方)
+            auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 24);
+            nameLabel->setPosition(Vec2(btnPos.x-50, btnPos.y + 50)); // 上方偏移
+            nameLabel->setColor(Color3B::WHITE);
+            nameLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(nameLabel, 2);
 
-                auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 22);
-                priceLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 180));
-                priceLabel->setColor(Color3B::GREEN);
-                this->addChild(priceLabel, 2);
+            // 2. 价格标签 (按钮下方)
+            std::string priceText;
+            if (info.coinCost > 0) priceText += "Coin:" + std::to_string(info.coinCost) + " ";
+            if (info.waterCost > 0) priceText += "Water:" + std::to_string(info.waterCost) + " ";
+            if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
 
-                // 3. 描述标签 (价格下方)
-                auto descLabel = Label::createWithTTF(info.description, "fonts/Marker Felt.ttf", 18);
-                descLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 210));
-                descLabel->setColor(Color3B::YELLOW);
-                this->addChild(descLabel, 2);
-            }
+            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
+            priceLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 180));
+            priceLabel->setColor(Color3B::GREEN);
+            priceLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(priceLabel, 2);
+
+            // 3. 描述标签 (价格下方)
+            auto descLabel = Label::createWithTTF(info.description, "fonts/Marker Felt.ttf", 20);
+            descLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 210));
+            descLabel->setColor(Color3B::YELLOW);
+            descLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(descLabel, 2);
         }
     }
-    else {
-        CCLOG("[MARKET] ERROR:The quantity of the product buttons does not match the information.!");
+
+    // 设置第二行商品信息标签
+    for (int i = 0; i < secondRowItems.size(); ++i) {
+        MenuItemSprite* itemBtn = secondRowItems[i];
+        ShopItem& info = secondRowInfos[i];
+
+        if (itemBtn) {
+            Vec2 btnPos = itemBtn->getPosition();
+
+            // 1. 商品名称标签 (按钮上方)
+            auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 24);
+            nameLabel->setPosition(Vec2(btnPos.x-50, btnPos.y + 50)); // 上方偏移
+            nameLabel->setColor(Color3B::WHITE);
+            nameLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(nameLabel, 2);
+
+            // 2. 价格标签 (按钮下方)
+            std::string priceText;
+            if (info.coinCost > 0) priceText += "Coin:" + std::to_string(info.coinCost) + " ";
+            if (info.waterCost > 0) priceText += "Water:" + std::to_string(info.waterCost) + " ";
+            if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
+
+            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
+            priceLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 180));
+            priceLabel->setColor(Color3B::GREEN);
+            priceLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(priceLabel, 2);
+
+            // 3. 描述标签 (价格下方)
+            auto descLabel = Label::createWithTTF(info.description, "fonts/Marker Felt.ttf", 20);
+            descLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 210));
+            descLabel->setColor(Color3B::YELLOW);
+            descLabel->setAlignment(TextHAlignment::CENTER);
+            this->addChild(descLabel, 2);
+        }
     }
     // ==================== 信息标签设置结束 ====================
 
@@ -301,6 +425,9 @@ void ShopScene::createMenu() {
     if (waterCollectorItem) menu->addChild(waterCollectorItem);
     if (archerTowerItem) menu->addChild(archerTowerItem);
     if (cannonItem) menu->addChild(cannonItem);
+    if (barracksItem) menu->addChild(barracksItem);
+    if (goldStorageItem) menu->addChild(goldStorageItem);
+    if (waterStorageItem) menu->addChild(waterStorageItem);
 
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 1);
@@ -327,14 +454,29 @@ void ShopScene::onCannonPurchase(Ref* pSender) {
     purchaseItem(ShopItemType::CANNON);
 }
 
+void ShopScene::onBarracksPurchase(Ref* pSender) {
+    purchaseItem(ShopItemType::BARRACKS);
+}
+
+void ShopScene::onGoldStoragePurchase(Ref* pSender) {
+    purchaseItem(ShopItemType::GOLD_STORAGE);
+}
+
+void ShopScene::onWaterStoragePurchase(Ref* pSender) {
+    purchaseItem(ShopItemType::WATER_STORAGE);
+}
+
 bool ShopScene::purchaseItem(ShopItemType type) {
-    // 查找商品信息
+    // 商品信息（包含所有8个商品）
     std::vector<ShopItem> tempItems = {
         {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins every hour", 1500, 500, 0, false},
         {ShopItemType::WATER_COLLECTOR, "Water Collector", "Produce water every hour", 500, 1500, 0, false},
         {ShopItemType::WALL, "Wall", "Protect your village", 1000, 0, 0, false},
         {ShopItemType::ARCHER_TOWER, "Archer Tower", "Defensive architecture", 2000, 1000, 0, false},
-        {ShopItemType::CANNON, "Cannon", "Defensive architecture", 2500, 1500, 0, false}
+        {ShopItemType::CANNON, "Cannon", "Defensive architecture", 2500, 1500, 0, false},
+        {ShopItemType::BARRACKS, "Barracks", "Train troops", 1200, 800, 0, false},
+        {ShopItemType::GOLD_STORAGE, "Gold Storage", "Store more coins", 800, 0, 0, false},
+        {ShopItemType::WATER_STORAGE, "Water Storage", "Store more water", 0, 800, 0, false}
     };
 
     // 查找商品
@@ -346,19 +488,34 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                 water_count -= item.waterCost;
                 gem_count -= item.gemCost;
 
-                // ==== 核心修改：创建建筑对象 ====
+                // ==== 新增：检查是否是储存器并增加上限 ====
+                bool isStorageBuilding = false;
+
+                if (type == ShopItemType::GOLD_STORAGE) {
+                    coin_limit += 1500;  // 增加金币上限
+                    isStorageBuilding = true;
+                    CCLOG("[MARKET] Gold Storage purchased! Coin limit increased to: %d", coin_limit);
+                }
+                else if (type == ShopItemType::WATER_STORAGE) {
+                    water_limit += 1500;  // 增加圣水上限
+                    isStorageBuilding = true;
+                    CCLOG("[MARKET] Water Storage purchased! Water limit increased to: %d", water_limit);
+                }
+
+                // ==== 创建建筑对象 ====
                 Building* newBuilding = nullptr;
                 std::string filename;
                 cocos2d::Rect rect = Rect::ZERO;
                 std::string buildingName;
                 BuildingType buildingtype;
-                int buildingbasecost = 0;
+                int buildingbasecost = 300; // 默认设为300
 
                 switch (type) {
                     case ShopItemType::WALL:
                         filename = "city_wall.png";
                         buildingName = "Wall";
                         buildingtype = BuildingType::WALL;
+                        buildingbasecost = 0;
                         break;
                     case ShopItemType::GOLD_MINE:
                         filename = "Mine.png";
@@ -369,20 +526,38 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                     case ShopItemType::WATER_COLLECTOR:
                         filename = "waterwell.png";
                         buildingName = "Water Collector";
-                        buildingtype = BuildingType::MINE;
+                        buildingtype = BuildingType::WATER;
                         buildingbasecost = 300;
                         break;
                     case ShopItemType::ARCHER_TOWER:
                         filename = "TilesetTowers.png";
                         buildingName = "Archer Tower";
                         buildingtype = BuildingType::DEFENSE;
-                        buildingbasecost = 100;
+                        buildingbasecost = 300;
                         break;
                     case ShopItemType::CANNON:
                         filename = "Cannon.png";
                         buildingName = "Cannon";
                         buildingtype = BuildingType::DEFENSE;
-                        buildingbasecost = 100;
+                        buildingbasecost = 300;
+                        break;
+                    case ShopItemType::BARRACKS:
+                        filename = "junying.png";
+                        buildingName = "Barracks";
+                        buildingtype = BuildingType::BARRACKS; 
+                        buildingbasecost = 300;
+                        break;
+                    case ShopItemType::GOLD_STORAGE:
+                        filename = "BarGold.png";
+                        buildingName = "Gold Storage";
+                        buildingtype = BuildingType::STORAGE; 
+                        buildingbasecost = 300;
+                        break;
+                    case ShopItemType::WATER_STORAGE:
+                        filename = "Water.png";
+                        buildingName = "Water Storage";
+                        buildingtype = BuildingType::STORAGE; 
+                        buildingbasecost = 300;
                         break;
                 }
 
@@ -391,14 +566,12 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                     if (newBuilding) {
                         newBuilding->setScale(0.5f);
                         newBuilding->getTexture()->setAliasTexParameters();
-                        // 【关键修改】：添加到全局容器而不是创建新场景
-                        // 保留一次以确保在传递给GameScene时不被释放
+                        // 添加到全局容器
                         newBuilding->retain();
                         g_allPurchasedBuildings.pushBack(newBuilding);
-                        newBuilding->release(); // GameScene将持有它
+                        newBuilding->release();
                     }
                 }
-                // ==== 核心修改结束 ====
 
                 // 显示购买成功
                 showPurchaseMessage(true, item.name);
@@ -406,7 +579,7 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                 // 更新资源显示
                 updateResourceLabels();
 
-                // 【关键修改】：直接返回到GameScene，不再创建新场景
+                // 延迟0.5秒后返回游戏场景
                 this->runAction(Sequence::create(
                     DelayTime::create(0.5f),
                     CallFunc::create([this]() {
@@ -445,32 +618,27 @@ void ShopScene::showPurchaseMessage(bool success, const std::string& itemName) {
         color = Color4B::RED;
     }
 
-    // ==== 核心修改开始 ====
-    // 1. 移除旧的提示（如果存在）
+    // 移除旧的提示（如果存在）
     if (_currentMessageLabel) {
-        // 停止该标签上所有计划中的动作（非常重要，防止旧的“移除自身”动作误伤新标签）
         _currentMessageLabel->stopAllActions();
-        // 从父节点（当前场景）中移除并清理
         _currentMessageLabel->removeFromParent();
-        _currentMessageLabel = nullptr; // 指针置空
+        _currentMessageLabel = nullptr;
     }
 
-    // 2. 创建新的提示标签
+    // 创建新的提示标签
     auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 32);
     label->setPosition(Vec2(origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.2f));
+        origin.y + visibleSize.height * 0.1f));
     label->setTextColor(color);
-    this->addChild(label, 3); // 注意这里的Z-order (3) 要高于其他界面元素
+    this->addChild(label, 3);
 
-    // 3. 保存新标签的指针
+    // 保存新标签的指针
     _currentMessageLabel = label;
 
-    // 4. 设置新标签3秒后自动移除，并在移除后清空指针
+    // 设置新标签3秒后自动移除
     label->runAction(Sequence::create(
         DelayTime::create(3.0f),
         CallFunc::create([this, label]() {
-            // 回调函数：在动作序列中检查并移除
-            // 这是一个安全措施，确保只移除我们指向的标签，防止指针已指向新标签
             if (_currentMessageLabel == label) {
                 label->removeFromParent();
                 _currentMessageLabel = nullptr;
@@ -478,7 +646,6 @@ void ShopScene::showPurchaseMessage(bool success, const std::string& itemName) {
             }),
         nullptr
     ));
-    // ==== 核心修改结束 ====
 }
 
 void ShopScene::updateResourceLabels() {
@@ -517,5 +684,6 @@ void ShopScene::updateResourceLabels() {
 void ShopScene::menuBackCallback(Ref* pSender) {
     Director::getInstance()->popScene();
 }
+
 
 

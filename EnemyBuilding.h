@@ -28,6 +28,8 @@ public:
     // 1. 获取当前血量 (供士兵AI检查目标是否存活)
     int getCurrentHp() const { return _currentHp; }
 
+    // 【新增】检查建筑是否被摧毁
+    bool isDestroyed() const { return _isDestroyed; }
 
 private:
     // 【新增】发射导弹
@@ -41,6 +43,8 @@ private:
     float _attackRange;     // 攻击范围 (像素)
     float _attackCooldown;  // 攻击间隔 (秒)
     float _attackTimer;     // 计时器
+    // 【新增】摧毁状态标志
+    bool _isDestroyed;
 
     cocos2d::Sprite* _healthBar; // 血条精灵
 

@@ -104,7 +104,7 @@ void Soldier::findNewTarget()
     Vec2 myPos = this->getPosition();
 
     for (auto tower : towers) {
-        if (tower && tower->getCurrentHp() > 0) {
+        if (tower && tower->getCurrentHp() > 0 && !tower->isDestroyed()) {
             float dist = myPos.distance(tower->getPosition());
             if (dist < minDist) {
                 minDist = dist;

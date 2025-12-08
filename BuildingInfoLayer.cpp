@@ -1,6 +1,7 @@
 #include "BuildingInfoLayer.h"
 #include"TrainingLayer.h"
 #include"Building.h"
+#include"GameScene.h"
 
 USING_NS_CC;
 extern int army_limit;
@@ -81,9 +82,166 @@ void BuildingInfoLayer::setBuilding(Building* building)
     int cost = _targetBuilding->getNextLevelCost();
 
     // ============================================================
-    // 情况 A：兵营 (显示水花费 + 训练按钮)
+    // 情况 A：金矿 (显示金币生产状态)
     // ============================================================
-    if (_targetBuilding->getType() == BuildingType::BARRACKS &&
+    if (_targetBuilding->getType() == BuildingType::MINE) {
+
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::PRODUCING) {
+            // 正在生产中，显示倒计时
+            float timeLeft = _targetBuilding->getProductionTimeLeft();
+            std::string info = "Gold Mine Lv." + std::to_string(level) +
+                "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
+            _infoLabel->setString(info);
+
+            // 设置按钮为不可用或隐藏
+            _actionBtn->setString("Producing");
+            _actionBtn->setCallback(nullptr);
+
+            // 启动生产倒计时更新
+            this->schedule([=](float dt) {
+                float remainingTime = _targetBuilding->getProductionTimeLeft();
+                if (remainingTime > 0) {
+                    std::string info = "Gold Mine Lv." + std::to_string(level) +
+                        "\nProducing...\nTime left: " + std::to_string((int)remainingTime) + "s";
+                    _infoLabel->setString(info);
+                }
+                else {
+                    this->unschedule("production_timer");
+                    // 重新设置建筑信息
+                    this->setBuilding(_targetBuilding);
+                }
+                }, 1.0f, "production_timer");
+
+        }
+        else if (state == BuildingState::READY) {
+            // 资源可收集
+            int amount = _targetBuilding->getProducedAmount();
+            std::string info = "Gold Mine Lv." + std::to_string(level) +
+                "\nReady to collect!\nAmount: " + std::to_string(amount) + " coins";
+            _infoLabel->setString(info);
+
+            // 设置收集按钮
+            _actionBtn->setString("Collect");
+            _actionBtn->setCallback([=](Ref*) {
+                // 收集资源
+                _targetBuilding->collectResources();
+
+                // 【新增】更新GameScene中的资源显示
+                auto scene = Director::getInstance()->getRunningScene();
+                if (scene) {
+                    // 尝试获取GameScene层
+                    // 假设GameScene是场景的第一个子节点
+                    auto children = scene->getChildren();
+                    for (auto& child : children) {
+                        // 使用dynamic_cast尝试转换为GameScene
+                        auto gameScene = dynamic_cast<GameScene*>(child);
+                        if (gameScene) {
+                            // 调用GameScene的更新资源显示函数
+                            gameScene->updateResourceDisplay();
+                            break;
+                        }
+                    }
+                }
+
+                this->closeLayer();
+                });
+        }
+        else {
+            // 其他状态（升级中或空闲）
+            _infoLabel->setString("Gold Mine Lv." + std::to_string(level) +
+                "\nCost: " + std::to_string(cost) + " Coin");
+
+            // 设置升级按钮
+            _actionBtn->setString("Upgrade");
+            _actionBtn->setCallback([=](Ref*) {
+                // 1. 开始升级逻辑
+                this->handleStartUpgrade();
+                });
+        }
+    }
+    // ============================================================
+    // 情况 B：圣水收集器 (显示圣水生产状态)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::WATER ) {
+
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::PRODUCING) {
+            // 正在生产中，显示倒计时
+            float timeLeft = _targetBuilding->getProductionTimeLeft();
+            std::string info = "Water Collector Lv." + std::to_string(level) +
+                "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
+            _infoLabel->setString(info);
+
+            // 设置按钮为不可用或隐藏
+            _actionBtn->setString("Producing");
+            _actionBtn->setCallback(nullptr);
+
+            // 启动生产倒计时更新
+            this->schedule([=](float dt) {
+                float remainingTime = _targetBuilding->getProductionTimeLeft();
+                if (remainingTime > 0) {
+                    std::string info = "Water Collector Lv." + std::to_string(level) +
+                        "\nProducing...\nTime left: " + std::to_string((int)remainingTime) + "s";
+                    _infoLabel->setString(info);
+                }
+                else {
+                    this->unschedule("production_timer");
+                    // 重新设置建筑信息
+                    this->setBuilding(_targetBuilding);
+                }
+                }, 1.0f, "production_timer");
+
+        }
+        else if (state == BuildingState::READY) {
+            // 资源可收集
+            int amount = _targetBuilding->getProducedAmount();
+            std::string info = "Water Collector Lv." + std::to_string(level) +
+                "\nReady to collect!\nAmount: " + std::to_string(amount) + " water";
+            _infoLabel->setString(info);
+
+            // 设置收集按钮
+            _actionBtn->setString("Collect");
+            _actionBtn->setCallback([=](Ref*) {
+                // 收集资源
+                _targetBuilding->collectResources();
+
+                // 【新增】更新GameScene中的资源显示
+                auto scene = Director::getInstance()->getRunningScene();
+                if (scene) {
+                    // 尝试获取GameScene层
+                    auto children = scene->getChildren();
+                    for (auto& child : children) {
+                        auto gameScene = dynamic_cast<GameScene*>(child);
+                        if (gameScene) {
+                            gameScene->updateResourceDisplay();
+                            break;
+                        }
+                    }
+                }
+
+                this->closeLayer();
+                });
+        }
+        else {
+            // 其他状态（升级中或空闲）
+            _infoLabel->setString("Water Collector Lv." + std::to_string(level) +
+                "\nCost: " + std::to_string(cost) + " Coin");
+
+            // 设置升级按钮
+            _actionBtn->setString("Upgrade");
+            _actionBtn->setCallback([=](Ref*) {
+                // 1. 开始升级逻辑
+                this->handleStartUpgrade();
+                });
+        }
+    }
+    // ============================================================
+    // 情况 C：兵营 (显示水花费 + 训练按钮)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::BARRACKS &&
         _targetBuilding->getState() == BuildingState::IDLE)
     {
         // 显示信息
@@ -113,9 +271,9 @@ void BuildingInfoLayer::setBuilding(Building* building)
         menu->addChild(trainBtn);
     }
     // ============================================================
-    // 情况 B：其他建筑（除了城墙，城墙不可升级） (显示金币花费)
+    // 情况 D：其他建筑（除了城墙，城墙不可升级） (显示金币花费)
     // ============================================================
-    else if (_targetBuilding->getType() != BuildingType::WALL &&_targetBuilding->getState() == BuildingState::IDLE)
+    else if (_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::IDLE)
     {
         // 显示信息
         _infoLabel->setString("Level: " + std::to_string(level) +
@@ -129,14 +287,14 @@ void BuildingInfoLayer::setBuilding(Building* building)
             });
     }
     // ============================================================
-    // 情况 C：正在升级中 (重新打开弹窗时)
+    // 情况 E：正在升级中 (重新打开弹窗时)
     // ============================================================
-    else if(_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::UPGRADING)
+    else if (_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::UPGRADING)
     {
         // 如果一打开发现正在升级，直接进入倒计时监控模式
         this->handleUpgradeTimer();
     }
-    else{}
+    else {}
 
 }
 // 把它加在 setBuilding 后面
