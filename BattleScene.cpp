@@ -2,6 +2,7 @@
 #include "GameScene.h"
 #include "EnemyBuilding.h"
 #include "Soldier.h" // 务必包含 Soldier 头文件
+#include"DataManager.h"
 
 USING_NS_CC;
 
@@ -275,7 +276,7 @@ void BattleScene::loadEnemyMap()
             else if (name == "tower") {
                 int hp = dict["HP"].asInt();
                 int atk = dict["Attack"].asInt(); // 读出攻击力
-                float range = 200.0f; // 假设射程是 200，你也可以在 TMX 里配一个 "Range" 属性读出来
+                float range = 250.0f;//设射程是 250, 可以在 TMX 里配一个 "Range" 属性读出来
 
                 // 计算 notch
                 int damagePerNotch = hp / 4;
@@ -309,18 +310,75 @@ void BattleScene::loadEnemyMap()
     }
 }
 
+// ============================================================
+// 1. 重写 CreateUI：动态生成兵种列表
+// ============================================================
 void BattleScene::createUI()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    // 1. 士兵图标
-    _soldierIcon = Sprite::create("anim/giant1.png"); // 使用士兵图片作为图标
-    _soldierIcon->setScale(10.0f);
-    // 放置在右下角
-    _soldierIcon->setPosition(Vec2(visibleSize.width - 60, 60));
-    this->addChild(_soldierIcon, 20);
+    // 初始化选中状态
+    _currentSelectedItem = nullptr;
+    _isPlacingMode = false;
 
-    // 2. 提示文字 Label
+    // 定义我们要遍历的所有兵种配置
+    // 结构：{枚举类型, DataManager里的名字, 图片路径}
+    struct Config {
+        SoldierType type;
+        std::string dataName;
+        std::string imagePath;
+    };
+
+    std::vector<Config> configs = {
+        { SoldierType::ORIGINAL, "Soldier", "anim/man1.png" }, // 注意路径要对
+        { SoldierType::ARROW,    "Arrow",   "anim/arrow1.png" },
+        { SoldierType::BOOM,     "Boom",    "anim/boom1.png" },
+        { SoldierType::GIANT,    "Giant",   "anim/giant1.png" }
+    };
+
+    // 起始位置 (右下角向左排列)
+    float startX = visibleSize.width - 60;
+    float startY = 60;
+    float gap = 120; // 图标间隔
+
+    int index = 0;
+    for (const auto& cfg : configs) {
+        // 1. 从 DataManager 获取该兵种的数量
+        int count = DataManager::getInstance()->getTroopCount(cfg.dataName);
+
+        // 只有数量 > 0 才显示图标
+        if (count > 0) {
+
+            // 创建新的 UI 项结构体
+            SoldierUIItem* item = new SoldierUIItem();
+            item->type = cfg.type;
+            item->nameKey = cfg.dataName;
+            item->count = count;
+
+            // 创建图标 Sprite
+            item->icon = Sprite::create(cfg.imagePath);
+            if (!item->icon) {
+                // 如果图片找不到，用默认图代替防止崩溃
+                item->icon = Sprite::create("anim/giant1.png");
+            }
+            item->icon->setScale(10.0f); // 调整大小
+            item->icon->setPosition(startX - (index * gap), startY);
+            this->addChild(item->icon, 20);
+
+            // 创建数量 Label
+            item->countLabel = Label::createWithTTF(std::to_string(count), "fonts/Marker Felt.ttf", 24);
+            item->countLabel->setPosition(item->icon->getPositionX(), item->icon->getPositionY() - 40);
+            item->countLabel->setTextColor(Color4B::GREEN);
+            item->countLabel->enableOutline(Color4B::BLACK, 1); // 加个描边看清楚点
+            this->addChild(item->countLabel, 21);
+
+            // 保存到列表
+            _soldierUIList.push_back(item);
+            index++;
+        }
+    }
+
+    // 提示信息 Label (保持不变)
     _msgLabel = Label::createWithTTF("", "fonts/Marker Felt.ttf", 24);
     _msgLabel->setPosition(Vec2(visibleSize.width / 2, visibleSize.height - 100));
     _msgLabel->setTextColor(Color4B::RED);
@@ -328,81 +386,98 @@ void BattleScene::createUI()
     this->addChild(_msgLabel, 30);
 }
 
-void BattleScene::onSoldierIconClicked()
+// ============================================================
+// 2. 处理兵种图标点击
+// ============================================================
+void BattleScene::onSoldierIconClicked(SoldierUIItem* item)
 {
-    // 1. 【优先处理】：如果当前处于放置模式，点击表示退出/取消。
-    //    退出模式必须被允许，无论士兵数量是否已满。
-    if (_isPlacingMode) {
+    // 情况 A：如果在放置模式，且点击的是【当前选中的】图标 -> 取消放置
+    if (_isPlacingMode && _currentSelectedItem == item) {
         _isPlacingMode = false;
+        _currentSelectedItem = nullptr;
 
-        // 执行退出模式的 UI 逻辑
-        _soldierIcon->stopAllActions();
-        _soldierIcon->setScale(10.0f); // 修复：确保退出时缩放回到初始值 10.0f
-        _soldierIcon->setColor(Color3B::WHITE);
-        _forbiddenAreaNode->clear(); // 清除红色区域
-
-        // 确保停止长按调度器
+        // 还原 UI
+        item->icon->stopAllActions();
+        item->icon->setScale(3.0f);
+        item->icon->setColor(Color3B::WHITE);
+        _forbiddenAreaNode->clear();
         this->unschedule(CC_SCHEDULE_SELECTOR(BattleScene::spawnScheduler));
-
-        return; // 退出函数，完成取消操作。
+        return;
     }
 
-    // 2. 【检查数量】：如果当前未处于放置模式，点击表示进入。此时才检查数量限制。
-    if (_spawnCount >= MAX_SPAWN) {
-        showWarning("Max soldiers reached (10)!");
-        return; // 达到上限，阻止进入模式。
+    // 情况 B：如果点击了别的图标，或者之前没选中 -> 切换/选中
+
+    // 1. 先把旧的选中项还原
+    if (_currentSelectedItem) {
+        _currentSelectedItem->icon->stopAllActions();
+        _currentSelectedItem->icon->setScale(3.0f);
+        _currentSelectedItem->icon->setColor(Color3B::WHITE);
     }
 
-    // 3. 【允许进入】：如果未达到上限，则进入放置模式。
+    // 2. 检查数量是否耗尽
+    if (item->count <= 0) {
+        showWarning("No more soldiers of this type!");
+        _isPlacingMode = false;
+        _currentSelectedItem = nullptr;
+        _forbiddenAreaNode->clear();
+        return;
+    }
+
+    // 3. 选中新的
     _isPlacingMode = true;
+    _currentSelectedItem = item;
+    _currentSelectedType = item->type; // 记录下要造什么兵
 
-    // 执行进入模式的 UI 逻辑
-    // 浮动交互效果
+    // 4. 播放选中动画
     auto action = RepeatForever::create(Sequence::create(
-        ScaleTo::create(0.5f, 10.5f),
-        ScaleTo::create(0.5f, 9.5f),
+        ScaleTo::create(0.5f, 3.5f), // 稍微变大
+        ScaleTo::create(0.5f, 3.0f),
         nullptr
     ));
-    _soldierIcon->runAction(action);
-    _soldierIcon->setColor(Color3B::YELLOW); // 变色提示选中
+    item->icon->runAction(action);
+    item->icon->setColor(Color3B::YELLOW);
 
-    // 【关键】绘制不可放置区域 (红色半透明)
+    // 5. 绘制红色区域 (逻辑不变)
     _forbiddenAreaNode->clear();
     for (const auto& rect : _forbiddenRects) {
         _forbiddenAreaNode->drawSolidRect(
             rect.origin,
             Vec2(rect.getMaxX(), rect.getMaxY()),
-            Color4F(1.0f, 0.0f, 0.0f, 0.3f) // 红色，30%透明度
+            Color4F(1.0f, 0.0f, 0.0f, 0.3f)
         );
     }
 }
 
+// ============================================================
+// 3. 修改触摸开始：检测点击了哪个图标
+// ============================================================
 bool BattleScene::onTouchBegan(Touch* touch, Event* event)
 {
     Vec2 touchLoc = touch->getLocation();
 
-    // 1. 检测是否点击了 UI 图标
-    if (_soldierIcon->getBoundingBox().containsPoint(touchLoc)) {
-        onSoldierIconClicked();
-        return true; // 吞噬事件
+    // 1. 遍历检查是否点到了下方的兵种列表
+    for (auto item : _soldierUIList) {
+        if (item->icon->getBoundingBox().containsPoint(touchLoc)) {
+            onSoldierIconClicked(item); // 触发该图标的逻辑
+            return true; // 吞噬事件
+        }
     }
 
-    // 2. 检测地图点击 (放置模式)
-    if (_isPlacingMode) {
+    // 2. 地图点击 (放置模式)
+    if (_isPlacingMode && _currentSelectedItem) {
         _isTouchingMap = true;
         _currentTouchPos = touchLoc;
 
-        // 立即尝试放置一个
+        // 尝试生成
         trySpawnSoldier(touchLoc);
 
-        // 【长按逻辑】开启调度器，每0.2秒生成一个
+        // 开启长按连续出兵
         this->schedule(CC_SCHEDULE_SELECTOR(BattleScene::spawnScheduler), 0.2f);
         return true;
     }
 
     return false;
 }
-
 void BattleScene::onTouchMoved(Touch* touch, Event* event)
 {
     if (_isPlacingMode && _isTouchingMap) {
@@ -424,23 +499,23 @@ void BattleScene::spawnScheduler(float dt)
     }
 }
 
+// ============================================================
+// 4. 修改生成逻辑：使用当前选中的兵种
+// ============================================================
 void BattleScene::trySpawnSoldier(Vec2 worldPos)
 {
-    // 1. 检查数量限制
-    if (_spawnCount >= MAX_SPAWN) {
-        showWarning("Max soldiers reached!");
-        _isPlacingMode = false; // 自动退出模式
-        onSoldierIconClicked(); // 重置UI状态
+    // 安全检查
+    if (!_currentSelectedItem || _currentSelectedItem->count <= 0) {
+        _isPlacingMode = false;
+        // 如果没兵了，自动取消选中
+        if (_currentSelectedItem) onSoldierIconClicked(_currentSelectedItem);
         return;
     }
 
     // 2. 检查碰撞 (不可放置区域)
     bool isBlocked = false;
-    // 士兵有个大概的占地面积，比如 20x20，居中检测
     Rect soldierRect(worldPos.x - 10, worldPos.y - 10, 20, 20);
-
     for (const auto& rect : _forbiddenRects) {
-        // intersectsRect 检测两个矩形是否重叠
         if (rect.intersectsRect(soldierRect)) {
             isBlocked = true;
             break;
@@ -448,27 +523,40 @@ void BattleScene::trySpawnSoldier(Vec2 worldPos)
     }
 
     if (isBlocked) {
-        showWarning("Cannot place here! Select another spot.");
+        showWarning("Cannot place here!");
         return;
     }
 
-    // 3. 放置成功：生成士兵
-    // 转换到 _tileMap 的局部坐标系，因为士兵应该加在地图上随地图移动
+    // 3. 放置成功
     Vec2 nodePos = _tileMap->convertToNodeSpace(worldPos);
 
-    // 1. 明确指定你要创建的兵种类型
-    SoldierType typeToSpawn = SoldierType::GIANT;
-    // 2. 调用基类的工厂方法
-    auto soldier = Soldier::create(this, typeToSpawn); // <--- 使用 Soldier::create
+    // 【核心修改】使用 _currentSelectedType 创建对应的兵
+    auto soldier = Soldier::create(this, _currentSelectedType);
     soldier->setPosition(nodePos);
-    _tileMap->addChild(soldier, 2); // 层级高于建筑
-
+    _tileMap->addChild(soldier, 2);
     _soldiers.pushBack(soldier);
-    _spawnCount++;
 
-    // 【新增修改】成功放置一个士兵后，立即退出放置模式，清除红色区域
-    _isPlacingMode = false;
-    onSoldierIconClicked();
+    // 4. 扣除数量
+    _currentSelectedItem->count--;
+
+    // 5. 更新 UI 数字
+    _currentSelectedItem->countLabel->setString(std::to_string(_currentSelectedItem->count));
+
+    // 6. 更新 DataManager (可选，如果希望消耗是永久的)
+    // DataManager::getInstance()->setTroopCount(_currentSelectedItem->nameKey, _currentSelectedItem->count);
+
+    // 7. 如果数量归零，变灰并停止放置
+    if (_currentSelectedItem->count <= 0) {
+        _currentSelectedItem->icon->setColor(Color3B::GRAY);
+        _currentSelectedItem->countLabel->setColor(Color3B::RED);
+
+        // 强制退出放置模式
+        _isPlacingMode = false;
+        _currentSelectedItem->icon->stopAllActions();
+        _currentSelectedItem->icon->setScale(3.0f);
+        _forbiddenAreaNode->clear();
+        _currentSelectedItem = nullptr;
+    }
 }
 
 void BattleScene::showWarning(const std::string& msg)

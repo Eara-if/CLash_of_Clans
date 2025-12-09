@@ -5,16 +5,16 @@
 #include <vector>
 #include "EnemyBuilding.h" // 需要包含 EnemyBuilding 头文件
 
+
 USING_NS_CC;
 class BattleScene; // 前向声明，避免交叉引用
 
 // 定义兵种类型
-enum class SoldierType
-{
-    NONE,
-    GIANT,      // 巨人士兵
-    ARCHER,     // 弓箭手
-    // TODO: 添加其他兵种
+enum SoldierType {
+    ORIGINAL = 0,
+    ARROW = 1,
+    BOOM = 2,
+    GIANT = 3
 };
 
 class Soldier : public Sprite
@@ -64,6 +64,8 @@ protected:
     // 血条逻辑（基类实现，但为虚函数，允许子类重写）
     virtual void setupHealthBar();
     virtual void updateHealthBar();
+    // 【关键新增】确保攻击函数是 virtual 的，子类才能重写
+    virtual void attackTarget(EnemyBuilding* target);
 };
 
 #endif // __SOLDIER_H__

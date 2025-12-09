@@ -321,40 +321,40 @@ void GameScene::addPurchasedBuilding(Building* building) {
         });
 }
 
-void GameScene::setBattleButton()
-{
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    // 1. 创建文字标签
-    // 【关键修正】：直接使用 MenuItemFont::create，并指定 TTF 文件路径
-    // 这样可以避免手动创建 Label 时可能出现的坐标或属性问题。
-    auto startBattleItem = MenuItemFont::create(
-        "Ready To Fight", // 按钮显示的文字
-        CC_CALLBACK_1(GameScene::menuGotoBattleCallback, this)
-    );
-
-    // 设置字体：必须指定 TTF 文件路径和大小
-    // 这里的路径必须和 showText 中使用的路径一致
-    startBattleItem->setFontNameObj("fonts/Marker Felt.ttf");
-    startBattleItem->setFontSize(48);
-
-    // 设置颜色 (可选，防止颜色被 MenuItemFont 默认的白色或灰色覆盖)
-    startBattleItem->setColor(Color3B::WHITE);
-
-    // 设置位置：在大本营下方
-    startBattleItem->setPosition(
-        Vec2(origin.x + visibleSize.width / 2, origin.y + 200)
-    );
-
-    // 3. 创建菜单并添加
-    auto battleMenu = Menu::create(startBattleItem, NULL);
-    battleMenu->setPosition(Vec2::ZERO);
-
-    // Z-Order: 确保这个菜单层级足够高，不会被其他 Sprite 覆盖
-    this->addChild(battleMenu, 10); // 设置一个较高的 Z-order，例如 10
-
-}
+//void GameScene::setBattleButton()
+//{
+//    auto visibleSize = Director::getInstance()->getVisibleSize();
+//    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+//
+//    // 1. 创建文字标签
+//    // 【关键修正】：直接使用 MenuItemFont::create，并指定 TTF 文件路径
+//    // 这样可以避免手动创建 Label 时可能出现的坐标或属性问题。
+//    auto startBattleItem = MenuItemFont::create(
+//        "Ready To Fight", // 按钮显示的文字
+//        CC_CALLBACK_1(GameScene::menuGotoBattleCallback, this)
+//    );
+//
+//    // 设置字体：必须指定 TTF 文件路径和大小
+//    // 这里的路径必须和 showText 中使用的路径一致
+//    startBattleItem->setFontNameObj("fonts/Marker Felt.ttf");
+//    startBattleItem->setFontSize(48);
+//
+//    // 设置颜色 (可选，防止颜色被 MenuItemFont 默认的白色或灰色覆盖)
+//    startBattleItem->setColor(Color3B::WHITE);
+//
+//    // 设置位置：在大本营下方
+//    startBattleItem->setPosition(
+//        Vec2(origin.x + visibleSize.width / 2, origin.y + 200)
+//    );
+//
+//    // 3. 创建菜单并添加
+//    auto battleMenu = Menu::create(startBattleItem, NULL);
+//    battleMenu->setPosition(Vec2::ZERO);
+//
+//    // Z-Order: 确保这个菜单层级足够高，不会被其他 Sprite 覆盖
+//    this->addChild(battleMenu, 10); // 设置一个较高的 Z-order，例如 10
+//
+//}
 
 void GameScene::menuGotoBattleCallback(Ref* pSender)
 {
@@ -514,7 +514,7 @@ bool GameScene::init()
     // 【修改点】保存宝石 Label
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
-    this->setBattleButton(); // 【新增】调用战斗按钮布局函数
+    //this->setBattleButton(); // 【新增】调用战斗按钮布局函数
     this->addShopButton(); // 【新增】调用商城按钮布局函
     return true;
 }

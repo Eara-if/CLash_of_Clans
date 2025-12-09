@@ -6,6 +6,15 @@
 #include "EnemyBuilding.h"
 #include "Soldier.h" // 需要包含 Soldire 头文件
 
+// 定义一个简单的结构体来管理底部的兵种UI
+struct SoldierUIItem {
+    cocos2d::Sprite* icon;        // 图标
+    cocos2d::Label* countLabel;   // 数量文字
+    SoldierType type;             // 兵种类型
+    int count;                    // 剩余数量
+    std::string nameKey;          // 对应 DataManager 的字符串key
+};
+
 class BattleScene : public cocos2d::Scene
 {
 public:
@@ -13,6 +22,7 @@ public:
     virtual bool init();
     virtual void update(float dt) override;
     CREATE_FUNC(BattleScene);
+
 
     // 供士兵 AI 使用的公共接口
     cocos2d::Vector<EnemyBuilding*>& getTowers() { return _towers; }
@@ -30,14 +40,16 @@ private:
     cocos2d::Vector<Soldier*> _soldiers;    // 所有士兵
 
     // 障碍物区域 (世界坐标系 Rect，用于检测放置位置和绘制红色区域)
-    std::vector<cocos2d::Rect> _forbiddenRects; // <--- C2065: _forbiddenRects 的声明
+    std::vector<cocos2d::Rect> _forbiddenRects; // 
 
     // UI & 放置逻辑
-    cocos2d::Sprite* _soldierIcon;
+    std::vector<SoldierUIItem*> _soldierUIList;
     bool _isPlacingMode;
     cocos2d::DrawNode* _forbiddenAreaNode; // 用于绘制红色警告区
     cocos2d::Label* _msgLabel;
-
+    // 【新增】当前选中的兵种类型
+    SoldierType _currentSelectedType;
+    SoldierUIItem* _currentSelectedItem; // 当前选中的UI项指针
     // 放置计数和计时器相关
     int _spawnCount;
     const int MAX_SPAWN = 10;
@@ -53,7 +65,7 @@ private:
 
     // UI & 交互回调
     void createUI();
-    void onSoldierIconClicked();
+    void BattleScene::onSoldierIconClicked(SoldierUIItem* item);
     void trySpawnSoldier(cocos2d::Vec2 worldPos);
     void showWarning(const std::string& msg);
     void spawnScheduler(float dt);

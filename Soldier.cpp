@@ -1,7 +1,10 @@
 // Soldier.cpp
 
 #include "Soldier.h"
-#include "GiantSoldier.h" // 用于 Soldier::create 工厂方法
+#include "GiantSoldier.h"    // 巨人士兵
+#include "OriginalSoldier.h" // 原始士兵
+#include "ArrowSoldier.h"    // 弓箭手
+#include "BoomSoldier.h"     // 炸弹人
 #include "BattleScene.h"
 #include "EnemyBuilding.h" // 【修复点 1】必须引用，因为 _target 是 EnemyBuilding*
 
@@ -10,23 +13,71 @@
 // =========================================================
 Soldier* Soldier::create(BattleScene* battleScene, SoldierType type)
 {
-    if (type == SoldierType::GIANT) {
-        // 创建 GiantSoldier 实例
-        // 【修改点 2】使用 new 关键字手动创建实例，然后调用 autorelease
-        auto ret = new (std::nothrow) GiantSoldier();
+    Soldier* ret = nullptr;
 
-        if (ret && ret->init(battleScene, type)) {
-            ret->autorelease();
-            return ret;
+    switch (type) {
+        case SoldierType::ORIGINAL:
+        {
+            // 1. 创建 OriginalSoldier 实例
+            auto original = new (std::nothrow) OriginalSoldier();
+            if (original && original->init(battleScene, type)) {
+                original->autorelease();
+                ret = original;
+            }
+            else {
+                CC_SAFE_DELETE(original);
+            }
+            break;
         }
-        CC_SAFE_DELETE(ret);
-        return nullptr;
-
+        case SoldierType::ARROW:
+        {
+            // 2. 创建 ArrowSoldier 实例
+            auto arrow = new (std::nothrow) ArrowSoldier();
+            if (arrow && arrow->init(battleScene, type)) {
+                arrow->autorelease();
+                ret = arrow;
+            }
+            else {
+                CC_SAFE_DELETE(arrow);
+            }
+            break;
+        }
+        case SoldierType::BOOM:
+        {
+            // 3. 创建 BoomSoldier 实例
+            auto boom = new (std::nothrow) BoomSoldier();
+            if (boom && boom->init(battleScene, type)) {
+                boom->autorelease();
+                ret = boom;
+            }
+            else {
+                CC_SAFE_DELETE(boom);
+            }
+            break;
+        }
+        case SoldierType::GIANT:
+        {
+            // 4. 创建 GiantSoldier 实例 (你的模板)
+            auto giant = new (std::nothrow) GiantSoldier();
+            if (giant && giant->init(battleScene, type)) {
+                giant->autorelease();
+                ret = giant;
+            }
+            else {
+                CC_SAFE_DELETE(giant);
+            }
+            break;
+        }
+        default:
+        {
+            cocos2d::log("Error: Unknown SoldierType %d", (int)type);
+            // 默认情况下，也可以返回 nullptr 或创建一个基类实例
+            ret = nullptr;
+            break;
+        }
     }
-    // TODO: 其他兵种在此处添加 else if (type == SoldierType::ARCHER) { ... }
 
-    CCLOG("Error: Unknown Soldier Type!");
-    return nullptr;
+    return ret;
 }
 
 // =========================================================
@@ -270,4 +321,13 @@ void Soldier::updateHealthBar()
 
     // 删掉原有的 (4 - currentFrameIndex) 逻辑，直接使用 frameIndex 即可
     _healthBar->setTextureRect(Rect(frameIndex * frameWidth, 0, frameWidth, textureHeight));
+}
+
+void Soldier::attackTarget(EnemyBuilding* target)
+{
+    // 放置你的通用攻击逻辑（例如，所有近战单位共享的逻辑）
+    if (target) {
+        target->takeDamage(this->_attackDamage);
+    }
+    // 对于 GiantSoldier、OriginalSoldier 等没有重写的子类，它们将执行这里的逻辑。
 }

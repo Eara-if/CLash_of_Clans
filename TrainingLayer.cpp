@@ -1,5 +1,6 @@
 #include "TrainingLayer.h"
 #include "DataManager.h" // 引入数据管理器
+#include "BattleScene.h"
 
 USING_NS_CC;
 Label* TrainingLayer::showText(std::string content, float x, float y, cocos2d::Color4B color)
@@ -53,18 +54,52 @@ bool TrainingLayer::init()
     createTroopCard("Giant", "soldiers/giant.png", 3, center);
 
 
-    // 4. 关闭按钮
+    // ============================================================
+    // 【新增/修改】 底部按钮区域
+    // ============================================================
+
+    // 1. 关闭按钮 (Close) - 稍微往左挪一点，或者放左下角
     auto closeLabel = Label::createWithTTF("Close", "fonts/Marker Felt.ttf", 28);
     auto closeBtn = MenuItemLabel::create(closeLabel, [=](Ref*) {
         this->closeLayer();
         });
-    closeBtn->setPosition(center.x, center.y - 150);
+    // 放在底部偏左
+    closeBtn->setPosition(center.x - 100, center.y - 180);
 
-    auto menu = Menu::create(closeBtn, NULL);
+    // 2. 【核心新增】战斗按钮 (Ready to Fight!) - 放底部偏右，显眼一点
+    auto fightLabel = Label::createWithTTF("FIGHT FIRST PASS!", "fonts/Marker Felt.ttf", 36);
+    fightLabel->setColor(Color3B::YELLOW); // 金色文字
+    fightLabel->enableOutline(Color4B::BLACK, 2); // 加个黑边更霸气
+
+    auto fightBtn = MenuItemLabel::create(fightLabel, [=](Ref*) {
+
+        // A. 检查一下有没有兵 (可选优化)
+        if (DataManager::getInstance()->getTotalPopulation() <= 0) {
+            auto warning = this->showText("Train troops first!", center.x, center.y, Color4B::RED);
+            warning->runAction(Sequence::create(MoveBy::create(1.0f, Vec2(0, 50)), RemoveSelf::create(), nullptr));
+            return;
+        }
+
+        // B. 关闭当前弹窗 (防止返回时弹窗还在)
+        this->removeFromParent();
+
+        // C. 跳转战斗场景
+        // 使用 pushScene 可以在战斗结束后 popScene 回到 GameScene
+        auto scene = BattleScene::createScene();
+        Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
+        });
+
+    // 放在底部偏右
+    fightBtn->setPosition(center.x + 100, center.y - 180);
+
+
+    // 3. 把两个按钮加到 Menu
+    auto menu = Menu::create(closeBtn, fightBtn, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu);
 
     return true;
+
 }
 
 // TrainingLayer.cpp
