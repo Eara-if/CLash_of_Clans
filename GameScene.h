@@ -26,6 +26,7 @@ public:
     // 创建场景的静态方法
     // 修改createScene，使其可以接收一个可选的建筑参数
     static cocos2d::Scene* createScene(Building* purchasedBuilding = nullptr);
+    void setBattleButton();
     void addShopButton();
     // 初始化函数
     virtual bool init();
@@ -37,11 +38,6 @@ public:
     void setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int cost, BuildingType type1, cocos2d::Vec2 position);
     // 新增：资源更新函数
     void updateResourceDisplay();
-    // 新增：添加保存游戏按钮
-    void addSaveButton();
-
-    // 新增：保存游戏回调函数
-    void menuSaveGameCallback(cocos2d::Ref* pSender);
     // 这是一个宏，自动帮我们实现 create() 函数
     CREATE_FUNC(GameScene);
 };

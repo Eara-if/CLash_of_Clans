@@ -11,8 +11,7 @@ enum class BuildingType {
     WATER,   //水泵
     DEFENSE,     // 防御塔
     WALL, //城墙
-    WATER_STORAGE,
-    GOLD_STORAGE//金币/水储存器
+    STORAGE //金币/水储存器
 };
 enum class BuildingState {
     IDLE,       // 空闲
@@ -54,18 +53,6 @@ public:
     void collectResources();     // 收集资源
     float getProductionTimeLeft(); // 获取生产剩余时间
     int getProducedAmount();     // 获取可收集的资源量
-
-    // 新增：用于存档/读档的方法
-    cocos2d::Vec2 getOriginalPosition() { return getPosition(); }
-    void setOriginalPosition(cocos2d::Vec2 pos) { setPosition(pos); }
-
-    // 设置建筑状态和时间（用于加载存档）
-    void setBuildingState(BuildingState newState) { state = newState; }
-    void setUpgradeTimeLeft(float time) { timeLeft = time; }
-    void setProductionTimeLeft(float time) { productionTimeLeft = time; }
-    bool isProductionReady() { return isReadyToCollect; }
-    void setProductionReady(bool ready) { isReadyToCollect = ready; }
-    void setProductionAmount(int amount) { productionAmount = amount; }
 
 private:
     BuildingType type;

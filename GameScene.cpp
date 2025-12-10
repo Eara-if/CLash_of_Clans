@@ -4,7 +4,6 @@
 #include "BattleScene.h"
 #include "Building.h" 
 #include "ShopScene.h"
-#include"SaveGame.h"
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -366,7 +365,6 @@ void GameScene::menuGotoBattleCallback(Ref* pSender)
     // 2. 切换场景，使用pushScene保留当前场景
     Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
 }
-
 bool GameScene::init()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -485,39 +483,14 @@ bool GameScene::init()
     // 【关键点 B】设置层级为 100 (确保在背景之上)
     this->addChild(menu, 100);
 
-    // 【修改】创建大本营和兵营的逻辑
-   // 检查全局建筑容器中是否已经有基地建筑
-    bool hasBaseBuilding = false;
-    bool hasBarracksBuilding = false;
+    Vec2 housePos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
 
-    for (auto& building : g_allPurchasedBuildings) {
-        if (building) {
-            if (building->getType() == BuildingType::BASE) {
-                hasBaseBuilding = true;
-            }
-            else if (building->getType() == BuildingType::BARRACKS) {
-                hasBarracksBuilding = true;
-            }
-        }
-    }
+    // 调用通用函数！
+    // 注意：传入 my_house_level 这个全局变量
+    this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, housePos);
 
-    // 如果没有基地建筑，创建默认的
-    if (!hasBaseBuilding) {
-        Vec2 housePos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-        this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, housePos);
-        CCLOG("=== GameScene: Created default base building ===");
-    }
-
-    // 如果没有兵营建筑，创建默认的
-    if (!hasBarracksBuilding) {
-        Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2 + 200, origin.y + visibleSize.height / 2);
-        this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, junyingPos);
-        CCLOG("=== GameScene: Created default barracks building ===");
-    }
-
-    // 【重要】添加所有已购买的建筑（包括从存档加载的）
-    this->addAllPurchasedBuildings();
-    
+    Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2 + 200, origin.y + visibleSize.height / 2);
+    this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, junyingPos);
 
     // 添加所有已购买的建筑
     this->addAllPurchasedBuildings();
@@ -542,8 +515,7 @@ bool GameScene::init()
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
     //this->setBattleButton(); // 【新增】调用战斗按钮布局函数
-    this->addShopButton(); // 【新增】调用商城按钮布局函数
-    this->addSaveButton(); // 【新增】调用保存游戏按钮布局函数
+    this->addShopButton(); // 【新增】调用商城按钮布局函
     return true;
 }
 
@@ -615,19 +587,6 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
 
     // 4. 添加到场景
     this->addChild(building, 1);
-
-    // 【新增】添加到本地容器
-    _allBuildings.pushBack(building);
-
-    // 【关键修改】添加到全局容器，这样保存时才能找到
-    if (!g_allPurchasedBuildings.contains(building)) {
-        building->retain();
-        g_allPurchasedBuildings.pushBack(building);
-        building->release();
-
-        CCLOG("=== GameScene: Default building added to global container: %s (type: %d) ===",
-            name.c_str(), (int)type1);
-    }
 }
 
 
@@ -692,62 +651,37 @@ void GameScene::addShopButton() {
 
 }
 
+// 新增：添加所有已购买建筑的函数
 void GameScene::addAllPurchasedBuildings() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    CCLOG("=== GameScene: Adding all purchased buildings, count: %d ===",
-        (int)g_allPurchasedBuildings.size());
 
     for (auto& building : g_allPurchasedBuildings) {
-        if (building) {
-            // 检查建筑是否已经在场景中
-            if (!building->getParent()) {
-                // 添加到场景
-                this->addChild(building, 10);
+        if (building && !building->getParent()) {
+            this->addChild(building, 10);
 
-                CCLOG("=== GameScene: Added building to scene - Type: %d, Name: %s, Pos: (%.1f, %.1f) ===",
-                    (int)building->getType(), building->getName().c_str(),
-                    building->getPositionX(), building->getPositionY());
-
-                // 如果建筑位置是(0,0)，设置到默认位置
-                if (building->getPositionX() == 0 && building->getPositionY() == 0) {
-                    // 为不同建筑类型设置不同的默认位置
-                    float x, y;
-
-                    switch (building->getType()) {
-                        case BuildingType::BASE:
-                            x = origin.x + visibleSize.width / 2;
-                            y = origin.y + visibleSize.height / 2;
-                            break;
-                        case BuildingType::BARRACKS:
-                            x = origin.x + visibleSize.width / 2 + 200;
-                            y = origin.y + visibleSize.height / 2;
-                            break;
-                        default:
-                            x = origin.x + visibleSize.width / 2;
-                            y = origin.y + visibleSize.height / 2 - 150;
-                            break;
-                    }
-
-                    building->setPosition(x, y);
-                    CCLOG("=== GameScene: Reset building position to (%.1f, %.1f) ===", x, y);
-                }
-
-                // 重新设置升级回调
-                building->setOnUpgradeCallback([=]() {
-                    // 更新资源显示
-                    this->updateResourceDisplay();
-                    });
-
-                // 添加到本地容器
-                if (!_allBuildings.contains(building)) {
-                    _allBuildings.pushBack(building);
-                }
+            // 确保建筑有一个默认位置（如果当前位置是0,0）
+            if (building->getPositionX() == 0 && building->getPositionY() == 0) {
+                building->setPosition(visibleSize.width / 2, visibleSize.height / 2);
             }
-            else {
-                CCLOG("=== GameScene: Building already in scene, skipping ===");
-            }
+
+            // 重新设置升级回调
+            building->setOnUpgradeCallback([=]() {
+                if (_coinTextLabel) {
+                    std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
+                    _coinTextLabel->setString(txt);
+                }
+                if (_waterTextLabel) {
+                    std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
+                    _waterTextLabel->setString(txt);
+                }
+                if (_gemTextLabel) {
+                    std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
+                    _gemTextLabel->setString(txt);
+                }
+                });
+
+            // 添加到本地容器
+            _allBuildings.pushBack(building);
         }
     }
 }
@@ -756,13 +690,10 @@ void GameScene::addAllPurchasedBuildings() {
 void GameScene::onEnter() {
     Scene::onEnter();
 
-    CCLOG("=== GameScene: onEnter() called ===");
-
     // 从商城返回时，更新资源显示
     this->updateResourceDisplay();
 
-    // 检查是否有新建筑需要添加（比如刚从商城购买的建筑）
-    bool addedNewBuildings = false;
+    // 从商城返回时，检查是否有新建筑需要添加
     for (auto& building : g_allPurchasedBuildings) {
         if (building && !building->getParent()) {
             // 这个建筑还没有添加到场景中，添加它
@@ -770,7 +701,6 @@ void GameScene::onEnter() {
 
             auto visibleSize = Director::getInstance()->getVisibleSize();
             if (building->getPositionX() == 0 && building->getPositionY() == 0) {
-                // 设置一个默认位置
                 building->setPosition(visibleSize.width / 2, visibleSize.height / 2);
             }
 
@@ -790,19 +720,8 @@ void GameScene::onEnter() {
                 }
                 });
 
-            if (!_allBuildings.contains(building)) {
-                _allBuildings.pushBack(building);
-            }
-
-            addedNewBuildings = true;
-            CCLOG("=== GameScene: onEnter() added new building - Type:%d, Name:%s ===",
-                (int)building->getType(), building->getName().c_str());
+            _allBuildings.pushBack(building);
         }
-    }
-
-    if (addedNewBuildings) {
-        CCLOG("=== GameScene: Added %d new buildings from global container ===",
-            (int)_allBuildings.size());
     }
 }
 
@@ -837,53 +756,4 @@ void GameScene::updateResourceDisplay() {
     if (mygem) {
         mygem->refresh();
     }
-}
-
-void GameScene::addSaveButton() {
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    // 创建保存按钮
-    auto saveLabel = Label::createWithTTF("SAVE GAME", "fonts/Marker Felt.ttf", 28);
-    saveLabel->setColor(Color3B::GREEN);
-    saveLabel->enableOutline(Color4B::BLACK, 2);
-
-    auto saveItem = MenuItemLabel::create(saveLabel,
-        CC_CALLBACK_1(GameScene::menuSaveGameCallback, this));
-
-    // 设置按钮位置（右下角）
-    float x = origin.x + visibleSize.width - 150;
-    float y = origin.y + 100;
-
-    saveItem->setPosition(Vec2(x, y));
-
-    // 【新增】调试按钮
-    auto debugLabel = Label::createWithTTF("DEBUG SAVE", "fonts/Marker Felt.ttf", 20);
-    debugLabel->setColor(Color3B::YELLOW);
-
-    auto debugItem = MenuItemLabel::create(debugLabel,
-        [](Ref* pSender) {
-            CCLOG("=== Debug Save System ===");
-            SaveGame::getInstance()->debugWritablePath();
-
-            // 尝试保存和加载测试数据
-            auto saveGame = SaveGame::getInstance();
-            bool saveResult = saveGame->saveGameState("test_save.json");
-            CCLOG("Test save result: %s", saveResult ? "SUCCESS" : "FAILED");
-
-            bool loadResult = saveGame->loadGameState("test_save.json");
-            CCLOG("Test load result: %s", loadResult ? "SUCCESS" : "FAILED");
-        });
-
-    // 创建菜单容器
-    auto saveMenu = Menu::create(saveItem, NULL);
-    saveMenu->setPosition(Vec2::ZERO);
-    this->addChild(saveMenu, 200);
-}
-
-void GameScene::menuSaveGameCallback(Ref* pSender) {
-    log("Saving game...");
-
-    // 调用SaveGame单例保存游戏
-    SaveGame::getInstance()->saveGameState();
 }

@@ -55,8 +55,8 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
     readyIndicator = nullptr;
 
     // 如果是金矿或圣水收集器，开始生产
-    if (type == BuildingType::MINE || type == BuildingType::WATER) {
-        startProduction();
+    if (type == BuildingType::MINE|| type == BuildingType::WATER) {
+            startProduction();
     }
 
     this->initTouchListener();

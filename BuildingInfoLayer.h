@@ -3,6 +3,8 @@
 
 #include "cocos2d.h"
 #include <functional> // 必须引用这个，用于回调
+// BuildingInfoLayer.h
+
 
 class Building;
 class BuildingInfoLayer : public cocos2d::Layer

@@ -50,6 +50,8 @@ private:
 
     // 辅助函数：根据当前血量刷新血条显示
     void updateHealthBar();
+    // 【新增】声明播放爆炸特效的函数
+    void playExplosionEffect();
 };
 
 #endif

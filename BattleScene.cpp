@@ -6,19 +6,52 @@
 
 USING_NS_CC;
 
-Scene* BattleScene::createScene()
-{
-    return BattleScene::create();
-}
-
 bool BattleScene::init()
 {
-    if (!Scene::init())
-    {
-        return false;
-    }
+    // 仅执行基类初始化，所有具体设置转移到 initWithMap 中
+    return Scene::init();
+}
 
-    // 初始化交互状态变量
+// 【新增】设置地图文件名（供内部调用）
+void BattleScene::setMapFileName(const std::string& fileName)
+{
+    _mapFileName = fileName;
+}
+
+// 【替换】不带参数的 createScene (默认)：调用带参数版本
+Scene* BattleScene::createScene()
+{
+    // 默认加载第一张地图的文件名
+    return BattleScene::createScene("Enemy_map1.tmx");
+}
+
+// 【替换】带参数的 createScene：自定义创建流程
+Scene* BattleScene::createScene(const std::string& mapFileName)
+{
+    // 自定义创建流程，确保在调用 initWithMap 时传入正确的地图文件名
+    BattleScene* scene = new (std::nothrow) BattleScene();
+    if (scene && scene->initWithMap(mapFileName))
+    {
+        scene->autorelease();
+        return scene;
+    }
+    else
+    {
+        CC_SAFE_DELETE(scene);
+        return nullptr;
+    }
+}
+
+// 【新增】自定义初始化函数 (请确保在 BattleScene.h 中声明 bool initWithMap(const std::string& mapFileName);)
+bool BattleScene::initWithMap(const std::string& mapFileName)
+{
+    // 1. 调用父类初始化 (这里必须返回 true，因为 init() 已经保证成功)
+    if (!Scene::init()) return false;
+
+    // 2. 【核心】设置地图文件名
+    _mapFileName = mapFileName;
+
+    // 3. 初始化交互状态变量 (原 init() 逻辑开始)
     _isPlacingMode = false;
     _spawnCount = 0;
     _isTouchingMap = false;
@@ -26,24 +59,24 @@ bool BattleScene::init()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 1. 加载 TMX 地图 (包含对象解析)
+    // 4. 加载 TMX 地图 (包含对象解析)
     this->loadEnemyMap();
 
-    // 2. 创建战斗 UI (士兵图标、提示文字)
+    // 5. 创建战斗 UI (士兵图标、提示文字)
     this->createUI();
 
-    // 3. 初始化绘制节点 (用于画红色禁止区域)
+    // 6. 初始化绘制节点 (用于画红色禁止区域)
     _forbiddenAreaNode = DrawNode::create();
-    this->addChild(_forbiddenAreaNode, 10); // 层级要在地图之上
+    this->addChild(_forbiddenAreaNode, 10);
 
-    // 4. 添加触摸监听
+    // 7. 添加触摸监听
     auto listener = EventListenerTouchOneByOne::create();
     listener->onTouchBegan = CC_CALLBACK_2(BattleScene::onTouchBegan, this);
     listener->onTouchMoved = CC_CALLBACK_2(BattleScene::onTouchMoved, this);
     listener->onTouchEnded = CC_CALLBACK_2(BattleScene::onTouchEnded, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
-    // 5. 添加返回按钮 (保留原有逻辑)
+    // 8. 添加返回按钮
     auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 28);
     backLabel->setTextColor(Color4B::WHITE);
 
@@ -218,16 +251,18 @@ void BattleScene::hideVictoryPopup()
 
 void BattleScene::loadEnemyMap()
 {
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-    // ================= 1. 创建 Tiled Map =================
-    _tileMap = TMXTiledMap::create("Enemy_map1.tmx");
+    // ================= 1. 创建 Tiled Map (只创建一次) =================
+    // 【修正：只使用 _mapFileName 变量加载地图】
+    _tileMap = TMXTiledMap::create(_mapFileName);
 
     if (!_tileMap) {
-        CCLOG("Error: Failed to load Enemy_map1.tmx");
+        // 如果加载失败，输出日志并返回
+        log("Error: Failed to load TMX map: %s", _mapFileName.c_str());
         return;
     }
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     // 设置地图位置：居中
     float mapWidth = _tileMap->getContentSize().width;

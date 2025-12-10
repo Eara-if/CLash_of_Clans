@@ -27,12 +27,17 @@ public:
     // 供士兵 AI 使用的公共接口
     cocos2d::Vector<EnemyBuilding*>& getTowers() { return _towers; }
     EnemyBuilding* getBase() { return _base; }
+    static cocos2d::Scene* createScene(const std::string& mapFileName); // 【修改】接受地图名参数
 
     // 碰撞检测接口 (用于放置检测和未来可能的寻路)
     bool isPositionBlocked(cocos2d::Vec2 worldPos);
+    // 【新增】自定义初始化方法
+    bool initWithMap(const std::string& mapFileName);
 
 private:
     cocos2d::TMXTiledMap* _tileMap;
+    std::string _mapFileName; // 【新增】用于存储要加载的地图文件名
+    void setMapFileName(const std::string& fileName); // 【新增】设置地图文件名
 
     // 游戏对象列表
     cocos2d::Vector<EnemyBuilding*> _towers; // 所有防御塔

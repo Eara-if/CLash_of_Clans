@@ -156,9 +156,11 @@ void EnemyBuilding::fireMissile(Soldier* target)
     missile->runAction(seq);
 }
 
+
+
 void EnemyBuilding::takeDamage(int damage)
 {
-    // 【修改】如果已经被摧毁，不再处理伤害
+    // 如果已经被摧毁，不再处理伤害
     if (_isDestroyed) return;
 
     _currentHp -= damage;
@@ -171,13 +173,22 @@ void EnemyBuilding::takeDamage(int damage)
         // 标记为已摧毁
         _isDestroyed = true;
 
-        // 死亡逻辑 (比如播放爆炸动画，从父节点移除等)
+        // 【新增】播放爆炸动画
+        this->playExplosionEffect();
+
+        // 死亡逻辑
         log("Building Destroyed!");
-        // 简单示例：变灰表示损毁
+
+        // 变灰表示损毁 (你可以保留这个，也可以去掉，看爆炸后的效果)
         this->setColor(Color3B::GRAY);
-        // 将攻击力设置为0，确保不会再攻击
+
+        // 将攻击力设置为0
         _attackPower = 0;
-        // 或者直接移除： this->removeFromParent();
+
+        // 隐藏血条（可选：通常建筑炸了血条也应该消失）
+        if (_healthBar) {
+            _healthBar->setVisible(false);
+        }
     }
 }
 
@@ -204,4 +215,52 @@ void EnemyBuilding::updateHealthBar()
     // 设置显示的区域
     // x 坐标 = 索引 * 单格宽
     _healthBar->setTextureRect(Rect((3 - lostNotches) * frameWidth, 0, frameWidth, textureHeight));
+}
+
+void EnemyBuilding::playExplosionEffect()
+{
+    // 1. 创建爆炸 Sprite
+    auto explosionSprite = Sprite::create();
+
+    // 【修改点1】坐标设置
+    // 因为我们要把它加到地图上（和塔同级），所以位置直接等于塔在地图上的位置
+    explosionSprite->setPosition(this->getPosition());
+
+    explosionSprite->setScale(5.0f); // 保持你调整好的大小
+
+    // 【修改点2】添加到父节点（地图）而不是 this
+    // this->getLocalZOrder() + 10 确保它永远比塔（this）高 10 层，显示在最前面
+    if (this->getParent()) {
+        this->getParent()->addChild(explosionSprite, this->getLocalZOrder() + 10);
+    }
+    else {
+        //以此防备万一塔还没有父节点的情况（虽然不太可能）
+        this->addChild(explosionSprite, 20);
+        explosionSprite->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height / 2));
+    }
+
+    // 2. 加载动画帧 (保持原样)
+    Vector<SpriteFrame*> animFrames;
+    char str[100] = { 0 };
+
+    for (int i = 1; i <= 9; i++)
+    {
+        sprintf(str, "soldiers/Explosion%d.png", i);
+        auto sprite = Sprite::create(str);
+        if (sprite) {
+            animFrames.pushBack(sprite->getSpriteFrame());
+        }
+    }
+
+    // 3. 创建动画 (保持原样)
+    auto animation = Animation::createWithSpriteFrames(animFrames, 0.1f);
+
+    // 4. 动作序列 (保持原样)
+    auto seq = Sequence::create(
+        Animate::create(animation),
+        RemoveSelf::create(),
+        nullptr
+    );
+
+    explosionSprite->runAction(seq);
 }
