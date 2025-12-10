@@ -211,11 +211,11 @@ void Soldier::attackLogic(float dt)
             );
             this->runAction(seq);
 
-            // 扣除目标血量
-            _target->takeDamage(_attackDamage);
+            this->attackTarget(_target);
+            if (_currentHp <= 0) return;
 
-            // 如果目标死了，清空引用
-            if (_target->getCurrentHp() <= 0) {
+            // 检查目标是否死亡（这个检查必须放在 attackTarget 之后）
+            if (_target && _target->getCurrentHp() <= 0) {
                 _target = nullptr;
             }
         }
@@ -228,11 +228,6 @@ void Soldier::takeDamage(int damage)
     if (_currentHp < 0) _currentHp = 0; // 避免负数
 
     updateHealthBar(); // 更新血条显示
-
-    if (_currentHp <= 0) {
-        this->removeFromParent();
-        // 可以在这里添加死亡动画等
-    }
 }
 
 // =========================================================
@@ -325,9 +320,8 @@ void Soldier::updateHealthBar()
 
 void Soldier::attackTarget(EnemyBuilding* target)
 {
-    // 放置你的通用攻击逻辑（例如，所有近战单位共享的逻辑）
+    // 对于 OriginalSoldier, GiantSoldier 等未重写的士兵，执行这里！
     if (target) {
         target->takeDamage(this->_attackDamage);
     }
-    // 对于 GiantSoldier、OriginalSoldier 等没有重写的子类，它们将执行这里的逻辑。
 }

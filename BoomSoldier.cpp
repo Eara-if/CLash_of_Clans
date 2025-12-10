@@ -45,34 +45,22 @@ void BoomSoldier::stopAnim()
     this->stopActionByTag(101);
 }
 
-// =========================================================
-// 【新增】攻击逻辑：自爆！
-// =========================================================
-// =========================================================
-// 【修改】攻击逻辑：自爆！
-// =========================================================
 void BoomSoldier::attackTarget(EnemyBuilding* target)
 {
-    // 确保目标存在
-    if (!target) return;
+    // 1. 造成伤害 (自爆)
+    if (target) {
+        target->takeDamage(this->_attackDamage);
+    }
 
-    // 1. 停止所有后续动作和计时器
-    // 关键：终止基类 Soldier 启动的重复攻击计时器
+    // 2. 停止自身所有计时器 (非必须，但推荐)
     this->unscheduleAllCallbacks();
     this->stopAllActions();
 
-    // 2. 释放伤害 (值为 20)
-    // 伤害值已经在 setupProperties 中设置 (_attackDamage = 20)
-    target->takeDamage(this->_attackDamage);
-
-    // 3. 播放爆炸动画/特效 (可选，如果爆炸动画很短，可以加，如果长，需另行处理)
-    // ... (你的爆炸特效代码) ...
-
-    // 4. 立即将自己血量归零并消失
+    // 3. 核心自毁：标记死亡
     this->_currentHp = 0;
 
-    // 从 BattleScene 的 _soldiers 容器中移除，并从场景中移除
-    this->removeFromParent();
+    // 4. 血条更新 (更新后血条会显示空)
+    this->updateHealthBar();
 
-    // 【重要】自爆完成
+    // 不调用 removeFromParent()，等待 BattleScene 清理（您已在 BattleScene 中正确实现）
 }

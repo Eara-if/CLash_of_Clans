@@ -75,6 +75,31 @@ void BattleScene::update(float dt)
     // 如果游戏已结束，不再执行后续逻辑
     if (_isGameOver) return;
 
+    // **士兵 AI 更新和清理**
+    auto soldierIt = _soldiers.begin();
+    while (soldierIt != _soldiers.end())
+    {
+        auto soldier = *soldierIt;
+
+        // 1. 运行 AI 逻辑
+        soldier->update(dt);
+
+        // 2. 检查士兵是否死亡 (自爆兵在 attackTarget 已经将 _currentHp 设为 0)
+        if (soldier->getCurrentHp() <= 0)
+        {
+            // 移除出 Cocos 场景
+            soldier->removeFromParent();
+
+            // 从容器中移除指针，防止再次被 update
+            soldierIt = _soldiers.erase(soldierIt);
+        }
+        else
+        {
+            // 士兵存活，继续下一个
+            ++soldierIt;
+        }
+    }
+
     // 遍历所有防御塔，让它们执行逻辑
     for (auto node : _towers) {
         auto tower = dynamic_cast<EnemyBuilding*>(node);
@@ -361,7 +386,7 @@ void BattleScene::createUI()
                 // 如果图片找不到，用默认图代替防止崩溃
                 item->icon = Sprite::create("anim/giant1.png");
             }
-            item->icon->setScale(10.0f); // 调整大小
+            item->icon->setScale(5.0f); // 调整大小
             item->icon->setPosition(startX - (index * gap), startY);
             this->addChild(item->icon, 20);
 
@@ -533,7 +558,7 @@ void BattleScene::trySpawnSoldier(Vec2 worldPos)
     // 【核心修改】使用 _currentSelectedType 创建对应的兵
     auto soldier = Soldier::create(this, _currentSelectedType);
     soldier->setPosition(nodePos);
-    _tileMap->addChild(soldier, 2);
+    _tileMap->addChild(soldier, 5);
     _soldiers.pushBack(soldier);
 
     // 4. 扣除数量
