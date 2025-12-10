@@ -193,50 +193,10 @@ bool HelloWorld::init()
     startItem->setPosition(Vec2(origin.x + visibleSize.width / 2,
         buttonStartY));
 
-    // 7. 【新增】创建"重置游戏"按钮（如果有存档）
-    if (hasSaveFile)
-    {
-        auto resetLabel = Label::createWithTTF("RESET GAME", "fonts/Marker Felt.ttf", 36);
-        resetLabel->setTextColor(Color4B::RED);
-
-        auto resetItem = MenuItemLabel::create(resetLabel, [=](Ref* pSender) {
-            // 删除存档文件
-            if (SaveGame::getInstance()->deleteSaveFile()) {
-                // 显示删除成功提示
-                auto msgLabel = Label::createWithTTF("Game Reset Successfully!", "fonts/Marker Felt.ttf", 32);
-                msgLabel->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-                msgLabel->setColor(Color3B::GREEN);
-                this->addChild(msgLabel, 10);
-
-                // 2秒后移除提示并刷新界面
-                msgLabel->runAction(Sequence::create(
-                    DelayTime::create(2.0f),
-                    RemoveSelf::create(),
-                    CallFunc::create([=]() {
-                        // 重新加载当前场景
-                        auto scene = HelloWorld::createScene();
-                        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
-                        }),
-                    nullptr
-                ));
-            }
-            });
-
-        resetItem->setPosition(Vec2(origin.x + visibleSize.width / 2,
-            buttonStartY - 80));
-
-        // 创建菜单并添加所有按钮
-        auto startmenu = Menu::create(startItem, resetItem, NULL);
-        startmenu->setPosition(Vec2::ZERO);
-        this->addChild(startmenu, 1);
-    }
-    else
-    {
-        // 没有存档时，只显示"开始游戏"按钮
-        auto startmenu = Menu::create(startItem, NULL);
-        startmenu->setPosition(Vec2::ZERO);
-        this->addChild(startmenu, 1);
-    }
+    // 没有存档时，只显示"开始游戏"按钮
+    auto startmenu = Menu::create(startItem, NULL);
+    startmenu->setPosition(Vec2::ZERO);
+    this->addChild(startmenu, 1);
 
     return true;
 }
