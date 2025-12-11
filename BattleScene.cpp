@@ -363,7 +363,7 @@ void BattleScene::loadEnemyMap()
             // ----------------------------------------------------
             // 处理 C: 障碍物 (Tree, grass)
             // ----------------------------------------------------
-            else if (name == "Tree" || name == "grass") {
+            else if (name == "Tree" || name == "grass"|| name == "mine") {
                 // 不需要创建实体类，上面的 _forbiddenRects.push_back 已经处理了阻挡逻辑
             }
         }
