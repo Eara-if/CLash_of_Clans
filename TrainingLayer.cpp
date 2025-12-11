@@ -55,46 +55,69 @@ bool TrainingLayer::init()
 
 
     // ============================================================
-    // 【新增/修改】 底部按钮区域
-    // ============================================================
+ // 【修改】 底部按钮区域
+ // ============================================================
 
-    // 1. 关闭按钮 (Close) - 稍微往左挪一点，或者放左下角
+ // 定义底部按钮的 Y 坐标
+    float closeY = center.y - 150;     // 关闭按钮
+    float fight1Y = center.y - 195;    // 第一关按钮
+    float fight2Y = center.y - 250;    // 第二关按钮 (新增)
+
+
+    // 1. 关闭按钮 (Close) - 放在底部左边
     auto closeLabel = Label::createWithTTF("Close", "fonts/Marker Felt.ttf", 28);
     auto closeBtn = MenuItemLabel::create(closeLabel, [=](Ref*) {
         this->closeLayer();
         });
-    // 放在底部偏左
-    closeBtn->setPosition(center.x - 100, center.y - 180);
+    // 【修改】调整位置
+    closeBtn->setPosition(center.x - 150, closeY);
 
-    // 2. 【核心新增】战斗按钮 (Ready to Fight!) - 放底部偏右，显眼一点
-    auto fightLabel = Label::createWithTTF("FIGHT FIRST PASS!", "fonts/Marker Felt.ttf", 36);
-    fightLabel->setColor(Color3B::YELLOW); // 金色文字
-    fightLabel->enableOutline(Color4B::BLACK, 2); // 加个黑边更霸气
 
-    auto fightBtn = MenuItemLabel::create(fightLabel, [=](Ref*) {
+    // 2. FIGHT FIRST PASS! 按钮 【修改位置和逻辑】
+    auto fightLabel1 = Label::createWithTTF("FIGHT FIRST PASS!", "fonts/Marker Felt.ttf", 36);
+    fightLabel1->setColor(Color3B::YELLOW);
+    fightLabel1->enableOutline(Color4B::BLACK, 2);
 
-        // A. 检查一下有没有兵 (可选优化)
+    auto fightBtn1 = MenuItemLabel::create(fightLabel1, [=](Ref*) {
         if (DataManager::getInstance()->getTotalPopulation() <= 0) {
             auto warning = this->showText("Train troops first!", center.x, center.y, Color4B::RED);
             warning->runAction(Sequence::create(MoveBy::create(1.0f, Vec2(0, 50)), RemoveSelf::create(), nullptr));
             return;
         }
-
-        // B. 关闭当前弹窗 (防止返回时弹窗还在)
         this->removeFromParent();
-
-        // C. 跳转战斗场景
-        // 使用 pushScene 可以在战斗结束后 popScene 回到 GameScene
-        auto scene = BattleScene::createScene();
+        // 【关键修改 1】使用 BattleScene::createScene("Enemy_map1.tmx")
+        auto scene = BattleScene::createScene("Enemy_map1.tmx");
         Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
         });
 
-    // 放在底部偏右
-    fightBtn->setPosition(center.x + 100, center.y - 180);
+    // 【修改】调整位置
+    fightBtn1->setPosition(center.x + 100, fight1Y);
 
 
-    // 3. 把两个按钮加到 Menu
-    auto menu = Menu::create(closeBtn, fightBtn, NULL);
+    // 3. FIGHT SECOND PASS! 按钮 【新增】
+    auto fightLabel2 = Label::createWithTTF("FIGHT SECOND PASS!", "fonts/Marker Felt.ttf", 36);
+    fightLabel2->setColor(Color3B(0, 255, 255)); // 比如青色，用不同颜色区分
+    fightLabel2->enableOutline(Color4B::BLACK, 2);
+
+    auto fightBtn2 = MenuItemLabel::create(fightLabel2, [=](Ref*) {
+        if (DataManager::getInstance()->getTotalPopulation() <= 0) {
+            auto warning = this->showText("Train troops first!", center.x, center.y, Color4B::RED);
+            warning->runAction(Sequence::create(MoveBy::create(1.0f, Vec2(0, 50)), RemoveSelf::create(), nullptr));
+            return;
+        }
+        this->removeFromParent();
+        // 【关键新增】使用 BattleScene::createScene("Enemy_map2.tmx")
+        auto scene = BattleScene::createScene("Enemy_map2.tmx");
+        Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
+        });
+
+    // 设置位置在第一个战斗按钮下面
+    fightBtn2->setPosition(center.x + 100, fight2Y);
+
+
+    // 4. 把所有按钮加到 Menu
+    // 【修改】将 closeBtn, fightBtn1, fightBtn2 都添加到 Menu
+    auto menu = Menu::create(closeBtn, fightBtn1, fightBtn2, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu);
 
@@ -104,7 +127,7 @@ bool TrainingLayer::init()
 
 // TrainingLayer.cpp
 
-void TrainingLayer::createTroopCard(std::string name, std::string image, int index, Vec2 centerPos)
+void TrainingLayer::createTroopCard(std::string name, std::string image,int index, Vec2 centerPos)
 {
     // 计算卡片位置
     float x = centerPos.x - 300 + (index * 200);

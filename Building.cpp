@@ -1,6 +1,6 @@
 #include "Building.h"
 #include "BuildingInfoLayer.h" // 一定要引用之前写的弹窗类
-
+#include"GameScene.h"
 USING_NS_CC;
 
 // 引用全局变量 (告诉编译器去别的地方找这个变量)
@@ -177,7 +177,8 @@ void Building::collectResources()
             if (water_count > water_limit) water_count = water_limit;
             log("Collected %d water from Water Collector. Total: %d", productionAmount, water_count);
         }
-
+        auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+        gamescene->updateResourceDisplay();
         // 重新开始生产
         startProduction();
     }
@@ -261,78 +262,100 @@ void Building::speedUp()
         log("Not enough gems!");
     }
 }
+// Building.cpp
 
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
-    listener->setSwallowTouches(true);   //吞噬，底下的东西不会再被点击
+    listener->setSwallowTouches(true);
 
-    // 1. 手指按下
     listener->onTouchBegan = [=](Touch* touch, Event* event) {
         Vec2 touchPos = touch->getLocation();
 
-        // 判断是否点到了房子
-        // 把触摸点转换成相对于房子的坐标
+        // 使用节点空间转换，判断是否点中
         Vec2 nodePos = this->convertToNodeSpace(touchPos);
         Rect rect = Rect(0, 0, getContentSize().width, getContentSize().height);
 
         if (rect.containsPoint(nodePos))
         {
-            // 【核心逻辑】记录偏移量
-            // 这样拖拽时，房子不会瞬间瞬移到手指中心，而是保持相对位置
-            touchOffset = this->getPosition() - touchPos;
+            // 1. 【核心】记录起飞前的位置 (地图坐标系)
+            originalPos = this->getPosition();
 
-            // 重置拖拽标记
+            touchOffset = this->getPosition() - touchPos;
             isDragging = false;
 
-            // 稍微放大一点，给玩家反馈“我按住它了”
-            this->setScale(0.55f); // 假设原来是 0.5f，稍微变大一点
-
+            // 视觉反馈
+            this->setScale(0.55f);
+            this->setLocalZOrder(99999); // 提起来，防止被遮挡
             return true;
         }
         return false;
         };
 
-    // 2. 手指移动
     listener->onTouchMoved = [=](Touch* touch, Event* event) {
-
-        // 计算移动后的新位置
-        Vec2 newPos = touch->getLocation() + touchOffset;
-
-        // 设置位置
-        this->setPosition(newPos);
-
-        // 【判断】如果手指移动距离超过 10 像素，就算作“拖拽”
-        // 这样可以防止手抖导致的误判
-        if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f)
-        {
+        if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f) {
             isDragging = true;
-
-            // 【可选】拖拽时动态调整层级 (Z-Order)
-            // 在 2D 游戏中，通常 Y 越小（越靠下），Z 应该越大（遮挡后面的）
-            // this->getParent()->reorderChild(this, 10000 - newPos.y);
         }
+
+        // 移动逻辑
+        Vec2 worldNewPos = touch->getLocation() + touchOffset;
+        Vec2 nodePos = this->getParent()->convertToNodeSpace(worldNewPos);
+        this->setPosition(nodePos);
         };
 
-    // 3. 手指松开
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
+        this->setScale(0.5f); // 恢复大小
 
-        // 恢复原来的大小 (假设原来是 0.5f)
-        this->setScale(0.5f);
+        if (isDragging) {
+            auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
 
-        // ============================================================
-        // 【核心区分】是点击还是拖拽？
-        // ============================================================
-        if (isDragging)
-        {
-            // A. 如果是拖拽：什么都不做，就停在这里
-            log("Moved building to: %f, %f", this->getPositionX(), this->getPositionY());
+            if (gameScene) {
+                // 1. 获取当前建筑的精准世界包围盒
+                Rect nodeRect = this->getBoundingBox();
+                Vec2 worldOrigin = this->getParent()->convertToWorldSpace(nodeRect.origin);
+                Rect myWorldRect = Rect(worldOrigin.x, worldOrigin.y, nodeRect.size.width, nodeRect.size.height);
 
-            // 【进阶提示】你可以在这里加代码，把新坐标保存到数据库或全局变量
+                // 2. 稍微缩小一点判定框 (手感优化)
+                myWorldRect.origin.x += 10;
+                myWorldRect.origin.y += 10;
+                myWorldRect.size.width -= 20;
+                myWorldRect.size.height -= 20;
+
+                // 3. 检测碰撞
+                if (gameScene->checkCollision(myWorldRect, this)) {
+                    log("COLLISION! Back to: %f, %f", originalPos.x, originalPos.y);
+
+                    // 【关键修复】回弹动画 + 强制设置位置
+                    // 以前可能只有动画，没有 setPosition，导致动画完了位置不对
+                    auto moveBack = MoveTo::create(0.1f, originalPos);
+                    auto tintRed = TintTo::create(0.1f, Color3B::RED);
+                    auto tintBack = TintTo::create(0.1f, Color3B::WHITE);
+
+                    // 动作序列：移回 -> 变红 -> 变白 -> 恢复层级
+                    auto seq = Sequence::create(
+                        Spawn::create(moveBack, tintRed, NULL),
+                        tintBack,
+                        CallFunc::create([=]() {
+                            // 动作结束后，强制确认位置和层级
+                            this->setPosition(originalPos);
+                            this->setLocalZOrder(10000 - (int)originalPos.y);
+                            }),
+                        NULL
+                    );
+                    this->runAction(seq);
+                }
+                else {
+                    log("Placed OK.");
+                    // 放置成功，更新记录点
+                    originalPos = this->getPosition();
+                    this->setLocalZOrder(10000 - (int)this->getPositionY());
+                }
+            }
+            isDragging = false;
         }
-        else
-        {
-            // B. 如果不是拖拽 (位移很小)：说明是点击，打开升级弹窗
+        else {
+            // 点击事件
+            this->setLocalZOrder(10000 - (int)this->getPositionY()); // 恢复层级
             auto infoLayer = BuildingInfoLayer::create();
             infoLayer->setBuilding(this);
             Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
