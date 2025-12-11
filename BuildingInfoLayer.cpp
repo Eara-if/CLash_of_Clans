@@ -164,7 +164,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
     // ============================================================
     // 情况 B：圣水收集器 (显示圣水生产状态)
     // ============================================================
-    else if (_targetBuilding->getType() == BuildingType::WATER ) {
+    else if (_targetBuilding->getType() == BuildingType::WATER) {
 
         BuildingState state = _targetBuilding->getState();
 
