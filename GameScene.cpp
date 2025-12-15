@@ -93,7 +93,7 @@ public:
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
 
             // ���ӵ����ڵ�
-            parentNode->addChild(_displaySprite, 0);
+            parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
@@ -169,7 +169,7 @@ public:
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 120);
 
             // ���ӵ����ڵ�
-            parentNode->addChild(_displaySprite, 0);
+            parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
@@ -246,7 +246,7 @@ public:
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 182);
 
             // ���ӵ����ڵ�
-            parentNode->addChild(_displaySprite, 0);
+            parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
@@ -278,76 +278,6 @@ Scene* GameScene::createScene(Building* purchasedBuilding) {
     return scene;
 }
 
-void GameScene::addPurchasedBuilding(Building* building) {
-    if (!building) return;
-
-    // ---------------------------------------------------------
-    // 1. ȫ���������� (������ԭ�е��߼�)
-    // ---------------------------------------------------------
-    if (g_allPurchasedBuildings.contains(building)) {
-        if (building->getParent()) {
-            building->removeFromParent();
-        }
-    }
-    else {
-        g_allPurchasedBuildings.pushBack(building);
-    }
-
-    // ���뵱ǰ�����Ĺ����б�
-    if (!_allBuildings.contains(building)) {
-        _allBuildings.pushBack(building);
-    }
-
-    // ---------------------------------------------------------
-    // 2. �������޸ġ�����Ѱ����ŵ�
-    // ---------------------------------------------------------
-
-    // A. �趨����Ŀ��㣺��Ļ����
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-    Vec2 screenCenter = Vec2(visibleSize.width / 2, visibleSize.height / 2);
-
-    // B. ����Ļ����ת��Ϊ��ͼ�ڲ����� (�ǳ���Ҫ������λ�û�ƫ)
-    // �������� _tiledMap ��Ա����
-    Vec2 targetMapPos = _tiledMap->convertToNodeSpace(screenCenter);
-
-    // C. ��������Ŀ���λ�� (��ֹ�ص�)
-    Vec2 finalPos = this->getNearestFreePosition(building, targetMapPos);
-
-    // D. ����Ƿ��ͼȫ����
-    if (finalPos.equals(Vec2::ZERO)) {
-        log("Error: Map is full! Cannot place purchased building.");
-        // ������ԼӸ�������ʾ��ҡ�û�ط����ˡ�
-        return;
-    }
-
-    // ---------------------------------------------------------
-    // 3. �������޸ġ����ӵ���ͼ����������
-    // ---------------------------------------------------------
-
-    // ����λ�� (ʹ��������Ŀ�λ)
-    building->setPosition(finalPos);
-
-    // ���ؼ������ӵ� _tiledMap ������ this
-    // �������ܺ���ľ������ȷ�� Y ���ڵ�����
-    _tiledMap->addChild(building);
-
-    // ���ò㼶 (YԽ��ZԽС��ʵ���ڵ�)
-    building->setLocalZOrder(10000 - (int)finalPos.y);
-
-    // ���ؼ���ע��Ϊ�ϰ��
-    // �����´�����������קʱ����֪������������
-    this->addObstacle(building);
-
-    building->setOnUpgradeCallback([=]() {
-
-        if (building->getType() == BuildingType::BASE) {
-
-
-        }
-
-        this->updateResourceDisplay();
-        });
-}
 
 //
 //   
@@ -388,17 +318,35 @@ bool GameScene::init()
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     _tiledMap = TMXTiledMap::create("Grass.tmx");
-    if (_tiledMap) {
-        _tiledMap->setAnchorPoint(Vec2::ZERO);
-        _tiledMap->setPosition(Vec2::ZERO);
-
-        _tiledMap->setScale(1.0f);
-
-        this->addChild(_tiledMap, -99);
+    if (!_tiledMap) {
+        log("Error: Failed to load map!");
+        return false;
     }
-    else {
-        log("Error: Failed to load map! Check filename and Resources folder.");
-    }
+    this->addChild(_tiledMap, 1); // Z-Order 设为 1 (之前修复触摸冲突改的)
+
+    // ============================================================
+    // 【核心修改 1】计算初始缩放，让地图完整显示在屏幕内
+    // ============================================================
+    Size mapSize = _tiledMap->getContentSize();
+
+    // 计算 X 轴和 Y 轴分别需要的缩放比例
+    float scaleX = visibleSize.width / mapSize.width;
+    float scaleY = visibleSize.height / mapSize.height;
+
+    // 取两者的较小值，保证地图宽或高完全塞进屏幕，不会被切掉
+    float minScale = std::min(scaleX, scaleY);
+
+    // 设置初始缩放
+    _tiledMap->setScale(minScale);
+
+    // 立即调用一次边界修正函数，它会自动把缩放后的地图“居中”显示
+    this->checkAndClampMapPosition();
+
+    // ============================================================
+    // 【核心修改 2】计算地图的“物理中心” (Local Coordinate)
+    // ============================================================
+    // 注意：不要用屏幕中心，要用地图中心！
+    Vec2 mapCenterLocal = Vec2(mapSize.width / 2, mapSize.height / 2);
     auto objectGroup = _tiledMap->getObjectGroup("Objects");
     //检测地图中对象层的树
     if (objectGroup) {
@@ -423,7 +371,7 @@ bool GameScene::init()
                     float x = dict["x"].asFloat();
                     float y = dict["y"].asFloat();
 
-                    sprite->setPosition(x, y);
+                    sprite->setPosition(x, y+150);
 
                     if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
                         float width = dict["width"].asFloat();
@@ -452,17 +400,13 @@ bool GameScene::init()
     float x = origin.x + backItem->getContentSize().width / 2 + 20;
     float y = origin.y + backItem->getContentSize().height / 2 + 20;
     backItem->setPosition(Vec2(x, y));
-
-    // 4. �����˵�����
     auto menu = Menu::create(backItem, NULL);
-
     menu->setPosition(Vec2::ZERO);
-
     this->addChild(menu, 100);
+
 
     bool hasBaseBuilding = false;
     bool hasBarracksBuilding = false;
-
     for (auto& building : g_allPurchasedBuildings) {
         if (building) {
             if (building->getType() == BuildingType::BASE) {
@@ -476,16 +420,21 @@ bool GameScene::init()
 
     // 如果没有基地建筑，创建默认的
     if (!hasBaseBuilding) {
-        Vec2 housePos = Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
-        this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, housePos);
-        CCLOG("=== GameScene: Created default base building ===");
+        // 使用 getNearestFreePosition 寻找中心附近最近的空地 (防止中心正好有棵树)
+        // 这里的 mapCenterLocal 是地图内部坐标，可以直接传给 getNearestFreePosition (我们之前修过这个函数，它接收 Local)
+        // 注意：这里我们还没创建 Building 对象，无法传给 getNearestFreePosition 算大小，
+        // 所以我们先简单地传 targetPos，在 setbuilding 内部或者手动微调
+
+        // 简单处理：直接尝试放在中心，稍后 setbuilding 会处理 ZOrder
+        this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, mapCenterLocal);
+        CCLOG("Created default base at Map Center");
     }
 
-    // 如果没有兵营建筑，创建默认的
+    // 创建默认兵营 (放在地图中心稍微偏右一点的位置)
     if (!hasBarracksBuilding) {
-        Vec2 junyingPos = Vec2(origin.x + visibleSize.width / 2 + 200, origin.y + visibleSize.height / 2);
-        this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, junyingPos);
-        CCLOG("=== GameScene: Created default barracks building ===");
+        Vec2 barracksPos = mapCenterLocal + Vec2(200, 0); // 往右偏移 200 像素
+        this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, barracksPos);
+        CCLOG("Created default barracks near Map Center");
     }
 
 
@@ -513,6 +462,23 @@ bool GameScene::init()
    
     this->addShopButton();
     this->addSaveButton(); // 【新增】调用保存游戏按钮布局函数
+
+    isMapDragging = false;
+
+    // 2. 添加触摸监听 (用于移动地图)
+    // 注意：我们要把这个监听器设为较低的优先级，或者让它吞噬触摸
+    // 但因为我们要点建筑，所以这里不吞噬，而是通过逻辑判断
+    auto touchListener = EventListenerTouchOneByOne::create();
+    touchListener->setSwallowTouches(true); // 设为true，并在 onTouchBegan 里判断
+    touchListener->onTouchBegan = CC_CALLBACK_2(GameScene::onTouchBegan, this);
+    touchListener->onTouchMoved = CC_CALLBACK_2(GameScene::onTouchMoved, this);
+    touchListener->onTouchEnded = CC_CALLBACK_2(GameScene::onTouchEnded, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, _tiledMap);
+
+    // 3. 添加鼠标监听 (用于滚轮缩放)
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseScroll = CC_CALLBACK_1(GameScene::onMouseScroll, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
     return true;
 }
 
@@ -566,8 +532,117 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
             name.c_str(), (int)type1);
     }
 }
+void GameScene::checkAndClampMapPosition()
+{
+    // 获取屏幕尺寸
+    auto visibleSize = Director::getInstance()->getVisibleSize();
 
+    // 获取地图当前的缩放后的实际尺寸
+    // 内容尺寸 * 缩放倍率
+    float mapWidth = _tiledMap->getContentSize().width * _tiledMap->getScale();
+    float mapHeight = _tiledMap->getContentSize().height * _tiledMap->getScale();
 
+    // 获取当前位置
+    Vec2 currentPos = _tiledMap->getPosition();
+
+    // ==========================================
+    // 核心算法：计算 X 和 Y 的允许范围
+    // ==========================================
+
+    // 原理：
+    // 1. 如果地图比屏幕小(缩放很小)，通常居中显示。
+    // 2. 如果地图比屏幕大(正常情况)，则位置 x 必须在 [minX, 0] 之间。
+    //    如果 x > 0，左边就会漏黑边。
+    //    如果 x < minX，右边就会漏黑边。
+
+    // --- X 轴限制 ---
+    float minX = visibleSize.width - mapWidth; // 这是一个负数
+    float maxX = 0;
+
+    if (mapWidth < visibleSize.width) {
+        // 如果地图比屏幕窄，直接居中
+        currentPos.x = (visibleSize.width - mapWidth) / 2;
+    }
+    else {
+        // 限制在 [minX, 0] 之间
+        if (currentPos.x > maxX) currentPos.x = maxX;
+        if (currentPos.x < minX) currentPos.x = minX;
+    }
+
+    // --- Y 轴限制 ---
+    float minY = visibleSize.height - mapHeight; // 这是一个负数
+    float maxY = 0;
+
+    if (mapHeight < visibleSize.height) {
+        currentPos.y = (visibleSize.height - mapHeight) / 2;
+    }
+    else {
+        if (currentPos.y > maxY) currentPos.y = maxY;
+        if (currentPos.y < minY) currentPos.y = minY;
+    }
+
+    // 应用修正后的位置
+    _tiledMap->setPosition(currentPos);
+}
+void GameScene::onMouseScroll(Event* event)
+{
+    EventMouse* e = (EventMouse*)event;
+    float scrollY = e->getScrollY();
+
+    // 1. 计算新的缩放值
+    float factor = 0.1f;
+    float newScale = _tiledMap->getScale() + (scrollY > 0 ? factor : -factor);
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Size mapSize = _tiledMap->getContentSize();
+
+    float scaleX = visibleSize.width / mapSize.width;
+    float scaleY = visibleSize.height / mapSize.height;
+    float minLimit = std::min(scaleX, scaleY); // 这就是“全图显示”的缩放值
+
+    // 限制范围
+    if (newScale < minLimit) newScale = minLimit; // 不能比全图更小
+    if (newScale > 2.0f) newScale = 2.0f;         // 最大放大倍数
+
+    // 设置缩放
+    _tiledMap->setScale(newScale);
+
+    // 修正位置 (保证缩放时居中或贴边)
+    checkAndClampMapPosition();
+}
+bool GameScene::onTouchBegan(Touch* touch, Event* event)
+{
+    // 记录初始状态，不一定就是拖拽，也可能是想点建筑
+    isMapDragging = false;
+    return true; // 必须返回 true 才能接收后续的 Moved 和 Ended
+}
+
+void GameScene::onTouchMoved(Touch* touch, Event* event)
+{
+    // 1. 获取移动的距离 (Delta)
+    Vec2 delta = touch->getDelta();
+
+    // 2. 如果移动距离极小，可能是手指抖动，忽略
+    if (delta.getLength() < 2.0f && !isMapDragging) {
+        return;
+    }
+
+    // 3. 确认为拖拽模式
+    isMapDragging = true;
+
+    // 4. 计算新位置：当前位置 + 偏移量
+    Vec2 newPos = _tiledMap->getPosition() + delta;
+    _tiledMap->setPosition(newPos);
+
+    // 5. 【关键】实时修正位置，防止拖出界
+    checkAndClampMapPosition();
+}
+
+void GameScene::onTouchEnded(Touch* touch, Event* event)
+{
+    
+    isMapDragging = false;
+}
 void GameScene::menuBackCallback(Ref* pSender)
 {
     log("Back button clicked!");
@@ -629,21 +704,20 @@ void GameScene::addShopButton() {
 
 }
 
-// ���������������ѹ������ĺ���
 void GameScene::addAllPurchasedBuildings() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
-
+    Size mapSize = _tiledMap->getContentSize();
     for (auto& building : g_allPurchasedBuildings) {
         if (building && !building->getParent()) {
             _tiledMap->addChild(building, 10);
 
-            // ȷ��������һ��Ĭ��λ�ã������ǰλ����0,0��
             if (building->getPositionX() == 0 && building->getPositionY() == 0) {
-                Vec2 center = Vec2(visibleSize.width / 2, visibleSize.height / 2);
-                Vec2 pos = getNearestFreePosition(building, center);
-                auto x = pos.x;
-                auto y = pos.y;
-                building->setPosition(x, y);
+                Vec2 mapCenter = Vec2(mapSize.width / 2, mapSize.height / 2);
+
+                // 从地图中心开始找最近的空位
+                Vec2 pos = getNearestFreePosition(building, mapCenter);
+
+                building->setPosition(pos);
             }
 
             // �������������ص�
@@ -677,10 +751,11 @@ void GameScene::onEnter() {
     for (auto& building : g_allPurchasedBuildings) {
         if (building && !building->getParent()) {
             _tiledMap->addChild(building, 10);
-
+            Size mapSize = _tiledMap->getContentSize();
             auto visibleSize = Director::getInstance()->getVisibleSize();
             if (building->getPositionX() == 0 && building->getPositionY() == 0) {
-                Vec2 center = Vec2(visibleSize.width / 2, visibleSize.height / 2);
+
+                Vec2 center = Vec2(mapSize.width / 2, mapSize.height / 2);
                 Vec2 pos = getNearestFreePosition(building, center);
                 auto x = pos.x;
                 auto y = pos.y;
@@ -757,11 +832,8 @@ void GameScene::addObstacle(Node* node) {
     }
 }
 
-// GameScene.cpp
-
 Rect GameScene::getWorldBoundingBox(Node* node)
 {
-    // ����ڵ�ոձ�������û�и��ڵ㣬ֱ�ӷ��� Rect::ZERO ��ֹ����
     if (!node->getParent()) return Rect::ZERO;
 
     Rect rect = node->getBoundingBox();
@@ -770,13 +842,8 @@ Rect GameScene::getWorldBoundingBox(Node* node)
     return worldRect;
 }
 
-// GameScene.cpp
-
-// �����԰桿��ײ���
 bool GameScene::checkCollision(Rect targetRect, Node* ignoreNode)
-{// ���ϸ�ģʽ������С��������϶
-        // ֻҪ�Ӵ� 1 ���ض���ײ
-
+{
     for (auto obstacle : _obstacles)
     {
         if (obstacle == ignoreNode) continue;
@@ -797,14 +864,9 @@ bool GameScene::checkCollision(Rect targetRect, Node* ignoreNode)
 }
 Vec2 GameScene::getNearestFreePosition(Building* building, Vec2 targetMapPos)
 {
-    // ע�⣺���ﴫ����� targetMapPos (��ͼ����)������Ҫ����ת����������ȥ�����
-    // ��Ȼ checkCollision �ĳ����������꣬����ҲҪ��ϡ�
-
-    // 1. ��ȡ�����ߴ�
     Size size = building->getContentSize();
     float w = size.width * building->getScaleX();
     float h = size.height * building->getScaleY();
-
     // 2. ��������
     int step = (int)(w / 2);
     if (step < 10) step = 10;
@@ -815,26 +877,22 @@ Vec2 GameScene::getNearestFreePosition(Building* building, Vec2 targetMapPos)
             for (int y = -r; y <= r; y++) {
                 if (std::abs(x) != r && std::abs(y) != r) continue;
 
-                // ���㡾��ͼ����ϵ���µ��º�ѡ��
                 Vec2 candidateMapPos = targetMapPos + Vec2(x * step, y * step);
 
                 // ====================================================
-                // �����ġ��������õġ����������
+                // 【修改这里】不要转 WorldSpace，直接用 Local 算！
                 // ====================================================
 
-                // A. �ѵ�ͼ���� -> ת����������
-                Vec2 candidateWorldPos = _tiledMap->convertToWorldSpace(candidateMapPos);
-
-                // B. �����������
-                Rect testWorldRect = Rect(
-                    candidateWorldPos.x - w * 0.5f, // ����ê�� 0.5
-                    candidateWorldPos.y - h * 0.5f,
+                // A. 这里的 candidateMapPos 本身就是 Local 的
+                // B. 这里的 w 和 h 本身也是 Local 的 (Building 的原始大小)
+                Rect testLocalRect = Rect(
+                    candidateMapPos.x - w * 0.5f,
+                    candidateMapPos.y - h * 0.5f,
                     w, h
                 );
 
-                // C. ���
-                if (!checkCollision(testWorldRect, nullptr)) {
-                    // �ҵ��ˣ�ֱ�ӷ��ء���ͼ���꡿(��Ϊ setPosition ��Ҫ��ͼ����)
+                // C. 直接传入 Local Rect
+                if (!checkCollision(testLocalRect, nullptr)) {
                     return candidateMapPos;
                 }
             }

@@ -64,7 +64,17 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
 
     return true;
 }
+// Building.cpp
 
+void Building::onEnter()
+{
+    // 1. 必须调用父类 onEnter
+    Sprite::onEnter();
+
+    // 2. 进场时创建地基
+    // 因为是加在自己身上，所以这里绝对安全，不会导致 Crash
+    this->createGroundEffect();
+}
 void Building::setOnUpgradeCallback(std::function<void()> callback)
 {
     UpgradeCallback_coin = callback;
@@ -264,45 +274,48 @@ void Building::speedUp()
 }
 // Building.cpp
 
+// Building.cpp
+
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
     listener->setSwallowTouches(true);
 
+    // --- 触摸开始 (拿起建筑) ---
     listener->onTouchBegan = [=](Touch* touch, Event* event) {
         Vec2 touchPos = touch->getLocation();
+        Vec2 nodePos = this->getParent()->convertToNodeSpace(touchPos);
 
-        // 使用节点空间转换，判断是否点中
-        Vec2 nodePos = this->convertToNodeSpace(touchPos);
-        Rect rect = Rect(0, 0, getContentSize().width, getContentSize().height);
-
-        if (rect.containsPoint(nodePos))
+        if (this->getBoundingBox().containsPoint(nodePos))
         {
-            // 1. 【核心】记录起飞前的位置 (地图坐标系)
+            // 1. 记录数据
+            touchOffset = this->getPosition() - nodePos;
             originalPos = this->getPosition();
-
-            touchOffset = this->getPosition() - touchPos;
             isDragging = false;
 
-            // 视觉反馈
+            // 2. 视觉反馈：变大
             this->setScale(0.55f);
-            this->setLocalZOrder(99999); // 提起来，防止被遮挡
+
+            // 3. 【关键】拿起建筑时，移除地基！
+            // 这样原来的位置就会露出草地，看起来像是恢复了原色
+            this->removeGroundEffect();
+
             return true;
         }
         return false;
         };
 
+    // --- 触摸移动 (保持不变) ---
     listener->onTouchMoved = [=](Touch* touch, Event* event) {
         if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f) {
             isDragging = true;
         }
-
-        // 移动逻辑
         Vec2 worldNewPos = touch->getLocation() + touchOffset;
         Vec2 nodePos = this->getParent()->convertToNodeSpace(worldNewPos);
         this->setPosition(nodePos);
         };
 
+    // --- 触摸结束 (放下建筑) ---
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
         this->setScale(0.5f); // 恢复大小
 
@@ -310,52 +323,54 @@ void Building::initTouchListener()
             auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
 
             if (gameScene) {
-                // 1. 获取当前建筑的精准世界包围盒
-                Rect nodeRect = this->getBoundingBox();
-                Vec2 worldOrigin = this->getParent()->convertToWorldSpace(nodeRect.origin);
-                Rect myWorldRect = Rect(worldOrigin.x, worldOrigin.y, nodeRect.size.width, nodeRect.size.height);
+                // 获取碰撞检测框 (使用 Local 坐标)
+                Rect myLocalRect = this->getBoundingBox();
+                // 稍微缩小判定范围优化手感
+                myLocalRect.origin.x += 10;
+                myLocalRect.origin.y += 10;
+                myLocalRect.size.width -= 20;
+                myLocalRect.size.height -= 20;
 
-                // 2. 稍微缩小一点判定框 (手感优化)
-                myWorldRect.origin.x += 10;
-                myWorldRect.origin.y += 10;
-                myWorldRect.size.width -= 20;
-                myWorldRect.size.height -= 20;
+                // 检测碰撞
+                if (gameScene->checkCollision(myLocalRect, this)) {
+                    // === 发生碰撞，弹回原处 ===
+                    log("COLLISION! Back to origin.");
 
-                // 3. 检测碰撞
-                if (gameScene->checkCollision(myWorldRect, this)) {
-                    log("COLLISION! Back to: %f, %f", originalPos.x, originalPos.y);
-
-                    // 【关键修复】回弹动画 + 强制设置位置
-                    // 以前可能只有动画，没有 setPosition，导致动画完了位置不对
-                    auto moveBack = MoveTo::create(0.1f, originalPos);
-                    auto tintRed = TintTo::create(0.1f, Color3B::RED);
-                    auto tintBack = TintTo::create(0.1f, Color3B::WHITE);
-
-                    // 动作序列：移回 -> 变红 -> 变白 -> 恢复层级
                     auto seq = Sequence::create(
-                        Spawn::create(moveBack, tintRed, NULL),
-                        tintBack,
+                        MoveTo::create(0.1f, originalPos),
                         CallFunc::create([=]() {
-                            // 动作结束后，强制确认位置和层级
+                            // 动画结束后，强制归位
                             this->setPosition(originalPos);
                             this->setLocalZOrder(10000 - (int)originalPos.y);
+
+                            // 【关键】回到原位后，重新创建地基
+                            this->createGroundEffect();
                             }),
                         NULL
                     );
                     this->runAction(seq);
                 }
                 else {
+                    // === 放置成功 ===
                     log("Placed OK.");
-                    // 放置成功，更新记录点
                     originalPos = this->getPosition();
                     this->setLocalZOrder(10000 - (int)this->getPositionY());
+
+                    // 【关键】在新位置创建地基！
+                    // 这样新位置的地面就变色了
+                    this->createGroundEffect();
                 }
             }
             isDragging = false;
         }
         else {
-            // 点击事件
-            this->setLocalZOrder(10000 - (int)this->getPositionY()); // 恢复层级
+            // === 点击事件 (不是拖拽) ===
+            // 点击虽然没动位置，但为了保险，或者为了视觉一致性，也可以重新刷一下地基
+            this->createGroundEffect();
+
+            this->setLocalZOrder(10000 - (int)this->getPositionY());
+
+            // 弹出信息窗口
             auto infoLayer = BuildingInfoLayer::create();
             infoLayer->setBuilding(this);
             Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
@@ -383,4 +398,48 @@ void Building::finishUpgrade()
     }
 
     log("Upgrade finished! Level is now %d", a_level);
+}
+// Building.cpp
+
+void Building::createGroundEffect()
+{
+    // 1. 如果已经存在特效，先移除，防止叠加
+    if (groundEffectNode) {
+        groundEffectNode->removeFromParent();
+        groundEffectNode = nullptr;
+    }
+    auto groundSprite = Sprite::create("map/dirt_patch.png");
+
+    if (groundSprite) {
+        // 3. 获取尺寸信息
+        Size buildingSize = this->getContentSize(); // 建筑的原始大小
+        Size spriteSize = groundSprite->getContentSize(); // 图片的原始大小
+
+        // 4. 【关键】自动拉伸图片以适应不同大小的建筑
+        // 这样无论你的建筑是大本营还是兵营，这张地基图都会自动铺满底部
+        groundSprite->setScaleX(buildingSize.width / (spriteSize.width*0.8));
+        groundSprite->setScaleY(buildingSize.height / (spriteSize.height*1.5));
+
+        // 5. 设置位置：居中
+        // 因为是加在建筑(this)身上的，所以位置是建筑的中心点
+        groundSprite->setPosition(Vec2(buildingSize.width / 2, buildingSize.height / 2-50));
+        groundSprite->getTexture()->setAliasTexParameters();
+        // 6. 添加到建筑本身
+        // ZOrder -1 保证显示在建筑图片的底部
+        this->addChild(groundSprite, -1);
+
+        // 7. 保存指针
+        groundEffectNode = groundSprite;
+    }
+    else {
+        log("Error: Failed to load ground effect image: map/dirt.png");
+    }
+}
+
+void Building::removeGroundEffect()
+{
+    if (groundEffectNode) {
+        groundEffectNode->removeFromParent();
+        groundEffectNode = nullptr;
+    }
 }

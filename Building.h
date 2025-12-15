@@ -33,6 +33,7 @@ public:
     // 【新增】每帧运行的更新函数 (用于倒计时)
     virtual void update(float dt) override;
     void setOnUpgradeCallback(std::function<void()> callback);
+
     BuildingState getState() {
         return state;
     }
@@ -54,7 +55,10 @@ public:
     void collectResources();     // 收集资源
     float getProductionTimeLeft(); // 获取生产剩余时间
     int getProducedAmount();     // 获取可收集的资源量
+    virtual void onEnter() override;
 
+    void createGroundEffect();
+    void removeGroundEffect();
 private:
     BuildingType type;
     bool isDragging;
@@ -68,7 +72,7 @@ private:
     float timeLeft;  // 剩余时间
 
     std::function<void()> UpgradeCallback_coin;
-
+    cocos2d::Node* groundEffectNode = nullptr;
     void initTouchListener();
     int getUpgradeTime(); // 获取下一级升级需要几秒
 

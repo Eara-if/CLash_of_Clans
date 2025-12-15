@@ -21,6 +21,7 @@ private:
     // 新增：添加已购买建筑的辅助函数
     void addAllPurchasedBuildings();
     void addPurchasedBuilding(Building* building); // 新增：添加建筑的函数
+    bool isMapDragging;
 public:
     void addSaveButton();
     void menuSaveGameCallback(Ref* pSender);
@@ -28,6 +29,16 @@ public:
     // 创建场景的静态方法
     // 修改createScene，使其可以接收一个可选的建筑参数
     static cocos2d::Scene* createScene(Building* purchasedBuilding = nullptr);
+    bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
+    void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
+    void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
+
+    // 【新增】鼠标滚轮回调 (用于缩放)
+    void onMouseScroll(cocos2d::Event* event);
+
+    // 【新增】核心辅助函数：检查并修正地图位置 (防止出界)
+    void checkAndClampMapPosition();
+
     void setBattleButton();
     void addShopButton();
     // 初始化函数
