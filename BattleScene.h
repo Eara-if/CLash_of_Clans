@@ -18,6 +18,7 @@ struct SoldierUIItem {
 class BattleScene : public cocos2d::Scene
 {
 public:
+    void onEnter();
     static cocos2d::Scene* createScene();
     virtual bool init();
     virtual void update(float dt) override;

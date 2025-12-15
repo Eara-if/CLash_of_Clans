@@ -5,6 +5,7 @@
 #include "Building.h" 
 #include "ShopScene.h"
 #include"SaveGame.h"
+#include"AudioEngine.h"
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -375,6 +376,8 @@ void GameScene::addPurchasedBuilding(Building* building) {
 void GameScene::menuGotoBattleCallback(Ref* pSender)
 {
     log("Starting Battle...");
+    AudioEngine::stopAll();
+
     auto scene = BattleScene::createScene();
 
     Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
@@ -665,11 +668,9 @@ void GameScene::addAllPurchasedBuildings() {
     }
 }
 
-// ��������дonEnter������ȷ�����̳Ƿ���ʱ��������ȷ����
 void GameScene::onEnter() {
     Scene::onEnter();
-
-    // ���̳Ƿ���ʱ��������Դ��ʾ
+    AudioEngine::stopAll();
     this->updateResourceDisplay();
 
     // ���̳Ƿ���ʱ������Ƿ����½�����Ҫ����
@@ -705,9 +706,9 @@ void GameScene::onEnter() {
             _allBuildings.pushBack(building);
         }
     }
+    AudioEngine::play2d("music/1.ogg", true, 0.5f);
 }
 
-// ��������Դ��ʾ���º���
 void GameScene::updateResourceDisplay() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
