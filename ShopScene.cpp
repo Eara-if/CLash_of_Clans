@@ -2,7 +2,7 @@
 #include "GameScene.h"
 #include "Building.h"
 #include "HelloWorldScene.h"
-
+#include"AudioEngine.h"
 USING_NS_CC;
 
 // 声明外部变量
@@ -18,7 +18,16 @@ extern cocos2d::Vector<Building*> g_allPurchasedBuildings;
 Scene* ShopScene::createScene() {
     return ShopScene::create();
 }
+void ShopScene::onEnter()
+{
+    // 1. 必须先调用父类的 onEnter，否则场景生命周期会乱
+    Scene::onEnter();
 
+    // 2. 停止之前场景（比如主城）的所有声音
+    AudioEngine::stopAll();
+
+    log("Enter ShopeScene: Music Stoped.");
+}
 bool ShopScene::init() {
 
     if (!Scene::init()) {

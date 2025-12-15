@@ -30,7 +30,7 @@ class ShopScene : public cocos2d::Scene {
 public:
     static cocos2d::Scene* createScene();
     virtual bool init();
-
+    void onEnter();
     // ´´½¨²Ëµ¥
     void createMenu();
 
