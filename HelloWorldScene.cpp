@@ -1,18 +1,18 @@
 /****************************************************************************
  Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
- 
+
  http://www.cocos2d-x.org
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +24,18 @@
 
 #include "HelloWorldScene.h"
 #include "GameScene.h"
+#include "SaveGame.h"  // 【新增】包含存档管理头文件
 USING_NS_CC;
+
+// 【新增】声明全局变量
+extern int coin_count;
+extern int water_count;
+extern int gem_count;
+extern int coin_limit;
+extern int water_limit;
+extern int gem_limit;
+extern int army_limit;
+extern cocos2d::Vector<Building*> g_allPurchasedBuildings;
 
 Scene* HelloWorld::createScene()
 {
@@ -131,50 +142,64 @@ bool HelloWorld::init()
     // --- 双重循环结束 ---
 
     //////////////////////////////
-    // (下面应该接着是你之前写的 "START GAME" 按钮代码)
-
-    //////////////////////////////
-    // 4. 添加一个标题文字 (可选)
-
-    auto label = Label::createWithTTF("My Game Start!", "fonts/Marker Felt.ttf", 24);
-    if (label != nullptr)
+    // 4. 添加游戏标题
+    auto title = Label::createWithTTF("CLASH OF COCO", "fonts/Marker Felt.ttf", 48);
+    if (title != nullptr)
     {
         // 放在屏幕顶部中间
-        label->setPosition(Vec2(origin.x + visibleSize.width / 2,
-            origin.y + visibleSize.height - label->getContentSize().height));
-
-        // 可以在这里改颜色，防止白色文字在浅绿色背景上看不清
-        // label->setTextColor(Color4B::BLACK); 
-
-        this->addChild(label, 1);
+        title->setPosition(Vec2(origin.x + visibleSize.width / 2,
+            origin.y + visibleSize.height - 100));
+        title->setColor(Color3B::YELLOW);
+        title->enableOutline(Color4B::BLACK, 3);
+        this->addChild(title, 1);
     }
-    // --- 在 init() 函数内部 ---
 
-// 1. 创建文字标签
-    auto startLabel = Label::createWithTTF("START GAME", "fonts/Marker Felt.ttf", 48);
-    // 改变文字颜色为红色，方便在绿色背景上看清
+    // 【新增】检查是否有存档文件
+    bool hasSaveFile = SaveGame::getInstance()->isSaveFileExist();
+
+    // 【修改】创建按钮的起始Y坐标
+    float buttonStartY = origin.y + visibleSize.height / 2 + 50;
+
+    // 5. 【新增】创建"继续游戏"按钮 (如果有存档)
+    if (hasSaveFile)
+    {
+        auto continueLabel = Label::createWithTTF("CONTINUE GAME", "fonts/Marker Felt.ttf", 48);
+        continueLabel->setTextColor(Color4B::GREEN);
+        continueLabel->enableOutline(Color4B::BLACK, 2);
+
+        auto continueItem = MenuItemLabel::create(continueLabel,
+            CC_CALLBACK_1(HelloWorld::menuContinueGame, this));
+
+        continueItem->setPosition(Vec2(origin.x + visibleSize.width / 2,
+            buttonStartY));
+
+        // 将按钮添加到菜单
+        auto startmenu = Menu::create(continueItem, NULL);
+        startmenu->setPosition(Vec2::ZERO);
+        this->addChild(startmenu, 1);
+
+        // 更新按钮起始位置
+        buttonStartY -= 80;
+    }
+
+    // 6. 创建"开始游戏"按钮
+    auto startLabel = Label::createWithTTF("NEW GAME", "fonts/Marker Felt.ttf", 48);
     startLabel->setTextColor(Color4B::WHITE);
+    startLabel->enableOutline(Color4B::BLACK, 2);
 
-    // 2. 创建菜单项 (点击文字触发)
-    // 参数2: CC_CALLBACK_1(类名::函数名, this)
-    auto startItem = MenuItemLabel::create(startLabel, CC_CALLBACK_1(HelloWorld::menuGotoNextScene, this));
+    auto startItem = MenuItemLabel::create(startLabel,
+        CC_CALLBACK_1(HelloWorld::menuGotoNextScene, this));
 
-    // 设置位置：屏幕正中心偏下一点
     startItem->setPosition(Vec2(origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height / 2 - 100));
+        buttonStartY));
 
-    // 3. 创建菜单并添加 (注意：Cocos中按钮必须放在 Menu 里才能点击)
-    // create 的参数最后必须加 NULL
+    // 没有存档时，只显示"开始游戏"按钮
     auto startmenu = Menu::create(startItem, NULL);
-    // Menu 默认位置是屏幕中心，我们把它的坐标设为(0,0)，这样上面的 setPosition 才是基于屏幕左下角的
     startmenu->setPosition(Vec2::ZERO);
     this->addChild(startmenu, 1);
 
-   
-
     return true;
 }
-
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
@@ -185,23 +210,74 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 
     //EventCustom customEndEvent("game_scene_close_event");
     //_eventDispatcher->dispatchEvent(&customEndEvent);
-
-
 }
-// --- 在 HelloWorldScene.cpp 文件末尾 ---
 
+// 开始新游戏
 void HelloWorld::menuGotoNextScene(Ref* pSender)
 {
+    // 【新增】重置游戏数据
+    coin_count = 5000;
+    water_count = 5000;
+    gem_count = 500;
+    coin_limit = 5000;
+    water_limit = 5000;
+    gem_limit = 5000;
+    army_limit = 10;
+
+    // 清空已购买建筑
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building) {
+            building->removeFromParent();
+        }
+    }
+    g_allPurchasedBuildings.clear();
+
     // 1. 创建目标场景
     auto scene = GameScene::createScene();
 
     // 2. 告诉导演切换场景
-    // replaceScene 会销毁当前场景，释放内存，进入新场景
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+}
 
-    // 【方式 A】直接切换 (生硬)
-    // Director::getInstance()->replaceScene(scene);
+// 【新增】继续游戏
+void HelloWorld::menuContinueGame(Ref* pSender)
+{
+    log("Continue game...");
 
-    // 【方式 B】带特效切换 (推荐)
-    // TransitionFade: 淡入淡出，持续 1.0 秒
-    Director::getInstance()->replaceScene(TransitionFade::create(1.0f, scene));
+    // 尝试加载存档
+    if (SaveGame::getInstance()->loadGameState())
+    {
+        log("Save game loaded successfully!");
+
+        // 【重要】延迟一小段时间后创建游戏场景，确保数据已加载
+        this->runAction(Sequence::create(
+            DelayTime::create(0.1f),
+            CallFunc::create([=]() {
+                // 创建游戏场景（不传入建筑，因为存档中已包含）
+                auto scene = GameScene::createScene();
+                Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+                }),
+            nullptr
+        ));
+    }
+    else
+    {
+        log("Failed to load save game!");
+
+        // 显示错误提示
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+        auto errorLabel = Label::createWithTTF("Failed to load save game!", "fonts/Marker Felt.ttf", 32);
+        errorLabel->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
+        errorLabel->setColor(Color3B::RED);
+        this->addChild(errorLabel, 10);
+
+        // 2秒后移除提示
+        errorLabel->runAction(Sequence::create(
+            DelayTime::create(2.0f),
+            RemoveSelf::create(),
+            nullptr
+        ));
+    }
 }
