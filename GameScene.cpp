@@ -77,7 +77,7 @@ public:
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-        filename = "06.png";
+        filename = "ui/06.png";
 
 
         Rect tileRect = this->calculateRect();
@@ -153,7 +153,7 @@ public:
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-        filename = "06.png";
+        filename = "ui/06.png";
 
 
         Rect tileRect = this->calculateRect();
@@ -230,7 +230,7 @@ public:
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-        filename = "06.png";
+        filename = "ui/06.png";
 
 
         Rect tileRect = this->calculateRect();
@@ -433,7 +433,7 @@ bool GameScene::init()
     // 创建默认兵营 (放在地图中心稍微偏右一点的位置)
     if (!hasBarracksBuilding) {
         Vec2 barracksPos = mapCenterLocal + Vec2(200, 0); // 往右偏移 200 像素
-        this->setbuilding("junying.png", Rect::ZERO, "My junying", 200, BuildingType::BARRACKS, barracksPos);
+        this->setbuilding("junying.png", Rect::ZERO, "My junying", 500, BuildingType::BARRACKS, barracksPos);
         CCLOG("Created default barracks near Map Center");
     }
 

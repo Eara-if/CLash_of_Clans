@@ -4,7 +4,11 @@
 #include "cocos2d.h"
 // 2. 【新增】前向声明：告诉编译器 Soldier 是一个类，具体细节等会儿再说
 class Soldier;
-
+enum class EnemyType {
+    BASE,   // 大本营
+    TOWER,  // 攻击塔 (会攻击)
+    WALL    // 栅栏/墙 (不会攻击，但阻挡移动)
+};
 class EnemyBuilding : public cocos2d::Sprite
 {
 public:
@@ -31,6 +35,9 @@ public:
     // 【新增】检查建筑是否被摧毁
     bool isDestroyed() const { return _isDestroyed; }
 
+    void setType(EnemyType type) { _type = type; }
+    EnemyType getType() const { return _type; }
+
 private:
     // 【新增】发射导弹
     void fireMissile(Soldier* target);
@@ -52,6 +59,7 @@ private:
     void updateHealthBar();
     // 【新增】声明播放爆炸特效的函数
     void playExplosionEffect();
+    EnemyType _type = EnemyType::TOWER; // 默认为塔
 };
 
 #endif

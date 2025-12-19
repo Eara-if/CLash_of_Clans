@@ -175,29 +175,95 @@ void BattleScene::menuBackToGameScene(Ref* pSender)
 }
 
 // 【新增】检查游戏是否结束
+// BattleScene.cpp
+
+// BattleScene.cpp
+
+// BattleScene.cpp
+
 void BattleScene::checkGameEnd()
 {
-    // 如果已经游戏结束，直接返回
+    // 如果游戏已经结束，不再检测
     if (_isGameOver) return;
 
-    // 检查大本营是否被摧毁
-    if (_base && _base->isDestroyed()) {
-        _isGameOver = true;
+    // ==========================================
+    // 1. 胜利检测 (保持不变)
+    // ==========================================
+    bool victory = true;
 
-        // 暂停游戏逻辑，但保持UI交互
+    // 检查大本营
+    if (_base && !_base->isDestroyed()) {
+        victory = false;
+    }
+
+    // 检查防御塔 (排除墙)
+    if (victory) {
+        for (auto building : _towers) {
+            if (building && !building->isDestroyed() && building->getType() != EnemyType::WALL) {
+                victory = false;
+                break;
+            }
+        }
+    }
+
+    if (victory) {
+        _isGameOver = true;
         _isGamePaused = true;
 
-        // 延迟显示胜利弹窗，让玩家看到大本营摧毁的效果
+        // 冻结战场 (停止所有动作)
+        for (auto s : _soldiers) 
+            if (s) { 
+                s->stopAllActions(); 
+                s->unscheduleAllCallbacks();
+            }
+        for (auto t : _towers) if (t) { t->stopAllActions(); t->unscheduleAllCallbacks(); }
+        if (_base) _base->stopAllActions();
+        if (_tileMap) for (auto c : _tileMap->getChildren()) c->stopAllActions();
+
         this->runAction(Sequence::create(
             DelayTime::create(1.0f),
-            CallFunc::create([this]() {
-                this->showVictoryPopup();
-                }),
+            CallFunc::create([this]() { this->showVictoryPopup(); }),
+            nullptr
+        ));
+        return; // 赢了就直接返回，不用测输了没
+    }
+
+    // ==========================================
+    // 2. 失败检测 (新增)
+    // ==========================================
+
+    // 条件A: 场上已经没有活着的士兵了
+    bool noSoldiersOnField = _soldiers.empty();
+
+    // 条件B: 玩家手里已经没有剩余的兵可以派了
+    bool noReservesLeft = true;
+    for (auto item : _soldierUIList) {
+        if (item->count > 0) {
+            noReservesLeft = false;
+            break; // 只要还有一种兵能派，就还没输
+        }
+    }
+
+    // 只有当 A 和 B 都满足，且前面已经确认没赢 (victory == false)，才算输
+    if (noSoldiersOnField && noReservesLeft) {
+        _isGameOver = true;
+        _isGamePaused = true;
+
+        log("Game Over: Defeat!");
+
+        // 冻结战场
+        for (auto t : _towers) if (t) { t->stopAllActions(); t->unscheduleAllCallbacks(); }
+        if (_base) _base->stopAllActions();
+        if (_tileMap) for (auto c : _tileMap->getChildren()) c->stopAllActions();
+
+        // 延迟显示失败弹窗
+        this->runAction(Sequence::create(
+            DelayTime::create(1.0f),
+            CallFunc::create([this]() { this->showDefeatPopup(); }),
             nullptr
         ));
     }
 }
-
 // 【新增】显示胜利弹窗
 void BattleScene::showVictoryPopup()
 {
@@ -290,7 +356,81 @@ void BattleScene::showVictoryPopup()
     container->setScale(0.1f);
     container->runAction(EaseBackOut::create(ScaleTo::create(0.4f, 1.0f)));
 }
+// BattleScene.cpp
 
+void BattleScene::showDefeatPopup()
+{
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    Vec2 center = Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y);
+
+    // 1. 半透明背景
+    auto bgLayer = LayerColor::create(Color4B(0, 0, 0, 180), visibleSize.width, visibleSize.height);
+    bgLayer->setPosition(Vec2::ZERO);
+    // 吞噬触摸
+    auto listener = EventListenerTouchOneByOne::create();
+    listener->setSwallowTouches(true);
+    listener->onTouchBegan = [](Touch* t, Event* e) { return true; };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, bgLayer);
+    this->addChild(bgLayer, 100);
+
+    // 2. 弹窗背景
+    float targetScale = 5.0f;
+    auto popupBg = Sprite::create("popup_bg.png"); // 复用背景图
+    Size originalSize = popupBg->getContentSize();
+    float bgHeight = originalSize.height * targetScale;
+
+    popupBg->setPosition(center);
+    this->addChild(popupBg, 101);
+
+    // 3. 容器
+    auto container = Node::create();
+    container->setPosition(center);
+    this->addChild(container, 102);
+
+    // 4. 标题 (DEFEAT - 红色)
+    auto titleLabel = Label::createWithTTF("DEFEAT", "fonts/Marker Felt.ttf", 36);
+    titleLabel->setTextColor(Color4B::RED);
+    titleLabel->enableOutline(Color4B::BLACK, 2);
+    titleLabel->setPosition(Vec2(0, bgHeight * 0.35f));
+    container->addChild(titleLabel);
+
+    // 5. 失败信息
+    auto messageLabel = Label::createWithTTF("All soldiers are dead...", "fonts/Marker Felt.ttf", 28);
+    messageLabel->setTextColor(Color4B::WHITE);
+    messageLabel->setPosition(Vec2(0, bgHeight * 0.15f));
+    container->addChild(messageLabel);
+
+    auto messageLabel1 = Label::createWithTTF("Try to upgrade you soldiers!", "fonts/Marker Felt.ttf", 28);
+    messageLabel1->setTextColor(Color4B::WHITE);
+    messageLabel1->setPosition(Vec2(0, bgHeight * 0.05f));
+    container->addChild(messageLabel1);
+
+    // 6. 返回按钮
+    auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 32);
+    backLabel->setTextColor(Color4B::WHITE);
+
+    auto backItem = MenuItemLabel::create(
+        backLabel,
+        CC_CALLBACK_1(BattleScene::menuBackToGameScene, this)
+    );
+
+    // 简单的呼吸动画
+    auto scaleSeq = Sequence::create(ScaleTo::create(1.0f, 1.1f), ScaleTo::create(1.0f, 1.0f), NULL);
+    backItem->runAction(RepeatForever::create(scaleSeq));
+    backItem->setPosition(Vec2(0, -bgHeight * 0.25f));
+
+    auto menu = Menu::create(backItem, NULL);
+    menu->setPosition(Vec2::ZERO);
+    container->addChild(menu);
+
+    // 7. 进场动画
+    popupBg->setScale(0.1f);
+    popupBg->runAction(EaseBackOut::create(ScaleTo::create(0.4f, targetScale)));
+
+    container->setScale(0.1f);
+    container->runAction(EaseBackOut::create(ScaleTo::create(0.4f, 1.0f)));
+}
 // 【新增】隐藏胜利弹窗
 void BattleScene::hideVictoryPopup()
 {
@@ -343,7 +483,13 @@ void BattleScene::loadEnemyMap()
             float y = dict["y"].asFloat();
             float w = dict["width"].asFloat();
             float h = dict["height"].asFloat();
-
+            if (dict["fileName"].asString()=="Tree.png"|| dict["fileName"].asString() == "Tree1.png") {
+                y += 100;
+            }
+            if(name=="boom") {
+                x = 0;
+                y = 0;
+            }
             // 【关键步骤】处理坐标系
             // 1. 保存 "世界坐标" 的 Rect 到 _forbiddenRects，用于绘制红色区域和点击检测
             Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
@@ -373,9 +519,9 @@ void BattleScene::loadEnemyMap()
                 );
 
                 if (_base) {
-                    // 修正坐标：让建筑中心对齐对象的中心
+                    _base->setType(EnemyType::BASE);
                     _base->setPosition(x + w / 2, y + h / 2);
-                    _tileMap->addChild(_base, 1);
+                    _tileMap->addChild(_base, 3);
                 }
             }
 
@@ -405,17 +551,116 @@ void BattleScene::loadEnemyMap()
 
                 if (tower) {
                     tower->setPosition(x + w / 2, y + h / 2);
-                    _tileMap->addChild(tower, 1);
+                    _tileMap->addChild(tower, 3);
                     // 加入列表供士兵寻找
                     _towers.pushBack(tower);
                 }
             }
+            else if (name == "cannon") {
+                int hp = dict["HP"].asInt();
+                int atk = dict["Attack"].asInt(); // 读出攻击力
+                float range = 200.0f;//设射程是 250, 可以在 TMX 里配一个 "Range" 属性读出来
 
+                // 计算 notch
+                int damagePerNotch = hp / 4;
+                if (damagePerNotch == 0) 
+                    damagePerNotch = 1;
+
+                // 使用新的 create 函数
+                auto cannon = EnemyBuilding::create(
+                    "map/buildings/Cannon1.png",
+                    "ui/Heart2.png",
+                    hp,
+                    damagePerNotch,
+                    atk,   // 传入攻击力
+                    range  // 传入射程
+                );
+
+                if (cannon) {
+                    cannon->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(cannon, 3);
+                    // 加入列表供士兵寻找
+                    _towers.pushBack(cannon);
+                }
+            }
+            else if (name == "fence") {
+                int hp = 40; // 墙通常血比较厚
+
+                // 墙没有攻击力，射程为0
+                int atk = 0;
+                float range = 0;
+
+                // 计算 Notch (血条格数)
+                int damagePerNotch = hp / 4;
+                if (damagePerNotch == 0) damagePerNotch = 1;
+
+                // 2. 创建实体
+                // 注意：准备一张 fence.png 和 vertical_fence.png (如果需要竖着的)
+                auto fence = EnemyBuilding::create(
+                    "map/buildings/fence.png", // 你的栅栏图片路径
+                    "",
+                    hp,
+                    damagePerNotch,
+                    atk,
+                    range
+                );
+
+                if (fence) {
+                    fence->setPosition(x + w / 2, y + h / 2);
+                    fence->setType(EnemyType::WALL);
+                    _tileMap->addChild(fence, 2); // 层级比塔稍微低一点
+                    _towers.pushBack(fence);
+                }
+            }
+            else if (name == "boom") {
+
+            }
             // ----------------------------------------------------
             // 处理 C: 障碍物 (Tree, grass)
             // ----------------------------------------------------
-            else if (name == "Tree" || name == "grass"|| name == "mine") {
+            else if (name == "grass") {
                 // 不需要创建实体类，上面的 _forbiddenRects.push_back 已经处理了阻挡逻辑
+            }
+        }
+        auto objectGroup = _tileMap->getObjectGroup("object");
+        //检测地图中对象层的树
+        if (objectGroup) {
+            ValueVector objects = objectGroup->getObjects();
+
+            for (const auto& v : objects) {
+                ValueMap dict = v.asValueMap();
+
+                if (dict.find("fileName") != dict.end())
+                {
+                    std::string path = dict["fileName"].asString();
+
+                    auto sprite = Sprite::create(path);
+
+                    if (sprite) {
+                        _tileMap->addChild(sprite, 1);
+
+                        sprite->setAnchorPoint(Vec2::ZERO);
+                        sprite->getTexture()->setAliasTexParameters();
+
+                        float x = dict["x"].asFloat();
+                        float y = dict["y"].asFloat();
+
+                        sprite->setPosition(x, y+100);
+
+                        if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
+                            float width = dict["width"].asFloat();
+                            float height = dict["height"].asFloat();
+
+                            sprite->setScaleX(width / sprite->getContentSize().width);
+                            sprite->setScaleY(height / sprite->getContentSize().height);
+                        }
+
+                        sprite->setLocalZOrder(10000 - (int)y);
+                    }
+                    else {
+                        log("Error: Can't load image: %s", path.c_str());
+                    }
+                }
             }
         }
     }
@@ -682,13 +927,31 @@ void BattleScene::showWarning(const std::string& msg)
     ));
 }
 
-// 供其他逻辑调用（如果需要检查某个点是否被阻挡，注意这里输入的是世界坐标）
+// BattleScene.cpp
+
 bool BattleScene::isPositionBlocked(Vec2 worldPos)
 {
-    for (const auto& rect : _forbiddenRects) {
-        if (rect.containsPoint(worldPos)) {
-            return true;
+    // 1. 检查大本营 (如果没炸)
+    if (_base && !_base->isDestroyed()) {
+        Rect baseRect = _base->getBoundingBox();
+        Vec2 baseWorldPos = _tileMap->convertToWorldSpace(baseRect.origin);
+        Rect worldRect(baseWorldPos.x, baseWorldPos.y, baseRect.size.width, baseRect.size.height);
+
+        if (worldRect.containsPoint(worldPos)) return true;
+    }
+
+    // 2. 检查所有活着的塔和墙
+    for (auto building : _towers) {
+        if (building && !building->isDestroyed()) {
+            Rect rect = building->getBoundingBox();
+            Vec2 buildingWorldPos = _tileMap->convertToWorldSpace(rect.origin);
+            Rect worldRect(buildingWorldPos.x, buildingWorldPos.y, rect.size.width, rect.size.height);
+
+            if (worldRect.containsPoint(worldPos)) {
+                return true; // 被活着的建筑挡住了
+            }
         }
     }
+
     return false;
 }

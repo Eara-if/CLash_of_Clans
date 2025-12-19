@@ -107,73 +107,131 @@ bool Soldier::init(BattleScene* battleScene, SoldierType type)
 
 void Soldier::update(float dt)
 {
-    // 1. 如果没有目标或目标已死亡，寻找新目标
-    if (!_target || _target->getCurrentHp() <= 0) {
+    // 检查目标有效性
+    if (!_target || _target->getCurrentHp() <= 0 || _target->isDestroyed()) {
         _target = nullptr;
         findNewTarget();
     }
 
-    // 2. 如果依然没有目标（说明赢了），待机
     if (!_target) {
         if (_state != State::IDLE) {
             _state = State::IDLE;
-            stopAnim(); // 调用虚函数
+            stopAnim();
         }
         return;
     }
 
-    // 3. 计算与目标的距离
+    // ==========================================
+    // 【核心修复 1】攻击判定逻辑
+    // ==========================================
     float dist = this->getPosition().distance(_target->getPosition());
 
-    if (dist <= _attackRange) {
-        // 进入攻击范围
+    // 只要矩形接触了，就算“贴脸”了
+    bool isTouching = this->getBoundingBox().intersectsRect(_target->getBoundingBox());
+
+    // 满足 射程内 或 贴脸接触，都视为可攻击
+    if (dist <= _attackRange || isTouching) {
         if (_state != State::ATTACKING) {
             _state = State::ATTACKING;
-            stopAnim(); // 调用虚函数
+            stopAnim();
         }
         attackLogic(dt);
     }
     else {
-        // 超出范围，追击
         if (_state != State::MOVING) {
             _state = State::MOVING;
-            playWalkAnim(); // 调用虚函数
+            playWalkAnim();
         }
         moveLogic(dt);
     }
 }
 
+// Soldier.cpp
+
 void Soldier::findNewTarget()
 {
     if (!_battleScene) return;
 
-    // 优先级 1: 防御塔
     auto& towers = _battleScene->getTowers();
-    EnemyBuilding* nearestTower = nullptr;
-    float minDist = FLT_MAX;
+    EnemyBuilding* bestTarget = nullptr;
+    float minScore = FLT_MAX;
 
     Vec2 myPos = this->getPosition();
 
+    // 判断是否是弓箭手 (用于之后的特殊逻辑，如果有的话)
+    bool isArcher = (_attackRange > 150.0f);
+
     for (auto tower : towers) {
-        if (tower && tower->getCurrentHp() > 0 && !tower->isDestroyed()) {
+        if (tower && !tower->isDestroyed()) {
+
             float dist = myPos.distance(tower->getPosition());
-            if (dist < minDist) {
-                minDist = dist;
-                nearestTower = tower;
+            float score = dist;
+
+            // ============================================================
+            // 【核心修改】所有士兵都极度嫌弃墙！
+            // ============================================================
+            if (tower->getType() == EnemyType::WALL) {
+                // 给墙增加巨额罚分 (相当于这个墙在 10000 像素以外)
+                // 这样，只要场上还有活着的塔或基地，士兵绝对不会主动把墙当目标
+                score += 10000.0f;
+            }
+
+            if (score < minScore) {
+                minScore = score;
+                bestTarget = tower;
             }
         }
     }
 
-    if (nearestTower) {
-        _target = nearestTower;
-        return;
+    // 比较基地 (基地优先级最高，不加罚分)
+    auto base = _battleScene->getBase();
+    if (base && !base->isDestroyed()) {
+        float dist = myPos.distance(base->getPosition());
+        // 如果算出来的墙的分数(距离+10000)比基地还小，那说明实在没东西打了
+        if (dist < minScore) {
+            bestTarget = base;
+        }
     }
 
-    // 优先级 2: 大本营
-    auto base = _battleScene->getBase();
-    if (base && base->getCurrentHp() > 0) {
-        _target = base;
+    _target = bestTarget;
+}
+
+//void Soldier::moveLogic(float dt)
+//{
+//    if (!_target) return;
+//
+//    Vec2 myPos = this->getPosition();
+//    Vec2 targetPos = _target->getPosition();
+//
+//    // 计算方向向量
+//    Vec2 direction = (targetPos - myPos).getNormalized();
+//
+//    // 移动
+//    Vec2 newPos = myPos + direction * _moveSpeed * dt;
+//    this->setPosition(newPos);
+//
+//    // 简单的朝向调整
+//    if (direction.x > 0) this->setFlippedX(false);
+//    else if (direction.x < 0) this->setFlippedX(true);
+//}
+//// Soldier.cpp
+EnemyBuilding* Soldier::findNearestWall()
+{
+    if (!_battleScene) return nullptr;
+    EnemyBuilding* nearest = nullptr;
+    float minDst = 100.0f; // 【缩小范围】只找贴脸的墙 (之前是200可能太远)
+
+    Vec2 myPos = this->getPosition();
+    for (auto b : _battleScene->getTowers()) {
+        if (b && !b->isDestroyed() && b->getType() == EnemyType::WALL) {
+            float dst = myPos.distance(b->getPosition());
+            if (dst < minDst) {
+                minDst = dst;
+                nearest = b;
+            }
+        }
     }
+    return nearest;
 }
 
 void Soldier::moveLogic(float dt)
@@ -183,41 +241,66 @@ void Soldier::moveLogic(float dt)
     Vec2 myPos = this->getPosition();
     Vec2 targetPos = _target->getPosition();
 
-    // 计算方向向量
     Vec2 direction = (targetPos - myPos).getNormalized();
+    Vec2 nextPos = myPos + direction * _moveSpeed * dt;
+    Vec2 nextWorldPos = this->getParent()->convertToWorldSpace(nextPos);
 
-    // 移动
-    Vec2 newPos = myPos + direction * _moveSpeed * dt;
-    this->setPosition(newPos);
+    // 检测阻挡
+    if (_battleScene->isPositionBlocked(nextWorldPos))
+    {
+        // === 撞到东西了 ===
 
-    // 简单的朝向调整
+        // 1. 如果撞到的是目标本身 -> 停下攻击
+        Rect myRect = this->getBoundingBox();
+        Rect targetRect = _target->getBoundingBox();
+        if (myRect.intersectsRect(targetRect)) {
+            return;
+        }
+
+        // 2. 弓箭手逻辑 (隔墙打)
+        bool isArcher = (_attackRange > 150.0f);
+        float distToTarget = myPos.distance(targetPos);
+        if (isArcher && distToTarget <= _attackRange) {
+            return;
+        }
+
+        // 3. 【近战兵被挡路】 -> 被迫打墙
+        // 注意：这里我们是在 "被迫" 状态。
+        // 因为 findNewTarget 已经忽略了墙，所以 _target 此刻肯定是个远处的塔。
+        // 但路不通，所以我们要临时把目标切换成挡路的这堵墙。
+
+        EnemyBuilding* wall = findNearestWall();
+
+        // 只有当墙真的在身边时才切目标
+        if (wall && _target != wall) {
+            _target = wall;
+            // 士兵会原地开始攻击这堵墙。
+            // 当墙被打爆 (_isDestroyed=true) 后，update 会调用 findNewTarget。
+            // 此时 findNewTarget 又会忽略剩下的墙，继续锁定远处的塔。
+            // 结果：士兵打穿一个缺口就走了，不会清理旁边的墙。
+        }
+        return;
+    }
+
+    // 没挡路就正常走
+    this->setPosition(nextPos);
     if (direction.x > 0) this->setFlippedX(false);
     else if (direction.x < 0) this->setFlippedX(true);
 }
-
-void Soldier::attackLogic(float dt)
-{
+void Soldier::attackLogic(float dt) {
     _attackTimer += dt;
     if (_attackTimer >= _attackInterval) {
         _attackTimer = 0.0f;
-
-        // 执行攻击
         if (_target) {
-            // 攻击动画效果（保持 3.0f 的缩放基准）
-            auto seq = Sequence::create(
-                ScaleTo::create(0.1f, 2.8f),
-                ScaleTo::create(0.1f, 3.0f),
-                nullptr
-            );
+            // 动画
+            auto seq = Sequence::create(ScaleTo::create(0.1f, 2.8f), ScaleTo::create(0.1f, 3.0f), nullptr);
             this->runAction(seq);
-
+            // 攻击
             this->attackTarget(_target);
-            if (_currentHp <= 0) return;
-
-            // 检查目标是否死亡（这个检查必须放在 attackTarget 之后）
-            if (_target && _target->getCurrentHp() <= 0) {
-                _target = nullptr;
-            }
+            // 炸弹人自爆检测
+            if (this->getReferenceCount() == 0 || this->getCurrentHp() <= 0) 
+                return;
+            if (_target && _target->getCurrentHp() <= 0) _target = nullptr;
         }
     }
 }

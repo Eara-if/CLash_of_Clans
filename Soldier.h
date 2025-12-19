@@ -35,7 +35,7 @@ public:
     // 通用战斗逻辑
     void takeDamage(int damage);
     int getCurrentHp() const { return _currentHp; }
-
+    EnemyBuilding* findNearestWall();
 protected:
     // AI 状态枚举
     enum class State { IDLE, MOVING, ATTACKING };

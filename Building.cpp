@@ -369,7 +369,11 @@ void Building::initTouchListener()
             this->createGroundEffect();
 
             this->setLocalZOrder(10000 - (int)this->getPositionY());
-
+            if (this->type == BuildingType::WALL)
+            {
+                log("Clicked on a Wall - No popup.");
+                return; // 直接结束，不执行后面的弹窗代码
+            }
             // 弹出信息窗口
             auto infoLayer = BuildingInfoLayer::create();
             infoLayer->setBuilding(this);
@@ -409,7 +413,8 @@ void Building::createGroundEffect()
         groundEffectNode = nullptr;
     }
     auto groundSprite = Sprite::create("map/dirt_patch.png");
-
+    if (this->type == BuildingType::WALL)
+        return;
     if (groundSprite) {
         // 3. 获取尺寸信息
         Size buildingSize = this->getContentSize(); // 建筑的原始大小
@@ -426,7 +431,7 @@ void Building::createGroundEffect()
         groundSprite->getTexture()->setAliasTexParameters();
         // 6. 添加到建筑本身
         // ZOrder -1 保证显示在建筑图片的底部
-        this->addChild(groundSprite, -1);
+        this->addChild(groundSprite, -100);
 
         // 7. 保存指针
         groundEffectNode = groundSprite;

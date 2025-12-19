@@ -56,7 +56,12 @@ bool EnemyBuilding::init(const std::string& filename, const std::string& hpBarFi
         _healthBar->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 20));
         _healthBar->setScale(3.0f);
 
-        this->addChild(_healthBar);
+        this->addChild(_healthBar,100);
+    }
+    else
+    {
+        // 如果传的是空字符串，直接设为空指针
+        _healthBar = nullptr;
     }
 
     // 【新增】初始化攻击属性
@@ -106,54 +111,73 @@ void EnemyBuilding::updateTowerLogic(float dt, const cocos2d::Vector<Soldier*>& 
     }
 }
 
+// EnemyBuilding.cpp
+
 void EnemyBuilding::fireMissile(Soldier* target)
 {
-    // 【修改】检查防御塔是否已被摧毁
-    if (_isDestroyed) return;
+    // 基本检查
+    if (_isDestroyed || !target) return;
 
-    // 1. 创建导弹 Sprite
-    auto missile = Sprite::create("weapon/cannonball.png"); // 替换成你的导弹图片
-    missile->setPosition(this->getContentSize().width / 2, this->getContentSize().height / 2 + 50); // 从塔中心发射
-    missile->setScale(0.8f); // 调整大小
-    this->addChild(missile, 10); // 加在塔上，或者加在 BattleScene 地图层更好(需坐标转换)，这里简化先加在塔上
+    // 1. 创建导弹
+    auto missile = Sprite::create("weapon/cannonball.png"); // 确保路径对
+    if (!missile) return;
 
-    // 2. 计算目标位置
-    // 注意：因为 missile 是加在 Tower 上的，target 的位置是世界坐标(或地图坐标)，需要转换
-    // 如果 Tower 和 Soldier 都在 tileMap 上，计算相对位置即可：
+    missile->setPosition(this->getContentSize().width / 2, this->getContentSize().height / 2 + 50);
+    missile->setScale(0.8f);
+    this->addChild(missile, 10);
+
+    // 计算坐标和时间
     Vec2 targetPosInTower = this->convertToNodeSpace(target->getParent()->convertToWorldSpace(target->getPosition()));
-
-    // 3. 计算飞行时间 (距离越远飞得越久，保持速度恒定)
     float distance = missile->getPosition().distance(targetPosInTower);
-    float speed = 400.0f; // 导弹速度 (像素/秒)
+    float speed = 400.0f;
     float duration = distance / speed;
 
-    // 4. 创建动作序列
-    // 旋转角度 (可选)：让导弹头朝向敌人
+    // 调整角度
     Vec2 direction = targetPosInTower - missile->getPosition();
     float angle = CC_RADIANS_TO_DEGREES(atan2(direction.y, direction.x));
-    missile->setRotation(-angle); // Cocos 的旋转方向和数学相反
+    missile->setRotation(-angle);
 
-    // 动作：移动 -> 造成伤害 -> 移除导弹
+    // ============================================================
+    // 【核心修复开始】
+    // ============================================================
+
+    // A. 提前获取攻击力 (值拷贝)
+    // 这样 Lambda 里就不需要访问 'this' 了，防止塔被拆导致崩溃
+    int damage = this->_attackPower;
+
+    // B. 锁定目标 (Retain)
+    // 强制给 target 的引用计数 +1。即使士兵在别处被打死(removeFromParent)，
+    // 它的内存也不会被真正释放，直到我们喊 release。
+    target->retain();
+
     auto seq = Sequence::create(
         MoveTo::create(duration, targetPosInTower),
-        CallFunc::create([target, this, missile]() {
-            // 这是一个 Lambda 回调，导弹到达时执行
+        CallFunc::create([target, missile, damage]() { // 【修改】捕获 damage，而不是 this
 
-            // 【重要】再次检查 target 是否还活着，防止导弹飞行途中士兵死了导致空指针崩溃
-            // 简单的判断方法是看它是否还在内存池或者 flag
-            // 实际项目中建议给 Soldier 加个 isDead() 标记
-            if (target && target->getParent()) {
-                // 造成伤害 (假设 Soldier 有 takeDamage 函数)
-                target->takeDamage(this->_attackPower);
+            // Lambda 回调执行时：
+
+            // C. 检查目标是否“逻辑存活”
+            // 虽然 retain 保证了指针不崩，但士兵可能已经死了（不在场景里了）。
+            // 如果 getParent() 为空，说明士兵已经被移出游戏，我们就不造成伤害了。
+            if (target->getParent()) {
+                target->takeDamage(damage);
             }
 
-            // 移除导弹
+            // D. 移除导弹
             missile->removeFromParent();
+
+            // E. 释放目标 (Release)
+            // 对应前面的 retain。如果士兵之前已经被移出场景，这里的 release 会让引用计数归零，彻底销毁它。
+            target->release();
             }),
         nullptr
     );
 
     missile->runAction(seq);
+
+    // ============================================================
+    // 【核心修复结束】
+    // ============================================================
 }
 
 

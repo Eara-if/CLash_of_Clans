@@ -79,8 +79,8 @@ private:
     // 【新增】游戏结束逻辑
     void checkGameEnd();
     void showVictoryPopup();
+    void showDefeatPopup();
     void hideVictoryPopup();
-
     // 触摸事件
     bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
     void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
