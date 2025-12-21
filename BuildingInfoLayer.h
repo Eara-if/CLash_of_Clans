@@ -35,6 +35,12 @@ private:
     cocos2d::Label* _infoLabel; // 显示 "Lv.1" 或 "Time: 10s"
     cocos2d::MenuItemFont* _actionBtn; // "Upgrade" 或 "Speed Up"
     bool _isShowingTimer = false;
+
+    // 【新增】显示最大等级警告
+    void showMaxLevelWarning(const std::string& buildingName, int townHallLevel);
+
+    // 【新增】显示解锁要求警告
+    void showLockedWarning(const std::string& buildingName, int requiredTHLevel);
 };
 
 #endif

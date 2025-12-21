@@ -1,6 +1,7 @@
 #include "Building.h"
 #include "BuildingInfoLayer.h" // 一定要引用之前写的弹窗类
-#include"GameScene.h"
+#include "BuildingUpgradeLimits.h"
+#include "GameScene.h"
 USING_NS_CC;
 
 // 引用全局变量 (告诉编译器去别的地方找这个变量)
@@ -230,6 +231,63 @@ void Building::startUpgrade()
             RemoveSelf::create(),
             nullptr
         ));
+        return;
+    }
+
+    // 【新增】检查建筑最高等级限制（大本营最高10级已在其他地方处理）
+    int nextLevel = a_level + 1;
+
+    // 获取当前大本营等级
+    int townHallLevel = 1;
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::BASE) {
+            townHallLevel = building->getLevel();
+            break;
+        }
+    }
+
+    // 检查是否可以升级到下一级
+    auto upgradeLimits = BuildingUpgradeLimits::getInstance();
+    int maxLevelForThisTH = upgradeLimits->getMaxLevelForBuilding(type, townHallLevel);
+
+    if (nextLevel > maxLevelForThisTH&& type != BuildingType::BASE) {
+        log("Cannot upgrade %s to level %d: Maximum level for TH%d is %d",
+            buildingName.c_str(), nextLevel, townHallLevel, maxLevelForThisTH);
+
+        // 显示提示消息
+        auto scene = Director::getInstance()->getRunningScene();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+
+        std::string message = buildingName + " cannot be upgraded beyond level " +
+            std::to_string(maxLevelForThisTH) +
+            " at Town Hall level " + std::to_string(townHallLevel);
+
+        auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 28);
+        label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+        label->setColor(Color3B::ORANGE);
+        scene->addChild(label, 1000);
+        label->runAction(Sequence::create(
+            DelayTime::create(2.5f),
+            RemoveSelf::create(),
+            nullptr
+        ));
+
+        // 【新增】显示大本营升级提示
+        if (townHallLevel < 10) {
+            std::string unlockInfo = upgradeLimits->getUnlockInfoForNextTownHallLevel(townHallLevel);
+            auto infoLabel = Label::createWithTTF(unlockInfo, "fonts/Marker Felt.ttf", 24);
+            infoLabel->setPosition(visibleSize.width / 2, visibleSize.height / 2 - 50);
+            infoLabel->setColor(Color3B::YELLOW);
+            infoLabel->setDimensions(400, 0);
+            infoLabel->setAlignment(TextHAlignment::CENTER);
+            scene->addChild(infoLabel, 1000);
+            infoLabel->runAction(Sequence::create(
+                DelayTime::create(3.0f),
+                RemoveSelf::create(),
+                nullptr
+            ));
+        }
+
         return;
     }
 

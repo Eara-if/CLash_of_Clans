@@ -5,7 +5,7 @@
 #include "HelloWorldScene.h"
 #include"AudioEngine.h"
 USING_NS_CC;
-
+ 
 // 声明外部变量
 extern int coin_count;
 extern int water_count;
@@ -26,7 +26,7 @@ void ShopScene::onEnter()
 
     // 2. 停止之前场景（比如主城）的所有声音
     AudioEngine::stopAll();
-
+    
     log("Enter ShopeScene: Music Stoped.");
 }
 bool ShopScene::init() {
@@ -265,7 +265,7 @@ void ShopScene::createMenu() {
     int cannonCurrentCount = 0;
 
     for (auto& building : g_allPurchasedBuildings) {
-        if (building && building->getType() == BuildingType::DEFENSE) {
+        if (building && building->getType() == BuildingType::CANNON) {
             cannonCurrentCount++;
         }
     }
@@ -755,7 +755,7 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                 (type == ShopItemType::GOLD_MINE && bType == BuildingType::MINE) ||
                 (type == ShopItemType::WATER_COLLECTOR && bType == BuildingType::WATER) ||
                 (type == ShopItemType::ARCHER_TOWER && bType == BuildingType::DEFENSE) ||
-                (type == ShopItemType::CANNON && bType == BuildingType::DEFENSE) ||
+                (type == ShopItemType::CANNON && bType == BuildingType::CANNON) ||
                 (type == ShopItemType::BARRACKS && bType == BuildingType::BARRACKS) ||
                 (type == ShopItemType::GOLD_STORAGE && bType == BuildingType::GOLD_STORAGE) ||
                 (type == ShopItemType::WATER_STORAGE && bType == BuildingType::WATER_STORAGE)) {
@@ -849,7 +849,7 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                     case ShopItemType::CANNON:
                         filename = "Cannon.png";
                         buildingName = "Cannon";
-                        buildingtype = BuildingType::DEFENSE;
+                        buildingtype = BuildingType::CANNON;
                         buildingbasecost = 300;
                         break;
                     case ShopItemType::BARRACKS:

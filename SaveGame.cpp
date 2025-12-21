@@ -357,7 +357,7 @@ bool SaveGame::loadGameState(const std::string& filename)
                     if (buildingName.empty()) buildingName = "Archer Tower";
                     break;
                 case BuildingType::WALL:
-                    filename = "city_wall.png";
+                    filename = "fence.png";
                     if (buildingName.empty()) buildingName = "Wall";
                     baseCost = 0;
                     break;

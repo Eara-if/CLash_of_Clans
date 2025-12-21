@@ -1,4 +1,5 @@
 #include "BuildingInfoLayer.h"
+#include"BuildingUpgradeLimits.h"
 #include"TrainingLayer.h"
 #include"Building.h"
 #include"GameScene.h"
@@ -42,7 +43,7 @@ bool BuildingInfoLayer::init()
 
     // 创建一个通用的 Label，位置放中间
     _infoLabel = Label::createWithSystemFont("", "Arial", 28);
-    _infoLabel->setPosition(centerPos.x, centerPos.y + 30);
+    _infoLabel->setPosition(centerPos.x, centerPos.y + 80);
 
     _infoLabel->setTextColor(Color4B::BLACK);
     this->addChild(_infoLabel, 1);
@@ -76,16 +77,101 @@ void BuildingInfoLayer::setBuilding(Building* building)
     // 确保之前的定时器被关闭 (防止反复打开弹窗时定时器堆积)
     this->unschedule("upgrade_timer");
 
+    // 清理可能的训练按钮
+    if (menu) {
+        menu->removeAllChildren();
+        // 重新添加关闭按钮
+        auto closeLabel = Label::createWithTTF("Close", "fonts/Marker Felt.ttf", 30);
+        auto closeBtn = MenuItemLabel::create(closeLabel, [=](Ref*) { this->closeLayer(); });
+        closeBtn->setColor(Color3B::RED);
+        closeBtn->setPosition(0, -85);
+        menu->addChild(closeBtn);
+
+        // 重新添加升级按钮
+        menu->addChild(_actionBtn);
+    }
+
     // 获取数据
     int level = _targetBuilding->getLevel();
-    // 确保 Building.h 里有 getNextLevelCost() 并且是 public
     int cost = _targetBuilding->getNextLevelCost();
 
-    // ============================================================
-    // 情况 A：金矿 (显示金币生产状态)
-    // ============================================================
-    if (_targetBuilding->getType() == BuildingType::MINE) {
+    // 获取大本营等级和升级限制信息
+    int townHallLevel = 1;
+    for (auto& b : g_allPurchasedBuildings) {
+        if (b && b->getType() == BuildingType::BASE) {
+            townHallLevel = b->getLevel();
+            break;
+        }
+    }
 
+    auto upgradeLimits = BuildingUpgradeLimits::getInstance();
+    int maxLevel = upgradeLimits->getMaxLevelForBuilding(_targetBuilding->getType(), townHallLevel);
+    bool isMaxLevel = (level >= maxLevel);
+
+    // ============================================================
+    // 情况 A：大本营 (Town Hall)
+    // ============================================================
+    if (_targetBuilding->getType() == BuildingType::BASE) {
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::UPGRADING) {
+            // 正在升级中
+            this->handleUpgradeTimer();
+            return;
+        }
+        else if (state == BuildingState::IDLE) {
+            // 【核心修改】显示更详细的信息，包括下一级花费
+            std::string info = "Town Hall Lv." + std::to_string(level);
+
+            // 显示升级花费和时间
+            if (level < 10) {
+                info += "\nNext Level Cost: " + std::to_string(cost) + " Coin";
+
+                // 显示大本营升级解锁信息
+                std::string unlockInfo = upgradeLimits->getUnlockInfoForNextTownHallLevel(level);
+                info += "\nNew Unlocks:\n" + unlockInfo;
+
+                // 【新增】显示下一级建筑升级上限
+                auto nextLevelMaxLevels = upgradeLimits->getMaxLevelsForTownHall(level + 1);
+                auto currentLevelMaxLevels = upgradeLimits->getMaxLevelsForTownHall(level);
+            } 
+            else {
+                info += "\n\nMAX LEVEL REACHED!";
+            }
+
+            _infoLabel->setString(info);
+            _infoLabel->setDimensions(380, 0); // 设置宽度自动换行
+
+            // 设置升级按钮
+            _actionBtn->setString(level >= 10 ? "MAX" : "Upgrade");
+            _actionBtn->setCallback([=](Ref*) {
+                if (level >= 10) {
+                    // 达到最大等级，显示提示
+                    auto scene = Director::getInstance()->getRunningScene();
+                    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+                    std::string message = "Town Hall has reached maximum level!";
+                    auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 28);
+                    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+                    label->setColor(Color3B::ORANGE);
+                    scene->addChild(label, 1000);
+                    label->runAction(Sequence::create(
+                        DelayTime::create(2.0f),
+                        RemoveSelf::create(),
+                        nullptr
+                    ));
+                }
+                else {
+                    // 开始升级逻辑
+                    this->handleStartUpgrade();
+                }
+                });
+        }
+    }
+    // ============================================================
+    // 情况 B：金矿 (Gold Mine)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::MINE) {
         BuildingState state = _targetBuilding->getState();
 
         if (state == BuildingState::PRODUCING) {
@@ -95,7 +181,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
                 "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
             _infoLabel->setString(info);
 
-            // 设置按钮为不可用或隐藏
+            // 设置按钮为不可用
             _actionBtn->setString("Producing");
             _actionBtn->setCallback(nullptr);
 
@@ -109,11 +195,9 @@ void BuildingInfoLayer::setBuilding(Building* building)
                 }
                 else {
                     this->unschedule("production_timer");
-                    // 重新设置建筑信息
                     this->setBuilding(_targetBuilding);
                 }
                 }, 1.0f, "production_timer");
-
         }
         else if (state == BuildingState::READY) {
             // 资源可收集
@@ -125,61 +209,55 @@ void BuildingInfoLayer::setBuilding(Building* building)
             // 设置收集按钮
             _actionBtn->setString("Collect");
             _actionBtn->setCallback([=](Ref*) {
-                // 收集资源
                 _targetBuilding->collectResources();
-
-                // 【新增】更新GameScene中的资源显示
-                auto scene = Director::getInstance()->getRunningScene();
-                if (scene) {
-                    // 尝试获取GameScene层
-                    // 假设GameScene是场景的第一个子节点
-                    auto children = scene->getChildren();
-                    for (auto& child : children) {
-                        // 使用dynamic_cast尝试转换为GameScene
-                        auto gameScene = dynamic_cast<GameScene*>(child);
-                        if (gameScene) {
-                            // 调用GameScene的更新资源显示函数
-                            gameScene->updateResourceDisplay();
-                            break;
-                        }
-                    }
-                }
-
                 this->closeLayer();
                 });
         }
+        else if (state == BuildingState::UPGRADING) {
+            // 正在升级
+            this->handleUpgradeTimer();
+        }
         else {
-            // 其他状态（升级中或空闲）
-            _infoLabel->setString("Gold Mine Lv." + std::to_string(level) +
-                "\nCost: " + std::to_string(cost) + " Coin");
+            // 空闲状态
+            std::string info = "Gold Mine Lv." + std::to_string(level) +
+                "\nCost: " + std::to_string(cost) + " Coin" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+            if (isMaxLevel) {
+                info = "Gold Mine Lv." + std::to_string(level) + " (MAX)" +
+                    "\nUpgrade TH to increase level limit";
+            }
+
+            _infoLabel->setString(info);
 
             // 设置升级按钮
-            _actionBtn->setString("Upgrade");
+            _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
             _actionBtn->setCallback([=](Ref*) {
-                // 1. 开始升级逻辑
-                this->handleStartUpgrade();
+                if (isMaxLevel) {
+                    this->showMaxLevelWarning("Gold Mine", townHallLevel);
+                }
+                else {
+                    this->handleStartUpgrade();
+                }
                 });
         }
     }
     // ============================================================
-    // 情况 B：圣水收集器 (显示圣水生产状态)
+    // 情况 C：圣水收集器 (Water Collector)
     // ============================================================
-    else if (_targetBuilding->getType() == BuildingType::WATER ) {
-
+    else if (_targetBuilding->getType() == BuildingType::WATER) {
         BuildingState state = _targetBuilding->getState();
 
         if (state == BuildingState::PRODUCING) {
-            // 正在生产中，显示倒计时
+            // 正在生产中
             float timeLeft = _targetBuilding->getProductionTimeLeft();
             std::string info = "Water Collector Lv." + std::to_string(level) +
                 "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
             _infoLabel->setString(info);
 
-            // 设置按钮为不可用或隐藏
             _actionBtn->setString("Producing");
             _actionBtn->setCallback(nullptr);
 
-            // 启动生产倒计时更新
             this->schedule([=](float dt) {
                 float remainingTime = _targetBuilding->getProductionTimeLeft();
                 if (remainingTime > 0) {
@@ -189,11 +267,9 @@ void BuildingInfoLayer::setBuilding(Building* building)
                 }
                 else {
                     this->unschedule("production_timer");
-                    // 重新设置建筑信息
                     this->setBuilding(_targetBuilding);
                 }
                 }, 1.0f, "production_timer");
-
         }
         else if (state == BuildingState::READY) {
             // 资源可收集
@@ -202,100 +278,320 @@ void BuildingInfoLayer::setBuilding(Building* building)
                 "\nReady to collect!\nAmount: " + std::to_string(amount) + " water";
             _infoLabel->setString(info);
 
-            // 设置收集按钮
             _actionBtn->setString("Collect");
             _actionBtn->setCallback([=](Ref*) {
-                // 收集资源
                 _targetBuilding->collectResources();
-
-                // 【新增】更新GameScene中的资源显示
-                auto scene = Director::getInstance()->getRunningScene();
-                if (scene) {
-                    // 尝试获取GameScene层
-                    auto children = scene->getChildren();
-                    for (auto& child : children) {
-                        auto gameScene = dynamic_cast<GameScene*>(child);
-                        if (gameScene) {
-                            gameScene->updateResourceDisplay();
-                            break;
-                        }
-                    }
-                }
-
                 this->closeLayer();
                 });
         }
+        else if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
         else {
-            // 其他状态（升级中或空闲）
-            _infoLabel->setString("Water Collector Lv." + std::to_string(level) +
-                "\nCost: " + std::to_string(cost) + " Coin");
+            // 空闲状态
+            std::string info = "Water Collector Lv." + std::to_string(level) +
+                "\nCost: " + std::to_string(cost) + " Coin" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
 
-            // 设置升级按钮
-            _actionBtn->setString("Upgrade");
+            if (isMaxLevel) {
+                info = "Water Collector Lv." + std::to_string(level) + " (MAX)" +
+                    "\nUpgrade TH to increase level limit";
+            }
+
+            _infoLabel->setString(info);
+
+            _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
             _actionBtn->setCallback([=](Ref*) {
-                // 1. 开始升级逻辑
-                this->handleStartUpgrade();
+                if (isMaxLevel) {
+                    this->showMaxLevelWarning("Water Collector", townHallLevel);
+                }
+                else {
+                    this->handleStartUpgrade();
+                }
                 });
         }
     }
     // ============================================================
-    // 情况 C：兵营 (显示水花费 + 训练按钮)
+    // 情况 D：兵营 (Barracks)
     // ============================================================
-    else if (_targetBuilding->getType() == BuildingType::BARRACKS &&
-        _targetBuilding->getState() == BuildingState::IDLE)
-    {
-        // 显示信息
-        std::string info = "Barracks Lv." + std::to_string(level) +
-            "\nCap: " + std::to_string(army_limit) +
-            "\nCost: " + std::to_string(cost) + " Water";
+    else if (_targetBuilding->getType() == BuildingType::BARRACKS) {
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
+        else if (state == BuildingState::IDLE) {
+            // 显示信息
+            std::string info = "Barracks Lv." + std::to_string(level) +
+                "\nCapacity: " + std::to_string(army_limit) +
+                "\nCost: " + std::to_string(cost) + " Water" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+            if (isMaxLevel) {
+                info = "Barracks Lv." + std::to_string(level) + " (MAX)" +
+                    "\nUpgrade TH to increase level limit";
+            }
+
+            _infoLabel->setString(info);
+
+            // 设置升级按钮
+            _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
+            _actionBtn->setCallback([=](Ref*) {
+                if (isMaxLevel) {
+                    this->showMaxLevelWarning("Barracks", townHallLevel);
+                }
+                else {
+                    this->handleStartUpgrade();
+                }
+                });
+
+            // --- 训练按钮 ---
+            auto trainLabel = Label::createWithTTF("Train Troops", "fonts/Marker Felt.ttf", 30);
+            trainLabel->setColor(Color3B::GREEN);
+            trainLabel->enableOutline(Color4B::BLACK, 2);
+
+            auto trainBtn = MenuItemLabel::create(trainLabel, [=](Ref*) {
+                this->closeLayer();
+                auto trainingLayer = TrainingLayer::create();
+                Director::getInstance()->getRunningScene()->addChild(trainingLayer, 999);
+                });
+            trainBtn->setPosition(0, -55);
+            menu->addChild(trainBtn);
+        }
+    }
+    // ============================================================
+    // 情况 E：防御塔 (Archer Tower)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::DEFENSE) {
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
+        else if (state == BuildingState::IDLE) {
+            // 首先检查是否解锁（大本营等级是否足够）
+            bool isUnlocked = townHallLevel >= 3; // 防御塔需要TH3解锁
+
+            std::string info;
+            if (!isUnlocked) {
+                info = "Archer Tower Lv." + std::to_string(level) +
+                    "\n\nLOCKED! Requires Town Hall Level 3";
+            }
+            else {
+                info = "Archer Tower Lv." + std::to_string(level) +
+                    "\nCost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+                if (isMaxLevel) {
+                    info = "Archer Tower Lv." + std::to_string(level) + " (MAX)" +
+                        "\nUpgrade TH to increase level limit";
+                }
+            }
+
+            _infoLabel->setString(info);
+
+            // 设置升级按钮
+            if (!isUnlocked) {
+                _actionBtn->setString("LOCKED");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showLockedWarning("Archer Tower", 3);
+                    });
+            }
+            else if (isMaxLevel) {
+                _actionBtn->setString("MAX");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showMaxLevelWarning("Archer Tower", townHallLevel);
+                    });
+            }
+            else {
+                _actionBtn->setString("Upgrade");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->handleStartUpgrade();
+                    });
+            }
+        }
+    }
+    // ============================================================
+    // 情况 F：加农炮 (Cannon) 
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::CANNON) {
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
+        else if (state == BuildingState::IDLE) {
+            // 首先检查是否解锁（大本营等级是否足够）
+            bool isUnlocked = townHallLevel >= 4; // 加农炮需要TH4解锁
+
+            std::string info;
+            if (!isUnlocked) {
+                info = "Cannon Lv." + std::to_string(level) +
+                    "\n\nLOCKED! Requires Town Hall Level 4";
+            }
+            else {
+                info = "Cannon Lv." + std::to_string(level) +
+                    "\nCost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+                if (isMaxLevel) {
+                    info = "Cannon Lv." + std::to_string(level) + " (MAX)" +
+                        "\nUpgrade TH to increase level limit";
+                }
+            }
+
+            _infoLabel->setString(info);
+
+            // 设置升级按钮
+            if (!isUnlocked) {
+                _actionBtn->setString("LOCKED");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showLockedWarning("Cannon", 4);
+                    });
+            }
+            else if (isMaxLevel) {
+                _actionBtn->setString("MAX");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showMaxLevelWarning("Cannon", townHallLevel);
+                    });
+            }
+            else {
+                _actionBtn->setString("Upgrade");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->handleStartUpgrade();
+                    });
+            }
+        }
+    }
+    // ============================================================
+    // 情况 G：城墙 (Wall)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::WALL) {
+        // 城墙通常不可升级，或者有特殊的升级方式
+        std::string info = "Wall\nDefensive structure\nCannot be upgraded directly";
+
         _infoLabel->setString(info);
 
-        // 设置升级按钮
-        _actionBtn->setString("Upgrade");
+        // 城墙没有升级按钮，只显示信息
+        _actionBtn->setString("Close");
         _actionBtn->setCallback([=](Ref*) {
-            // 1. 开始升级逻辑 (包含开启定时器)
-            this->handleStartUpgrade();
-            });
-
-        // --- 训练按钮 (必须用 Label::createWithTTF 防止崩溃) ---
-        auto trainLabel = Label::createWithTTF("Train Troops", "fonts/Marker Felt.ttf", 30);
-        trainLabel->setColor(Color3B::GREEN);
-        trainLabel->enableOutline(Color4B::BLACK, 2);
-
-        auto trainBtn = MenuItemLabel::create(trainLabel, [=](Ref*) {
             this->closeLayer();
-            auto trainingLayer = TrainingLayer::create();
-            Director::getInstance()->getRunningScene()->addChild(trainingLayer, 999);
-            });
-        trainBtn->setPosition(0, -55);
-        menu->addChild(trainBtn);
-    }
-    // ============================================================
-    // 情况 D：其他建筑（除了城墙，城墙不可升级） (显示金币花费)
-    // ============================================================
-    else if (_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::IDLE)
-    {
-        // 显示信息
-        _infoLabel->setString("Level: " + std::to_string(level) +
-            "\nCost: " + std::to_string(cost) + " Coin");
-
-        // 设置升级按钮
-        _actionBtn->setString("Upgrade");
-        _actionBtn->setCallback([=](Ref*) {
-            // 1. 开始升级逻辑
-            this->handleStartUpgrade();
             });
     }
     // ============================================================
-    // 情况 E：正在升级中 (重新打开弹窗时)
+    // 情况 H：金币存储器 (Gold Storage)
     // ============================================================
-    else if (_targetBuilding->getType() != BuildingType::WALL && _targetBuilding->getState() == BuildingState::UPGRADING)
-    {
-        // 如果一打开发现正在升级，直接进入倒计时监控模式
-        this->handleUpgradeTimer();
-    }
-    else {}
+    else if (_targetBuilding->getType() == BuildingType::GOLD_STORAGE) {
+        BuildingState state = _targetBuilding->getState();
 
+        if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
+        else if (state == BuildingState::IDLE) {
+            // 首先检查是否解锁（大本营等级是否足够）
+            bool isUnlocked = townHallLevel >= 3; // 存储器需要TH3解锁
+
+            std::string info;
+            if (!isUnlocked) {
+                info = "Gold Storage Lv." + std::to_string(level) +
+                    "\n\nLOCKED! Requires Town Hall Level 3" +
+                    "\nIncreases coin capacity";
+            }
+            else {
+                // 显示容量信息（假设每级增加1500容量）
+                int storageCapacity = 1500 * level;
+                info = "Gold Storage Lv." + std::to_string(level) +
+                    "\nCapacity: " + std::to_string(storageCapacity) + " coins" +
+                    "\nCost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+                if (isMaxLevel) {
+                    info = "Gold Storage Lv." + std::to_string(level) + " (MAX)" +
+                        "\nCapacity: " + std::to_string(storageCapacity) + " coins" +
+                        "\nUpgrade TH to increase level limit";
+                }
+            }
+
+            _infoLabel->setString(info);
+
+            // 设置升级按钮
+            if (!isUnlocked) {
+                _actionBtn->setString("LOCKED");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showLockedWarning("Gold Storage", 3);
+                    });
+            }
+            else if (isMaxLevel) {
+                _actionBtn->setString("MAX");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showMaxLevelWarning("Gold Storage", townHallLevel);
+                    });
+            }
+            else {
+                _actionBtn->setString("Upgrade");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->handleStartUpgrade();
+                    });
+            }
+        }
+    }
+    // ============================================================
+    // 情况 I：圣水存储器 (Water Storage)
+    // ============================================================
+    else if (_targetBuilding->getType() == BuildingType::WATER_STORAGE) {
+        BuildingState state = _targetBuilding->getState();
+
+        if (state == BuildingState::UPGRADING) {
+            this->handleUpgradeTimer();
+        }
+        else if (state == BuildingState::IDLE) {
+            // 首先检查是否解锁（大本营等级是否足够）
+            bool isUnlocked = townHallLevel >= 3; // 存储器需要TH3解锁
+
+            std::string info;
+            if (!isUnlocked) {
+                info = "Water Storage Lv." + std::to_string(level) +
+                    "\n\nLOCKED! Requires Town Hall Level 3" +
+                    "\nIncreases water capacity";
+            }
+            else {
+                // 显示容量信息（假设每级增加1500容量）
+                int storageCapacity = 1500 * level;
+                info = "Water Storage Lv." + std::to_string(level) +
+                    "\nCapacity: " + std::to_string(storageCapacity) + " water" +
+                    "\nCost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+                if (isMaxLevel) {
+                    info = "Water Storage Lv." + std::to_string(level) + " (MAX)" +
+                        "\nCapacity: " + std::to_string(storageCapacity) + " water" +
+                        "\nUpgrade TH to increase level limit";
+                }
+            }
+
+            _infoLabel->setString(info);
+
+            // 设置升级按钮
+            if (!isUnlocked) {
+                _actionBtn->setString("LOCKED");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showLockedWarning("Water Storage", 3);
+                    });
+            }
+            else if (isMaxLevel) {
+                _actionBtn->setString("MAX");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->showMaxLevelWarning("Water Storage", townHallLevel);
+                    });
+            }
+            else {
+                _actionBtn->setString("Upgrade");
+                _actionBtn->setCallback([=](Ref*) {
+                    this->handleStartUpgrade();
+                    });
+            }
+        }
+    }
 }
 // 把它加在 setBuilding 后面
 void BuildingInfoLayer::handleStartUpgrade()
@@ -393,4 +689,57 @@ void BuildingInfoLayer::showTrainingMenu()
     // 把这个菜单加到背景图上
     // 注意：这里的 parent 应该是 bg，如果 bg 是局部变量，需要改成成员变量 _bg
     bg->addChild(trainMenu);
+}
+
+void BuildingInfoLayer::showMaxLevelWarning(const std::string& buildingName, int townHallLevel)
+{
+    auto scene = Director::getInstance()->getRunningScene();
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+    std::string message = buildingName + " has reached maximum level for TH" +
+        std::to_string(townHallLevel);
+    auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 28);
+    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+    label->setColor(Color3B::ORANGE);
+    scene->addChild(label, 1000);
+    label->runAction(Sequence::create(
+        DelayTime::create(2.0f),
+        RemoveSelf::create(),
+        nullptr
+    ));
+
+    // 显示升级解锁信息
+    if (townHallLevel < 10) {
+        auto upgradeLimits = BuildingUpgradeLimits::getInstance();
+        std::string unlockInfo = upgradeLimits->getUnlockInfoForNextTownHallLevel(townHallLevel);
+        auto infoLabel = Label::createWithTTF(unlockInfo, "fonts/Marker Felt.ttf", 24);
+        infoLabel->setPosition(visibleSize.width / 2, visibleSize.height / 2 - 50);
+        infoLabel->setColor(Color3B::YELLOW);
+        infoLabel->setDimensions(400, 0);
+        infoLabel->setAlignment(TextHAlignment::CENTER);
+        scene->addChild(infoLabel, 1000);
+        infoLabel->runAction(Sequence::create(
+            DelayTime::create(3.0f),
+            RemoveSelf::create(),
+            nullptr
+        ));
+    }
+}
+
+void BuildingInfoLayer::showLockedWarning(const std::string& buildingName, int requiredTHLevel)
+{
+    auto scene = Director::getInstance()->getRunningScene();
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+    std::string message = buildingName + " requires Town Hall Level " +
+        std::to_string(requiredTHLevel);
+    auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 28);
+    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+    label->setColor(Color3B::RED);
+    scene->addChild(label, 1000);
+    label->runAction(Sequence::create(
+        DelayTime::create(2.5f),
+        RemoveSelf::create(),
+        nullptr
+    ));
 }

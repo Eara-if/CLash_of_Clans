@@ -10,7 +10,8 @@ enum class BuildingType {
     MINE,       // 金矿
     WATER,   //水泵
     DEFENSE,     // 防御塔
-    WALL, //城墙
+    CANNON,  //加农炮
+    WALL,  //城墙
     GOLD_STORAGE, //金币/水储存器
     WATER_STORAGE
 };
