@@ -8,33 +8,42 @@
 class DataManager
 {
 public:
-    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ???????????
     static DataManager* getInstance();
 
-    // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ¹ï¿½ï¿½ï¿½ ---
+    // --- ??????????? ---
 
-    // ï¿½ï¿½ï¿½ï¿½Ê¿ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ true ï¿½ï¿½Ê¾ï¿½É¹ï¿½ï¿½ï¿½false ï¿½ï¿½Ê¾ï¿½Ë¿ï¿½ï¿½ï¿½ï¿½Ë»ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½)
+    // ??????? (???? true ????????false ??????????????????)
     bool trainTroop(std::string type);
-    //ï¿½ï¿½ï¿½ï¿½Ê¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    //???????????
     bool dismissTroop(std::string type);
-    // ï¿½ï¿½È¡Ä³ï¿½ï¿½Ê¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ???????????????
     int getTroopCount(std::string type);
 
-    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ë¿ï¿½
+    // ????????
     int getTotalPopulation();
 
-    // ï¿½ï¿½Õ¾ï¿½ï¿½ï¿½ (Õ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª)
+    // ?????? (???????????????)
     void clearArmy();
     void setMaxLevelUnlocked(int lv) { _maxLevelUnlocked = lv; }
     int getMaxLevelUnlocked() { return _maxLevelUnlocked; }
 
-private:
-    DataManager() {}; // ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½Ë½ï¿½Ğ»ï¿½
+    // ¡¾ĞÂÔö¡¿»ñÈ¡´ó±¾ÓªµÈ¼¶
+    int getTownHallLevel();
 
-    // ï¿½æ´¢ï¿½á¹¹ï¿½ï¿½<ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½>
-    // ï¿½ï¿½ï¿½ï¿½: "Soldier" -> 5, "Archer" -> 3
+    // ¡¾ĞÂÔö¡¿¼ì²é½¨Öş½âËøÌõ¼ş
+    bool isBuildingUnlocked(int buildingId, int& requiredTHLevel);
+
+    // ¡¾ĞÂÔö¡¿»ñÈ¡½¨Öş×î´óÊıÁ¿ÏŞÖÆ
+    int getBuildingMaxCount(int buildingId);
+
+private:
+    DataManager() {}; // ????????§İ?
+
+    // ?›¥????<????????, ????>
+    // ????: "Soldier" -> 5, "Archer" -> 3
     std::map<std::string, int> _myArmy;
-    int _maxLevelUnlocked = 1; // é»˜è®¤åªèƒ½æ‰“ç¬¬ 1 å…³
+    int _maxLevelUnlocked = 1; // Ä¬ÈÏÖ»ÄÜ´òµÚ 1 ¹Ø
 };
 
 #endif

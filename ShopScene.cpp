@@ -1,6 +1,7 @@
 #include "ShopScene.h"
 #include "GameScene.h"
 #include "Building.h"
+#include "DataManager.h"
 #include "HelloWorldScene.h"
 #include"AudioEngine.h"
 USING_NS_CC;
@@ -103,13 +104,23 @@ void ShopScene::createMenu() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
+    auto dataManager = DataManager::getInstance();
     // ================= 创建商品菜单项 =================
 
     // 1. 城墙
+    int wallRequiredLevel = 0;
+    bool wallUnlocked = dataManager->isBuildingUnlocked(6, wallRequiredLevel);
+    int wallMaxCount = dataManager->getBuildingMaxCount(6);
+    int wallCurrentCount = 0; // 需要实际统计
     Sprite* wallNormal = Sprite::create("fence.png");
     Sprite* wallSelected = Sprite::create("fence.png");
 
     if (wallNormal && wallSelected) {
+        if (!wallUnlocked) {
+            // 未解锁，显示灰色
+            wallNormal->setColor(Color3B(100, 100, 100));
+            wallSelected->setColor(Color3B(100, 100, 100));
+        }
         if (wallNormal->getTexture()) {
             wallNormal->getTexture()->setAliasTexParameters();
         }
@@ -129,10 +140,27 @@ void ShopScene::createMenu() {
     );
 
     // 2. 金矿
+    int mineRequiredLevel = 0;
+    bool mineUnlocked = dataManager->isBuildingUnlocked(2, mineRequiredLevel);
+    int mineMaxCount = dataManager->getBuildingMaxCount(2);
+    int mineCurrentCount = 0;
+
+    // 统计当前已有的金矿数量
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::MINE) {
+            mineCurrentCount++;
+        }
+    }
     Sprite* goldMineNormal = Sprite::create("Mine.png");
     Sprite* goldMineSelected = Sprite::create("Mine.png");
 
     if (goldMineNormal && goldMineSelected) {
+        if (!mineUnlocked) {
+            // 未解锁，显示灰色
+            goldMineNormal->setColor(Color3B(100, 100, 100));
+            goldMineSelected->setColor(Color3B(100, 100, 100));
+        }
+
         if (goldMineNormal->getTexture()) {
             goldMineNormal->getTexture()->setAliasTexParameters();
         }
@@ -152,10 +180,27 @@ void ShopScene::createMenu() {
     );
 
     // 3. 圣水收集器
+    int waterRequiredLevel = 0;
+    bool waterUnlocked = dataManager->isBuildingUnlocked(3, waterRequiredLevel);
+    int waterMaxCount = dataManager->getBuildingMaxCount(3);
+    int waterCurrentCount = 0;
+
+    // 统计当前已有的圣水收集器数量
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::WATER) {
+            waterCurrentCount++;
+        }
+    }
+
     Sprite* waterCollectorNormal = Sprite::create("waterwell.png");
     Sprite* waterCollectorSelected = Sprite::create("waterwell.png");
 
     if (waterCollectorNormal && waterCollectorSelected) {
+        if (!waterUnlocked) {
+            // 未解锁，显示灰色
+            waterCollectorNormal->setColor(Color3B(100, 100, 100));
+            waterCollectorSelected->setColor(Color3B(100, 100, 100));
+        }
         if (waterCollectorNormal->getTexture()) {
             waterCollectorNormal->getTexture()->setAliasTexParameters();
         }
@@ -175,10 +220,26 @@ void ShopScene::createMenu() {
     );
 
     // 4. 弓箭塔
+    int archerRequiredLevel = 0;
+    bool archerUnlocked = dataManager->isBuildingUnlocked(4, archerRequiredLevel);
+    int archerMaxCount = dataManager->getBuildingMaxCount(4);
+    int archerCurrentCount = 0;
+
+    // 统计当前已有的弓箭塔数量
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::DEFENSE) {
+            archerCurrentCount++;
+        }
+    }
     Sprite* archerTowerNormal = Sprite::create("TilesetTowers.png");
     Sprite* archerTowerSelected = Sprite::create("TilesetTowers.png");
 
     if (archerTowerNormal && archerTowerSelected) {
+        if (!archerUnlocked) {
+            // 未解锁，显示灰色
+            archerTowerNormal->setColor(Color3B(100, 100, 100));
+            archerTowerSelected->setColor(Color3B(100, 100, 100));
+        }
         if (archerTowerNormal->getTexture()) {
             archerTowerNormal->getTexture()->setAliasTexParameters();
         }
@@ -198,10 +259,25 @@ void ShopScene::createMenu() {
     );
 
     // 5. 加农炮
+    int cannonRequiredLevel = 0;
+    bool cannonUnlocked = dataManager->isBuildingUnlocked(5, cannonRequiredLevel);
+    int cannonMaxCount = dataManager->getBuildingMaxCount(5);
+    int cannonCurrentCount = 0;
+
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::DEFENSE) {
+            cannonCurrentCount++;
+        }
+    }
     Sprite* cannonNormal = Sprite::create("Cannon.png");
     Sprite* cannonSelected = Sprite::create("Cannon.png");
 
     if (cannonNormal && cannonSelected) {
+        if (!cannonUnlocked) {
+            // 未解锁，显示灰色
+            cannonNormal->setColor(Color3B(100, 100, 100));
+            cannonSelected->setColor(Color3B(100, 100, 100));
+        }
         if (cannonNormal->getTexture()) {
             cannonNormal->getTexture()->setAliasTexParameters();
         }
@@ -221,10 +297,26 @@ void ShopScene::createMenu() {
     );
 
     // 6. 军营 (新增)
+    int barracksRequiredLevel = 0;
+    bool barracksUnlocked = dataManager->isBuildingUnlocked(1, barracksRequiredLevel);
+    int barracksMaxCount = dataManager->getBuildingMaxCount(1);
+    int barracksCurrentCount = 0;
+
+    // 统计当前已有的兵营数量
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::BARRACKS) {
+            barracksCurrentCount++;
+        }
+    }
     Sprite* barracksNormal = Sprite::create("junying.png");
     Sprite* barracksSelected = Sprite::create("junying.png");
 
     if (barracksNormal && barracksSelected) {
+        if (!barracksUnlocked) {
+            // 未解锁或达到上限，显示灰色
+            barracksNormal->setColor(Color3B(100, 100, 100));
+            barracksSelected->setColor(Color3B(100, 100, 100));
+        }
         if (barracksNormal->getTexture()) {
             barracksNormal->getTexture()->setAliasTexParameters();
         }
@@ -244,10 +336,24 @@ void ShopScene::createMenu() {
     );
 
     // 7. 金币存储器 (新增)
+    int goldStorageRequiredLevel = 0;
+    bool goldStorageUnlocked = dataManager->isBuildingUnlocked(8, goldStorageRequiredLevel);
+    int goldStorageMaxCount = dataManager->getBuildingMaxCount(8);
+    int goldStorageCurrentCount = 0;
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::GOLD_STORAGE) {
+            goldStorageCurrentCount++;
+        }
+    }
     Sprite* goldStorageNormal = Sprite::create("BarGold.png");
     Sprite* goldStorageSelected = Sprite::create("BarGold.png");
 
     if (goldStorageNormal && goldStorageSelected) {
+        if (!goldStorageUnlocked) {
+            // 未解锁，显示灰色
+            goldStorageNormal->setColor(Color3B(100, 100, 100));
+            goldStorageSelected->setColor(Color3B(100, 100, 100));
+        }
         if (goldStorageNormal->getTexture()) {
             goldStorageNormal->getTexture()->setAliasTexParameters();
         }
@@ -267,10 +373,24 @@ void ShopScene::createMenu() {
     );
 
     // 8. 圣水存储器 (新增)
+    int waterStorageRequiredLevel = 0;
+    bool waterStorageUnlocked = dataManager->isBuildingUnlocked(9, waterStorageRequiredLevel);
+    int waterStorageMaxCount = dataManager->getBuildingMaxCount(9);
+    int waterStorageCurrentCount = 0;
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::WATER_STORAGE) {
+            waterStorageCurrentCount++;
+        }
+    }
     Sprite* waterStorageNormal = Sprite::create("Water.png");
     Sprite* waterStorageSelected = Sprite::create("Water.png");
 
     if (waterStorageNormal && waterStorageSelected) {
+        if (!waterStorageUnlocked) {
+            // 未解锁，显示灰色
+            waterStorageNormal->setColor(Color3B(100, 100, 100));
+            waterStorageSelected->setColor(Color3B(100, 100, 100));
+        }
         if (waterStorageNormal->getTexture()) {
             waterStorageNormal->getTexture()->setAliasTexParameters();
         }
@@ -375,9 +495,66 @@ void ShopScene::createMenu() {
             if (info.waterCost > 0) priceText += "Water:" + std::to_string(info.waterCost) + " ";
             if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
 
-            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
+            // 【新增】添加数量信息
+            int currentBuildingCount = 0;
+            int maxBuildingCount = 0;
+
+            // 根据建筑类型获取数量信息
+            switch (info.type) {
+                case ShopItemType::WALL:
+                    currentBuildingCount = wallCurrentCount;
+                    maxBuildingCount = wallMaxCount;
+                    break;
+                case ShopItemType::GOLD_MINE:
+                    currentBuildingCount = mineCurrentCount;
+                    maxBuildingCount = mineMaxCount;
+                    break;
+                case ShopItemType::WATER_COLLECTOR:
+                    currentBuildingCount = waterCurrentCount;
+                    maxBuildingCount = waterMaxCount;
+                    break;
+                case ShopItemType::ARCHER_TOWER:
+                    currentBuildingCount = archerCurrentCount;
+                    maxBuildingCount = archerMaxCount;
+                    break;
+                default:
+                    break;
+            }
+
+            // 【新增】添加解锁状态和数量限制信息
+            if (maxBuildingCount > 0) {
+                priceText += "\n" + std::to_string(currentBuildingCount) + "/" + std::to_string(maxBuildingCount);
+            }
+
+            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 18); // 字体调小一点
             priceLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 180));
-            priceLabel->setColor(Color3B::GREEN);
+
+            // 【新增】根据解锁状态和数量限制设置颜色
+            bool isUnlocked = true;
+            switch (info.type) {
+                case ShopItemType::WALL:
+                    isUnlocked = wallUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::GOLD_MINE:
+                    isUnlocked = mineUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::WATER_COLLECTOR:
+                    isUnlocked = waterUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::ARCHER_TOWER:
+                    isUnlocked = archerUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                default:
+                    break;
+            }
+
+            if (!isUnlocked) {
+                priceLabel->setColor(Color3B::GRAY);
+            }
+            else {
+                priceLabel->setColor(Color3B::GREEN);
+            }
+
             priceLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(priceLabel, 2);
 
@@ -411,9 +588,66 @@ void ShopScene::createMenu() {
             if (info.waterCost > 0) priceText += "Water:" + std::to_string(info.waterCost) + " ";
             if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
 
-            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
+            // 【新增】添加数量信息
+            int currentBuildingCount = 0;
+            int maxBuildingCount = 0;
+
+            // 根据建筑类型获取数量信息
+            switch (info.type) {
+                case ShopItemType::CANNON:
+                    currentBuildingCount = cannonCurrentCount;
+                    maxBuildingCount = cannonMaxCount;
+                    break;
+                case ShopItemType::BARRACKS:
+                    currentBuildingCount = barracksCurrentCount;
+                    maxBuildingCount = barracksMaxCount;
+                    break;
+                case ShopItemType::GOLD_STORAGE:
+                    currentBuildingCount = goldStorageCurrentCount;
+                    maxBuildingCount = goldStorageMaxCount;
+                    break;
+                case ShopItemType::WATER_STORAGE:
+                    currentBuildingCount = waterStorageCurrentCount;
+                    maxBuildingCount = waterStorageMaxCount;
+                    break;
+                default:
+                    break;
+            }
+
+            // 【新增】添加数量限制信息
+            if (maxBuildingCount > 0) {
+                priceText += "\n" + std::to_string(currentBuildingCount) + "/" + std::to_string(maxBuildingCount);
+            }
+
+            auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 18);
             priceLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 180));
-            priceLabel->setColor(Color3B::GREEN);
+
+            // 【新增】根据解锁状态和数量限制设置颜色
+            bool isUnlocked = true;
+            switch (info.type) {
+                case ShopItemType::CANNON:
+                    isUnlocked = cannonUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::BARRACKS:
+                    isUnlocked = barracksUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::GOLD_STORAGE:
+                    isUnlocked = goldStorageUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                case ShopItemType::WATER_STORAGE:
+                    isUnlocked = waterStorageUnlocked && (currentBuildingCount < maxBuildingCount);
+                    break;
+                default:
+                    break;
+            }
+
+            if (!isUnlocked) {
+                priceLabel->setColor(Color3B::GRAY);
+            }
+            else {
+                priceLabel->setColor(Color3B::GREEN);
+            }
+
             priceLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(priceLabel, 2);
 
@@ -476,6 +710,60 @@ void ShopScene::onWaterStoragePurchase(Ref* pSender) {
 }
 
 bool ShopScene::purchaseItem(ShopItemType type) {
+
+    auto dataManager = DataManager::getInstance();
+    int requiredTHLevel = 0;
+    bool isUnlocked = false;
+    int buildingId = 0;
+
+    // 映射 ShopItemType 到 buildingId
+    switch (type) {
+        case ShopItemType::WALL:
+            buildingId = 6; break;
+        case ShopItemType::GOLD_MINE:
+            buildingId = 2; break;
+        case ShopItemType::WATER_COLLECTOR:
+            buildingId = 3; break;
+        case ShopItemType::ARCHER_TOWER:
+            buildingId = 4; break;
+        case ShopItemType::CANNON:
+            buildingId = 5; break;
+        case ShopItemType::BARRACKS:
+            buildingId = 1; break;
+        case ShopItemType::GOLD_STORAGE:
+            buildingId = 8; break;
+        case ShopItemType::WATER_STORAGE:
+            buildingId = 9; break;
+        default:
+            buildingId = 0; break;
+    }
+
+    // 检查是否解锁
+    if (buildingId > 0) {
+        isUnlocked = dataManager->isBuildingUnlocked(buildingId, requiredTHLevel);
+    }
+
+    // 【新增】检查数量限制
+    int maxCount = dataManager->getBuildingMaxCount(buildingId);
+    int currentCount = 0;
+
+    // 统计当前已有的该类型建筑数量
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building) {
+            BuildingType bType = building->getType();
+            if ((type == ShopItemType::WALL && bType == BuildingType::WALL) ||
+                (type == ShopItemType::GOLD_MINE && bType == BuildingType::MINE) ||
+                (type == ShopItemType::WATER_COLLECTOR && bType == BuildingType::WATER) ||
+                (type == ShopItemType::ARCHER_TOWER && bType == BuildingType::DEFENSE) ||
+                (type == ShopItemType::CANNON && bType == BuildingType::DEFENSE) ||
+                (type == ShopItemType::BARRACKS && bType == BuildingType::BARRACKS) ||
+                (type == ShopItemType::GOLD_STORAGE && bType == BuildingType::GOLD_STORAGE) ||
+                (type == ShopItemType::WATER_STORAGE && bType == BuildingType::WATER_STORAGE)) {
+                currentCount++;
+            }
+        }
+    }
+
     // 商品信息（包含所有8个商品）
     std::vector<ShopItem> tempItems = {
         {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins every hour", 1500, 500, 0, false},
@@ -491,6 +779,20 @@ bool ShopScene::purchaseItem(ShopItemType type) {
     // 查找商品
     for (auto& item : tempItems) {
         if (item.type == type) {
+            // 【新增】检查解锁条件
+            if (!isUnlocked) {
+                std::string message = "Requires Town Hall Level " + std::to_string(requiredTHLevel) + "!";
+                showPurchaseMessage(false, message);
+                return false;
+            }
+
+            // 【新增】检查数量限制
+            if (currentCount >= maxCount) {
+                std::string message = "Maximum " + std::to_string(maxCount) + " of this building allowed!";
+                showPurchaseMessage(false, message);
+                return false;
+            }
+
             if (hasEnoughResources(item.coinCost, item.waterCost, item.gemCost)) {
                 // 扣除资源
                 coin_count -= item.coinCost;

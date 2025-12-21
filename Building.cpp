@@ -214,6 +214,25 @@ void Building::startUpgrade()
     // 1. 基本检查：如果已经在升级，或者满了，就不能再升
     if (state != BuildingState::IDLE) return;
 
+    // 【新增】检查大本营最高等级限制（10级）
+    if (type == BuildingType::BASE && a_level >= 10) {
+        log("Town Hall has reached maximum level (10)!");
+
+        // 显示提示消息
+        auto scene = Director::getInstance()->getRunningScene();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto label = Label::createWithTTF("Town Hall is at max level!", "fonts/Marker Felt.ttf", 28);
+        label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+        label->setColor(Color3B::ORANGE);
+        scene->addChild(label, 1000);
+        label->runAction(Sequence::create(
+            DelayTime::create(2.0f),
+            RemoveSelf::create(),
+            nullptr
+        ));
+        return;
+    }
+
     // 2. 计算本次升级需要的花费
     // (假设你有一个 getNextLevelCost 函数计算花费)
     int cost = this->getNextLevelCost();
@@ -422,12 +441,12 @@ void Building::createGroundEffect()
 
         // 4. 【关键】自动拉伸图片以适应不同大小的建筑
         // 这样无论你的建筑是大本营还是兵营，这张地基图都会自动铺满底部
-        groundSprite->setScaleX(buildingSize.width / (spriteSize.width*0.8));
-        groundSprite->setScaleY(buildingSize.height / (spriteSize.height*1.5));
+        groundSprite->setScaleX(buildingSize.width / (spriteSize.width * 0.8));
+        groundSprite->setScaleY(buildingSize.height / (spriteSize.height * 1.5));
 
         // 5. 设置位置：居中
         // 因为是加在建筑(this)身上的，所以位置是建筑的中心点
-        groundSprite->setPosition(Vec2(buildingSize.width / 2, buildingSize.height / 2-50));
+        groundSprite->setPosition(Vec2(buildingSize.width / 2, buildingSize.height / 2 - 50));
         groundSprite->getTexture()->setAliasTexParameters();
         // 6. 添加到建筑本身
         // ZOrder -1 保证显示在建筑图片的底部
