@@ -29,20 +29,6 @@ public:
 private:
     SaveGame() {}
     static SaveGame* _instance;
-
-    // 保存建筑数据
-    void saveBuildings(cocos2d::ValueVector& buildingsArray);
-
-    // 保存军队数据
-    void saveArmyData(cocos2d::ValueVector& armyArray);
-
-    // 加载建筑数据
-    void loadBuildings(const cocos2d::ValueVector& buildingsArray);
-
-    // 加载军队数据
-    void loadArmyData(const cocos2d::ValueVector& armyArray);
-
-
 };
 
 #endif // __SAVE_GAME_H__

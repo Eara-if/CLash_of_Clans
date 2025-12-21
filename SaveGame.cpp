@@ -49,6 +49,11 @@ bool SaveGame::saveGameState(const std::string& filename)
     CCLOG("=== SaveGame: Resources saved ===");
     CCLOG("=== SaveGame: Global buildings count: %d ===", (int)g_allPurchasedBuildings.size());
 
+    DataManager* dm_level = DataManager::getInstance();
+    int maxLevelUnlocked = dm_level->getMaxLevelUnlocked();
+    document.AddMember("max_level_unlocked", maxLevelUnlocked, allocator);
+    CCLOG("=== SaveGame: Level progress saved - Max level unlocked: %d ===", maxLevelUnlocked);
+
     // 【重要修改】保存所有建筑，不管是否有父节点
     Vector<Building*> tempBuildings;
     for (auto& building : g_allPurchasedBuildings) {
@@ -259,8 +264,19 @@ bool SaveGame::loadGameState(const std::string& filename)
     if (document.HasMember("gem_limit")) gem_limit = document["gem_limit"].GetInt();
     if (document.HasMember("army_limit")) army_limit = document["army_limit"].GetInt();
 
+
     CCLOG("=== SaveGame: Resources loaded - Coin:%d/%d, Water:%d/%d, Gem:%d/%d, ArmyLimit:%d ===",
         coin_count, coin_limit, water_count, water_limit, gem_count, gem_limit, army_limit);
+
+    // 【新增】加载关卡进度
+    if (document.HasMember("max_level_unlocked")) {
+        int savedMaxLevel = document["max_level_unlocked"].GetInt();
+        DataManager::getInstance()->setMaxLevelUnlocked(savedMaxLevel);
+        CCLOG("=== SaveGame: Level progress loaded - Max level unlocked: %d ===", savedMaxLevel);
+    }
+    else {
+        CCLOG("=== SaveGame: WARNING: No level progress found in save file, using default ===");
+    }
 
     // 先清空现有建筑
     for (auto& building : g_allPurchasedBuildings) {

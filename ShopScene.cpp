@@ -106,8 +106,8 @@ void ShopScene::createMenu() {
     // ================= 创建商品菜单项 =================
 
     // 1. 城墙
-    Sprite* wallNormal = Sprite::create("city_wall.png");
-    Sprite* wallSelected = Sprite::create("city_wall.png");
+    Sprite* wallNormal = Sprite::create("fence.png");
+    Sprite* wallSelected = Sprite::create("fence.png");
 
     if (wallNormal && wallSelected) {
         if (wallNormal->getTexture()) {
@@ -310,9 +310,9 @@ void ShopScene::createMenu() {
     float verticalSpacing = visibleSize.height * 0.25f;  // 垂直间距
 
     // 第一行Y坐标
-    float firstRowY = origin.y + visibleSize.height * 0.6f+50;
+    float firstRowY = origin.y + visibleSize.height * 0.6f + 50;
     // 第二行Y坐标
-    float secondRowY = origin.y + visibleSize.height * 0.3f+50;
+    float secondRowY = origin.y + visibleSize.height * 0.3f + 50;
 
     // 计算起始X坐标，让整排按钮在屏幕中水平居中
     float totalWidth = (totalItemsPerRow - 1) * horizontalSpacing;
@@ -322,7 +322,7 @@ void ShopScene::createMenu() {
     for (int i = 0; i < firstRowItems.size(); ++i) {
         MenuItemSprite* item = firstRowItems[i];
         if (item) {
-            float posX = startX + i * horizontalSpacing+60;
+            float posX = startX + i * horizontalSpacing + 60;
             item->setPosition(Vec2(posX, firstRowY));
         }
     }
@@ -331,7 +331,7 @@ void ShopScene::createMenu() {
     for (int i = 0; i < secondRowItems.size(); ++i) {
         MenuItemSprite* item = secondRowItems[i];
         if (item) {
-            float posX = startX + i * horizontalSpacing+60;
+            float posX = startX + i * horizontalSpacing + 60;
             item->setPosition(Vec2(posX, secondRowY));
         }
     }
@@ -364,7 +364,7 @@ void ShopScene::createMenu() {
 
             // 1. 商品名称标签 (按钮上方)
             auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 24);
-            nameLabel->setPosition(Vec2(btnPos.x-50, btnPos.y + 50)); // 上方偏移
+            nameLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y + 50)); // 上方偏移
             nameLabel->setColor(Color3B::WHITE);
             nameLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(nameLabel, 2);
@@ -376,14 +376,14 @@ void ShopScene::createMenu() {
             if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
 
             auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
-            priceLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 180));
+            priceLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 180));
             priceLabel->setColor(Color3B::GREEN);
             priceLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(priceLabel, 2);
 
             // 3. 描述标签 (价格下方)
             auto descLabel = Label::createWithTTF(info.description, "fonts/Marker Felt.ttf", 20);
-            descLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 210));
+            descLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 210));
             descLabel->setColor(Color3B::YELLOW);
             descLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(descLabel, 2);
@@ -400,7 +400,7 @@ void ShopScene::createMenu() {
 
             // 1. 商品名称标签 (按钮上方)
             auto nameLabel = Label::createWithTTF(info.name, "fonts/Marker Felt.ttf", 24);
-            nameLabel->setPosition(Vec2(btnPos.x-50, btnPos.y + 50)); // 上方偏移
+            nameLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y + 50)); // 上方偏移
             nameLabel->setColor(Color3B::WHITE);
             nameLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(nameLabel, 2);
@@ -412,14 +412,14 @@ void ShopScene::createMenu() {
             if (info.gemCost > 0) priceText += "Gem:" + std::to_string(info.gemCost);
 
             auto priceLabel = Label::createWithTTF(priceText, "fonts/Marker Felt.ttf", 20);
-            priceLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 180));
+            priceLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 180));
             priceLabel->setColor(Color3B::GREEN);
             priceLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(priceLabel, 2);
 
             // 3. 描述标签 (价格下方)
             auto descLabel = Label::createWithTTF(info.description, "fonts/Marker Felt.ttf", 20);
-            descLabel->setPosition(Vec2(btnPos.x-50, btnPos.y - 210));
+            descLabel->setPosition(Vec2(btnPos.x - 50, btnPos.y - 210));
             descLabel->setColor(Color3B::YELLOW);
             descLabel->setAlignment(TextHAlignment::CENTER);
             this->addChild(descLabel, 2);
@@ -521,7 +521,7 @@ bool ShopScene::purchaseItem(ShopItemType type) {
 
                 switch (type) {
                     case ShopItemType::WALL:
-                        filename = "city_wall.png";
+                        filename = "fence.png";
                         buildingName = "Wall";
                         buildingtype = BuildingType::WALL;
                         buildingbasecost = 0;
@@ -553,19 +553,19 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                     case ShopItemType::BARRACKS:
                         filename = "junying.png";
                         buildingName = "Barracks";
-                        buildingtype = BuildingType::BARRACKS; 
+                        buildingtype = BuildingType::BARRACKS;
                         buildingbasecost = 300;
                         break;
                     case ShopItemType::GOLD_STORAGE:
                         filename = "BarGold.png";
                         buildingName = "Gold Storage";
-                        buildingtype = BuildingType::GOLD_STORAGE; 
+                        buildingtype = BuildingType::GOLD_STORAGE;
                         buildingbasecost = 300;
                         break;
                     case ShopItemType::WATER_STORAGE:
                         filename = "Water.png";
                         buildingName = "Water Storage";
-                        buildingtype = BuildingType::WATER_STORAGE; 
+                        buildingtype = BuildingType::WATER_STORAGE;
                         buildingbasecost = 300;
                         break;
                 }
@@ -693,6 +693,4 @@ void ShopScene::updateResourceLabels() {
 void ShopScene::menuBackCallback(Ref* pSender) {
     Director::getInstance()->popScene();
 }
-
-
 
