@@ -267,6 +267,19 @@ void BattleScene::checkGameEnd()
 // 【新增】显示胜利弹窗
 void BattleScene::showVictoryPopup()
 {
+    // 如果当前加载的是 map1，则解锁到 2
+    if (_mapFileName == "Enemy_map1.tmx") {
+        if (DataManager::getInstance()->getMaxLevelUnlocked() < 2) {
+            DataManager::getInstance()->setMaxLevelUnlocked(2);
+        }
+    }
+    // 如果当前加载的是 map2，则解锁到 3（此时空军解锁）
+    else if (_mapFileName == "Enemy_map2.tmx") {
+        if (DataManager::getInstance()->getMaxLevelUnlocked() < 3) {
+            DataManager::getInstance()->setMaxLevelUnlocked(3);
+        }
+    }
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
     Vec2 center = Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y);
@@ -343,8 +356,8 @@ void BattleScene::showVictoryPopup()
     // 设置 Item 在 Menu 里的位置 (在背景底部)
     backItem->setPosition(Vec2(0, -bgHeight * 0.35f));
 
-    // ❌ 错误做法：container->addChild(backItem);
-    // ✅ 正确做法：必须放入 Menu 容器！
+    // 错误做法：container->addChild(backItem);
+    // 正确做法：必须放入 Menu 容器！
     auto menu = Menu::create(backItem, NULL);
     menu->setPosition(Vec2::ZERO); // 菜单对齐容器中心
     container->addChild(menu);
@@ -434,6 +447,7 @@ void BattleScene::showDefeatPopup()
 // 【新增】隐藏胜利弹窗
 void BattleScene::hideVictoryPopup()
 {
+
     this->removeChildByName("victory_bg_layer");
     this->removeChildByName("victory_popup");
     this->removeChildByName("victory_content");
@@ -551,6 +565,8 @@ void BattleScene::loadEnemyMap()
 
                 if (tower) {
                     tower->setPosition(x + w / 2, y + h / 2);
+                    // 【新增】确保普通塔标记为 TOWER
+                    tower->setType(EnemyType::TOWER);
                     _tileMap->addChild(tower, 3);
                     // 加入列表供士兵寻找
                     _towers.pushBack(tower);
@@ -578,6 +594,8 @@ void BattleScene::loadEnemyMap()
 
                 if (cannon) {
                     cannon->setPosition(x + w / 2, y + h / 2);
+                    // 【新增】显式设置为 CANNON 类型
+                    cannon->setType(EnemyType::CANNON);
                     _tileMap->addChild(cannon, 3);
                     // 加入列表供士兵寻找
                     _towers.pushBack(cannon);
@@ -689,7 +707,9 @@ void BattleScene::createUI()
         { SoldierType::ORIGINAL, "Soldier", "anim/man1.png" }, // 注意路径要对
         { SoldierType::ARROW,    "Arrow",   "anim/arrow1.png" },
         { SoldierType::BOOM,     "Boom",    "anim/boom1.png" },
-        { SoldierType::GIANT,    "Giant",   "anim/giant1.png" }
+        { SoldierType::GIANT,    "Giant",   "anim/giant1.png" },
+        // 【新增】Airforce
+        { SoldierType::AIRFORCE, "Airforce","anim/Owl1.png" }
     };
 
     // 起始位置 (右下角向左排列)
