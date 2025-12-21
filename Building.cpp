@@ -467,3 +467,100 @@ void Building::removeGroundEffect()
         groundEffectNode = nullptr;
     }
 }
+
+// 【新增】直接设置等级，不消耗资源（用于加载存档）
+void Building::setLevelDirectly(int level)
+{
+    if (level < 1) level = 1;
+
+    // 大本营最高10级限制
+    if (type == BuildingType::BASE && level > 10) {
+        level = 10;
+        CCLOG("=== Building: Town Hall max level is 10, setting to 10 ===");
+    }
+
+    // 设置等级
+    a_level = level;
+
+    CCLOG("=== Building: %s level set to %d (no resource cost) ===", buildingName.c_str(), a_level);
+}
+
+// 【新增】直接设置状态
+void Building::setStateDirectly(BuildingState newState)
+{
+    state = newState;
+
+    // 如果是金矿或圣水收集器且状态为READY，显示可收集标记
+    if ((type == BuildingType::MINE || type == BuildingType::WATER) && state == BuildingState::READY) {
+        if (!readyIndicator) {
+            readyIndicator = Sprite::create("ui/ready_indicator.png");
+            if (!readyIndicator) {
+                // 如果图片不存在，创建一个简单的红色感叹号
+                readyIndicator = Sprite::create();
+                auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
+                label->setColor(Color3B::RED);
+                label->setPosition(Vec2(15, 50));
+                readyIndicator->addChild(label);
+                readyIndicator->setContentSize(Size(30, 30));
+            }
+            readyIndicator->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 20));
+            this->addChild(readyIndicator, 100);
+        }
+    }
+    else if (readyIndicator) {
+        // 如果状态不是READY，移除可收集标记
+        readyIndicator->removeFromParent();
+        readyIndicator = nullptr;
+    }
+
+    CCLOG("=== Building: %s state set to %d ===", buildingName.c_str(), (int)state);
+}
+
+// 【新增】设置升级剩余时间
+void Building::setUpgradeTimeLeft(float time)
+{
+    timeLeft = time;
+    if (timeLeft > 0) {
+        state = BuildingState::UPGRADING;
+    }
+    CCLOG("=== Building: %s upgrade time left set to %.2f ===", buildingName.c_str(), timeLeft);
+}
+
+// 【新增】设置生产剩余时间
+void Building::setProductionTimeLeft(float time)
+{
+    productionTimeLeft = time;
+    if (productionTimeLeft > 0) {
+        state = BuildingState::PRODUCING;
+    }
+    CCLOG("=== Building: %s production time left set to %.2f ===", buildingName.c_str(), productionTimeLeft);
+}
+
+// 【新增】从数据初始化建筑（用于加载存档）
+void Building::initFromSaveData(int level, BuildingState savedState, float upgradeTimeLeft, float productionTimeLeft)
+{
+    // 设置等级
+    setLevelDirectly(level);
+
+    // 设置状态
+    setStateDirectly(savedState);
+
+    // 设置升级剩余时间
+    if (savedState == BuildingState::UPGRADING) {
+        setUpgradeTimeLeft(upgradeTimeLeft);
+    }
+
+    // 设置生产剩余时间
+    if (type == BuildingType::MINE || type == BuildingType::WATER) {
+        if (savedState == BuildingState::PRODUCING) {
+            setProductionTimeLeft(productionTimeLeft);
+        }
+        else if (savedState == BuildingState::READY) {
+            // 如果是可收集状态，确保有可收集标记
+            finishProduction(); // 这会创建可收集标记
+        }
+    }
+
+    CCLOG("=== Building: %s initialized from save data - Level:%d, State:%d ===",
+        buildingName.c_str(), level, (int)savedState);
+}

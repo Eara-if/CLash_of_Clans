@@ -278,15 +278,10 @@ bool SaveGame::loadGameState(const std::string& filename)
         CCLOG("=== SaveGame: WARNING: No level progress found in save file, using default ===");
     }
 
-    // 先清空现有建筑
-    for (auto& building : g_allPurchasedBuildings) {
-        if (building) {
-            building->removeFromParent();
-        }
-    }
+    // 【重要修改】不再清空现有建筑，而是重新构建
+ // 先保存原始建筑列表，稍后替换
+    Vector<Building*> oldBuildings = g_allPurchasedBuildings;
     g_allPurchasedBuildings.clear();
-
-    CCLOG("=== SaveGame: Existing buildings cleared ===");
 
     // 加载建筑数据
     if (document.HasMember("buildings") && document["buildings"].IsArray()) {
@@ -298,21 +293,33 @@ bool SaveGame::loadGameState(const std::string& filename)
 
             // 检查必需字段
             if (!buildingData.HasMember("type") || !buildingData.HasMember("pos_x") ||
-                !buildingData.HasMember("pos_y")) {
+                !buildingData.HasMember("pos_y") || !buildingData.HasMember("level")) {
                 CCLOG("=== SaveGame: WARNING: Building %d missing required fields ===", (int)i);
                 continue;
             }
 
-            // 获取建筑类型
+            // 获取建筑基本信息
             BuildingType type = static_cast<BuildingType>(buildingData["type"].GetInt());
-            int level = buildingData.HasMember("level") ? buildingData["level"].GetInt() : 1;
+            int savedLevel = buildingData["level"].GetInt();
             float posX = buildingData["pos_x"].GetFloat();
             float posY = buildingData["pos_y"].GetFloat();
-            BuildingState state = buildingData.HasMember("state") ?
+            BuildingState savedState = buildingData.HasMember("state") ?
                 static_cast<BuildingState>(buildingData["state"].GetInt()) : BuildingState::IDLE;
 
+            // 获取升级和生产剩余时间
+            float upgradeTimeLeft = 0;
+            float productionTimeLeft = 0;
+
+            if (buildingData.HasMember("upgrade_time_left")) {
+                upgradeTimeLeft = buildingData["upgrade_time_left"].GetFloat();
+            }
+
+            if (buildingData.HasMember("production_time_left")) {
+                productionTimeLeft = buildingData["production_time_left"].GetFloat();
+            }
+
             CCLOG("=== SaveGame: Loading building %d - Type:%d, Level:%d, Pos:(%.1f,%.1f), State:%d ===",
-                (int)i, (int)type, level, posX, posY, (int)state);
+                (int)i, (int)type, savedLevel, posX, posY, (int)savedState);
 
             // 根据类型创建建筑
             Building* newBuilding = nullptr;
@@ -320,41 +327,47 @@ bool SaveGame::loadGameState(const std::string& filename)
             std::string buildingName;
             int baseCost = 300;
 
+            // 从保存的数据中获取建筑名称（如果有）
+            if (buildingData.HasMember("name")) {
+                buildingName = buildingData["name"].GetString();
+            }
+
+            // 根据建筑类型设置参数
             switch (type) {
                 case BuildingType::BASE:
                     filename = "House.png";
-                    buildingName = "My House";
+                    if (buildingName.empty()) buildingName = "My House";
                     baseCost = 500;
                     break;
                 case BuildingType::BARRACKS:
                     filename = "junying.png";
-                    buildingName = "My junying";
+                    if (buildingName.empty()) buildingName = "My junying";
                     baseCost = 200;
                     break;
                 case BuildingType::MINE:
                     filename = "Mine.png";
-                    buildingName = "Gold Mine";
+                    if (buildingName.empty()) buildingName = "Gold Mine";
                     break;
                 case BuildingType::WATER:
                     filename = "waterwell.png";
-                    buildingName = "Water Collector";
+                    if (buildingName.empty()) buildingName = "Water Collector";
                     break;
                 case BuildingType::DEFENSE:
                     filename = "TilesetTowers.png";
-                    buildingName = "Archer Tower";
+                    if (buildingName.empty()) buildingName = "Archer Tower";
                     break;
                 case BuildingType::WALL:
                     filename = "city_wall.png";
-                    buildingName = "Wall";
+                    if (buildingName.empty()) buildingName = "Wall";
                     baseCost = 0;
                     break;
                 case BuildingType::GOLD_STORAGE:
                     filename = "BarGold.png";
-                    buildingName = "Gold Storage";
+                    if (buildingName.empty()) buildingName = "Gold Storage";
                     break;
                 case BuildingType::WATER_STORAGE:
                     filename = "Water.png";
-                    buildingName = "Water Storage";
+                    if (buildingName.empty()) buildingName = "Water Storage";
                     break;
                 default:
                     CCLOG("=== SaveGame: WARNING: Unknown building type: %d ===", (int)type);
@@ -368,33 +381,37 @@ bool SaveGame::loadGameState(const std::string& filename)
                 newBuilding->setPosition(posX, posY);
                 newBuilding->setScale(0.5f);
 
-                // 设置等级（多次升级以达到保存的等级）
-                int currentLevel = 1;
-                while (currentLevel < level) {
-                    newBuilding->startUpgrade();
-                    newBuilding->finishUpgrade();
-                    currentLevel++;
-                }
+                // 【核心修改】使用新方法直接从存档数据初始化建筑，不消耗资源！
+                newBuilding->initFromSaveData(savedLevel, savedState, upgradeTimeLeft, productionTimeLeft);
 
-                // 设置状态
-                if (state == BuildingState::UPGRADING && buildingData.HasMember("upgrade_time_left")) {
-                    float timeLeft = buildingData["upgrade_time_left"].GetFloat();
-                    // 注意：Building类需要扩展方法来设置升级状态和时间
-                    // 这里可以调用一个设置时间的方法（如果存在）
-                    // newBuilding->setUpgradeTimeLeft(timeLeft);
-                    CCLOG("=== SaveGame: Building has upgrade time left: %f ===", timeLeft);
-                }
+                // 【重要】设置回调函数
+                // 注意：这里需要重新设置回调函数，因为新创建的Building没有回调
+                newBuilding->setOnUpgradeCallback([=]() {
+                    // 这里的逻辑与GameScene中相同
+                    if (type == BuildingType::BASE) {
+                        coin_limit += 1500;
+                        water_limit += 1500;
+                    }
+                    else if (type == BuildingType::BARRACKS) {
+                        army_limit += 10;
+                        log("Army limit increased to %d", army_limit);
+                    }
 
-                // 设置生产状态
-                if (buildingData.HasMember("production_time_left")) {
-                    float prodTimeLeft = buildingData["production_time_left"].GetFloat();
-                    // newBuilding->setProductionTimeLeft(prodTimeLeft);
-                    CCLOG("=== SaveGame: Building has production time left: %f ===", prodTimeLeft);
-                }
+                    // 更新资源显示
+                    auto scene = Director::getInstance()->getRunningScene();
+                    auto gameScene = dynamic_cast<GameScene*>(scene);
+                    if (gameScene) {
+                        gameScene->updateResourceDisplay();
+                    }
+                    });
 
                 // 添加到全局容器
+                newBuilding->retain();
                 g_allPurchasedBuildings.pushBack(newBuilding);
-                CCLOG("=== SaveGame: Building %d created successfully ===", (int)i);
+                newBuilding->release();
+
+                CCLOG("=== SaveGame: Building %d created successfully (Level: %d, State: %d) ===",
+                    (int)i, savedLevel, (int)savedState);
             }
             else {
                 CCLOG("=== SaveGame: ERROR: Failed to create building %d ===", (int)i);
@@ -441,7 +458,7 @@ bool SaveGame::loadGameState(const std::string& filename)
 
     CCLOG("=== SaveGame: Game loaded successfully from: %s ===", fullPath.c_str());
 
-    // 【新增】显示加载成功提示
+    // 显示加载成功提示
     auto scene = Director::getInstance()->getRunningScene();
     if (scene) {
         auto visibleSize = Director::getInstance()->getVisibleSize();

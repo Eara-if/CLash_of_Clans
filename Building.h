@@ -59,6 +59,24 @@ public:
 
     void createGroundEffect();
     void removeGroundEffect();
+
+    // 【新增】直接设置等级，不消耗资源（用于加载存档）
+    void setLevelDirectly(int level);
+
+    // 【新增】直接设置状态
+    void setStateDirectly(BuildingState newState);
+
+    // 【新增】设置升级剩余时间
+    void setUpgradeTimeLeft(float time);
+
+    // 【新增】设置生产剩余时间
+    void setProductionTimeLeft(float time);
+
+    // 【新增】获取建筑名称
+    std::string getName() { return buildingName; }
+
+    // 【新增】从数据初始化建筑（用于加载存档）
+    void initFromSaveData(int level, BuildingState savedState, float upgradeTimeLeft = 0, float productionTimeLeft = 0);
 private:
     BuildingType type;
     bool isDragging;
