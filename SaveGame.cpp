@@ -44,7 +44,7 @@ bool SaveGame::saveGameState(const std::string& filename)
     document.AddMember("coin_limit", coin_limit, allocator);
     document.AddMember("water_limit", water_limit, allocator);
     document.AddMember("gem_limit", gem_limit, allocator);
-    document.AddMember("army_limit", army_limit, allocator);
+
 
     CCLOG("=== SaveGame: Resources saved ===");
     CCLOG("=== SaveGame: Global buildings count: %d ===", (int)g_allPurchasedBuildings.size());
@@ -262,7 +262,7 @@ bool SaveGame::loadGameState(const std::string& filename)
     if (document.HasMember("coin_limit")) coin_limit = document["coin_limit"].GetInt();
     if (document.HasMember("water_limit")) water_limit = document["water_limit"].GetInt();
     if (document.HasMember("gem_limit")) gem_limit = document["gem_limit"].GetInt();
-    if (document.HasMember("army_limit")) army_limit = document["army_limit"].GetInt();
+
 
 
     CCLOG("=== SaveGame: Resources loaded - Coin:%d/%d, Water:%d/%d, Gem:%d/%d, ArmyLimit:%d ===",
