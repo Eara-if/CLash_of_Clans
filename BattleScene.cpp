@@ -3,7 +3,7 @@
 #include "EnemyBuilding.h"
 #include "Soldier.h" // 务必包含 Soldier 头文件
 #include"DataManager.h"
-
+#include"MapTrap.h"
 USING_NS_CC;
 extern int coin_count;
 extern int water_count;
@@ -132,7 +132,22 @@ void BattleScene::update(float dt)
 
     // 如果游戏已结束，不再执行后续逻辑
     if (_isGameOver) return;
+    if (!_traps.empty()) {
+        for (auto it = _traps.begin(); it != _traps.end(); ) {
+            auto trap = *it;
 
+            // 传入当前所有士兵进行检测
+            bool triggered = trap->checkTrigger(_soldiers);
+
+            if (triggered) {
+                // 如果爆炸了，从检测列表中移除 (避免重复爆炸)
+                it = _traps.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+    }
     // **士兵 AI 更新和清理**
     auto soldierIt = _soldiers.begin();
     while (soldierIt != _soldiers.end())
@@ -178,13 +193,6 @@ void BattleScene::menuBackToGameScene(Ref* pSender)
 
     Director::getInstance()->popScene();
 }
-
-// 【新增】检查游戏是否结束
-// BattleScene.cpp
-
-// BattleScene.cpp
-
-// BattleScene.cpp
 
 void BattleScene::checkGameEnd()
 {
@@ -284,7 +292,12 @@ void BattleScene::showVictoryPopup()
             DataManager::getInstance()->setMaxLevelUnlocked(3);
         }
     }
-
+    // 如果当前加载的是 map2，则解锁到 3（此时空军解锁）
+    else if (_mapFileName == "Enemy_map3.tmx") {
+        if (DataManager::getInstance()->getMaxLevelUnlocked() < 4) {
+            DataManager::getInstance()->setMaxLevelUnlocked(4);
+        }
+    }
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
     Vec2 center = Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y);
@@ -527,18 +540,14 @@ void BattleScene::loadEnemyMap()
             float y = dict["y"].asFloat();
             float w = dict["width"].asFloat();
             float h = dict["height"].asFloat();
-            if (dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png") {
+            if (dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png" || dict["fileName"].asString() == "Tree2.png") {
                 y += 100;
             }
-            if (name == "boom") {
-                x = 0;
-                y = 0;
+            if (name != "boom") {
+                Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
+                Rect worldRect(worldPos.x, worldPos.y, w, h);
+                _forbiddenRects.push_back(worldRect);
             }
-            // 【关键步骤】处理坐标系
-            // 1. 保存 "世界坐标" 的 Rect 到 _forbiddenRects，用于绘制红色区域和点击检测
-            Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
-            Rect worldRect(worldPos.x, worldPos.y, w, h);
-            _forbiddenRects.push_back(worldRect);
 
             // 2. 创建实体对象 (Base 和 Tower)，添加到 _tileMap 上 (使用局部坐标 x, y)
 
@@ -661,12 +670,25 @@ void BattleScene::loadEnemyMap()
                 }
             }
             else if (name == "boom") {
+                // 读取伤害配置
+                int damage = dict["Damage"].asInt();
+                if (damage == 0) 
+                    damage = 1000; // 默认秒杀级伤害
 
+                // 定义陷阱区域 (使用地图局部坐标，因为士兵移动也是基于地图坐标)
+                Rect trapRect(x, y, w, h);
+
+                // 创建隐形陷阱
+                auto trap = MapTrap::create(trapRect, damage);
+                if (trap) {
+                    _tileMap->addChild(trap); // 加到地图上
+                    _traps.pushBack(trap);    // 加入管理列表
+                }
             }
             // ----------------------------------------------------
             // 处理 C: 障碍物 (Tree, grass)
             // ----------------------------------------------------
-            else if (name == "grass") {
+            else if (name == "grass"||name=="mine"||name=="root") {
                 // 不需要创建实体类，上面的 _forbiddenRects.push_back 已经处理了阻挡逻辑
             }
         }
@@ -703,7 +725,7 @@ void BattleScene::loadEnemyMap()
                             sprite->setScaleY(height / sprite->getContentSize().height);
                         }
 
-                        sprite->setLocalZOrder(10000 - (int)y);
+                        sprite->setLocalZOrder(3);
                     }
                     else {
                         log("Error: Can't load image: %s", path.c_str());

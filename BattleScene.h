@@ -1,7 +1,7 @@
 // BattleScene.h
 #ifndef __BATTLE_SCENE_H__
 #define __BATTLE_SCENE_H__
-
+#include "MapTrap.h"
 #include "cocos2d.h"
 #include "EnemyBuilding.h"
 #include "Soldier.h" // ��Ҫ���� Soldire ͷ�ļ�
@@ -34,7 +34,7 @@ public:
     bool isPositionBlocked(cocos2d::Vec2 worldPos);
     // ���������Զ����ʼ������
     bool initWithMap(const std::string& mapFileName);
-
+    cocos2d::Vector<MapTrap*> _traps;
 private:
     cocos2d::TMXTiledMap* _tileMap;
     std::string _mapFileName; // �����������ڴ洢Ҫ���صĵ�ͼ�ļ���

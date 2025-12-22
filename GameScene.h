@@ -20,6 +20,7 @@ private:
     cocos2d::Vector<Building*> _allBuildings;
     // 新增：添加已购买建筑的辅助函数
     void addAllPurchasedBuildings();
+    void addPurchasedBuilding(Building* building); // 新增：添加建筑的函数
     bool isMapDragging;
 public:
     void addSaveButton();
@@ -38,11 +39,7 @@ public:
     // 【新增】核心辅助函数：检查并修正地图位置 (防止出界)
     void checkAndClampMapPosition();
 
-    // 【新增】根据兵营等级计算人口上限
-    int calculateArmyLimit();
-    // 【新增】重新计算并更新人口上限
-    void recalculateArmyLimit();
-
+    void setBattleButton();
     void addShopButton();
     // 初始化函数
     virtual bool init();
