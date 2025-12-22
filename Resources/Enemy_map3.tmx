@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="65" height="36" tilewidth="32" tileheight="32" infinite="0" nextlayerid="18" nextobjectid="279">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="65" height="36" tilewidth="32" tileheight="32" infinite="0" nextlayerid="18" nextobjectid="287">
  <tileset firstgid="1" source="Base.tsx"/>
  <tileset firstgid="41" source="Grassland.tsx"/>
  <tileset firstgid="45" source="TilesetNature.tsx"/>
@@ -82,8 +82,6 @@
     <property name="HP" value="80"/>
    </properties>
   </object>
-  <object id="63" name="boom" x="542.97" y="574.879" width="64.2424" height="65.7576"/>
-  <object id="65" name="boom" x="1535.27" y="636.591" width="64.2424" height="64.7576"/>
   <object id="66" gid="45" x="164.788" y="993" width="121.94" height="126.121">
    <properties>
     <property name="fileName" value="Tree.png"/>
@@ -540,6 +538,14 @@
   </object>
   <object id="277" name="fence" x="1153.67" y="771.833" width="64.6667" height="64.3333"/>
   <object id="278" name="fence" x="805.667" y="247.833" width="64.6667" height="64.3333"/>
+  <object id="279" name="Home" x="225.635" y="71.2122" width="632.79" height="767.212"/>
+  <object id="280" name="Home" x="100.605" y="387.394" width="122.79" height="259.212"/>
+  <object id="281" name="Home" x="863.605" y="322.394" width="432.79" height="441.212"/>
+  <object id="282" name="Home" x="1297.61" y="353.394" width="202.79" height="411.212"/>
+  <object id="283" name="Home" x="1156.61" y="772.394" width="348.79" height="125.212"/>
+  <object id="284" name="Home" x="1504.61" y="478.394" width="190.79" height="351.212"/>
+  <object id="285" name="Home" x="1702.61" y="480.394" width="216.79" height="323.212"/>
+  <object id="286" name="Home" x="1599.61" y="354.394" width="320.79" height="119.212"/>
  </objectgroup>
  <layer id="5" name="buildings" width="65" height="36">
   <data encoding="base64">
