@@ -28,7 +28,8 @@ public:
     // ��ʿ�� AI ʹ�õĹ����ӿ�
     cocos2d::Vector<EnemyBuilding*>& getTowers() { return _towers; }
     EnemyBuilding* getBase() { return _base; }
-    static cocos2d::Scene* createScene(const std::string& mapFileName); // ���޸ġ����ܵ�ͼ������
+    static cocos2d::Scene* createScene(int levelIndex, std::string pvpJsonData = "");
+    void setupBattle(int levelIndex, std::string pvpJsonData);
 
     // ��ײ���ӿ� (���ڷ��ü���δ�����ܵ�Ѱ·)
     bool isPositionBlocked(cocos2d::Vec2 worldPos);
@@ -66,8 +67,8 @@ private:
     bool _isGameOver;
     bool _isGamePaused;
 
-    // TMX & ʵ�����
-    void loadEnemyMap();
+    void loadLevelCampaign(int levelIndex); // 加载原本的4关
+    void loadLevelPVP(const std::string& json); // 加载新的JSON数据
 
     // UI & �����ص�
     void createUI();
