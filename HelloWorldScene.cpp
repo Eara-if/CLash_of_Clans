@@ -24,6 +24,7 @@
 
 #include "HelloWorldScene.h"
 #include "GameScene.h"
+#include "DataManager.h"
 #include "SaveGame.h"  // 【新增】包含存档管理头文件
 USING_NS_CC;
 
@@ -215,6 +216,12 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 // 开始新游戏
 void HelloWorld::menuGotoNextScene(Ref* pSender)
 {
+    // 【新增】重置关卡进度为1（只能打第一关）
+    DataManager::getInstance()->setMaxLevelUnlocked(1);
+
+    // 【新增】清空所有训练过的兵种
+    DataManager::getInstance()->clearArmy();
+
     // 【新增】重置游戏数据
     coin_count = 5000;
     water_count = 5000;
@@ -222,7 +229,7 @@ void HelloWorld::menuGotoNextScene(Ref* pSender)
     coin_limit = 5000;
     water_limit = 5000;
     gem_limit = 5000;
-    army_limit = 10;
+    army_limit = 0;
 
     // 清空已购买建筑
     for (auto& building : g_allPurchasedBuildings) {
