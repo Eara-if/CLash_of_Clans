@@ -172,7 +172,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
     // 情况 B：金矿 (Gold Mine)
     // ============================================================
     else if (_targetBuilding->getType() == BuildingType::MINE) {
-        BuildingState state = _targetBuilding->getState();
+ BuildingState state = _targetBuilding->getState();
 
         if (state == BuildingState::PRODUCING) {
             // 正在生产中，显示倒计时
@@ -197,7 +197,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
                     this->unschedule("production_timer");
                     this->setBuilding(_targetBuilding);
                 }
-                }, 1.0f, "production_timer");
+            }, 1.0f, "production_timer");
         }
         else if (state == BuildingState::READY) {
             // 资源可收集
@@ -211,7 +211,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
             _actionBtn->setCallback([=](Ref*) {
                 _targetBuilding->collectResources();
                 this->closeLayer();
-                });
+            });
         }
         else if (state == BuildingState::UPGRADING) {
             // 正在升级
@@ -222,12 +222,12 @@ void BuildingInfoLayer::setBuilding(Building* building)
             std::string info = "Gold Mine Lv." + std::to_string(level) +
                 "\nCost: " + std::to_string(cost) + " Coin" +
                 "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
-
+            
             if (isMaxLevel) {
                 info = "Gold Mine Lv." + std::to_string(level) + " (MAX)" +
-                    "\nUpgrade TH to increase level limit";
+                       "\nUpgrade TH to increase level limit";
             }
-
+            
             _infoLabel->setString(info);
 
             // 设置升级按钮
@@ -235,11 +235,11 @@ void BuildingInfoLayer::setBuilding(Building* building)
             _actionBtn->setCallback([=](Ref*) {
                 if (isMaxLevel) {
                     this->showMaxLevelWarning("Gold Mine", townHallLevel);
-                }
-                else {
+                } else {
                     this->handleStartUpgrade();
                 }
-                });
+            });
+
         }
     }
     // ============================================================
@@ -269,7 +269,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
                     this->unschedule("production_timer");
                     this->setBuilding(_targetBuilding);
                 }
-                }, 1.0f, "production_timer");
+            }, 1.0f, "production_timer");
         }
         else if (state == BuildingState::READY) {
             // 资源可收集
@@ -282,7 +282,7 @@ void BuildingInfoLayer::setBuilding(Building* building)
             _actionBtn->setCallback([=](Ref*) {
                 _targetBuilding->collectResources();
                 this->closeLayer();
-                });
+            });
         }
         else if (state == BuildingState::UPGRADING) {
             this->handleUpgradeTimer();
@@ -292,23 +292,22 @@ void BuildingInfoLayer::setBuilding(Building* building)
             std::string info = "Water Collector Lv." + std::to_string(level) +
                 "\nCost: " + std::to_string(cost) + " Coin" +
                 "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
-
+            
             if (isMaxLevel) {
                 info = "Water Collector Lv." + std::to_string(level) + " (MAX)" +
-                    "\nUpgrade TH to increase level limit";
+                       "\nUpgrade TH to increase level limit";
             }
-
+            
             _infoLabel->setString(info);
 
             _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
             _actionBtn->setCallback([=](Ref*) {
                 if (isMaxLevel) {
                     this->showMaxLevelWarning("Water Collector", townHallLevel);
-                }
-                else {
+                } else {
                     this->handleStartUpgrade();
                 }
-                });
+            });
         }
     }
     // ============================================================
