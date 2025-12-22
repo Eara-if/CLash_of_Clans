@@ -543,7 +543,8 @@ void BattleScene::loadEnemyMap()
             if (dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png" || dict["fileName"].asString() == "Tree2.png") {
                 y += 100;
             }
-            if (name != "boom") {
+            if (name == "Home"|| name == "mine"||
+                dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png" || dict["fileName"].asString() == "Tree2.png") {
                 Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
                 Rect worldRect(worldPos.x, worldPos.y, w, h);
                 _forbiddenRects.push_back(worldRect);

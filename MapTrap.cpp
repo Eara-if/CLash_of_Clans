@@ -35,6 +35,9 @@ bool MapTrap::checkTrigger(const Vector<Soldier*>& soldiers)
             // 【核心逻辑】判断士兵的位置点，是否在陷阱矩形内
             // getPosition() 是士兵的世界坐标或者地图相对坐标，取决于你的层级结构
             // 假设 Soldier 和 MapTrap 都添加在 _tileMap 上，坐标系一致
+            if (soldier->getSoldierType() == SoldierType::AIRFORCE) {
+                continue;
+            }
             if (_trapArea.containsPoint(soldier->getPosition())) {
 
                 this->explode(soldiers); // 触发爆炸
@@ -55,6 +58,9 @@ void MapTrap::explode(const Vector<Soldier*>& soldiers)
     // 2. 造成范围伤害 (所有在矩形内的士兵都掉血)
     for (auto soldier : soldiers) {
         if (soldier && soldier->getCurrentHp() > 0) {
+            if (soldier->getSoldierType() == SoldierType::AIRFORCE) {
+                continue;
+            }
             if (_trapArea.containsPoint(soldier->getPosition())) {
                 soldier->takeDamage(_damage);
             }
