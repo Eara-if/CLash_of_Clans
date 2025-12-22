@@ -1,11 +1,11 @@
-ï»¿#include "GameScene.h"
+#include "GameScene.h"
 #include "HelloWorldScene.h"
 #include "BuildingInfoLayer.h"
 #include "BattleScene.h"
 #include "Building.h" 
 #include "ShopScene.h"
-#include"SaveGame.h"
-#include"AudioEngine.h"
+#include "SaveGame.h"
+#include "AudioEngine.h"
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -15,21 +15,21 @@ extern int coin_limit = 5000;
 extern int water_limit = 5000;
 extern int gem_limit = 5000;
 
-cocos2d::Vector<Building*> g_allPurchasedBuildings;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+cocos2d::Vector<Building*> g_allPurchasedBuildings;// ????????????????????
 
-int army_limit = 10;
+int army_limit = 0;
 class resource
 {
 public:
     std::string filename = "";
     int count = 0;
 
-    // ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½ï¿½ï¿½ 1ï¿½ï¿½Îªï¿½ï¿½Êµï¿½Ö¶ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
-    // ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ä¬ï¿½Ï²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ Node*
-    virtual void print(Node* parentNode) {}; // ï¿½éº¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´
+    // ????????? 1??????????????????????????????????
+    // ??????????????????????????????????? Node*
+    virtual void print(Node* parentNode) {}; // ?üD????????????§Õ
     virtual void modify() {};
     resource(int data) :count(data) {};
-    virtual ~resource() {}; // ï¿½ï¿½ï¿½ï¿½ï¿½é¡¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½éº¯ï¿½ï¿½
+    virtual ~resource() {}; // ?????¶Ù??????????????????üD??
 };
 
 class goldcoin : public resource
@@ -42,7 +42,7 @@ private:
         float tileWidth = 43;
         float tileHeight = 10;
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½ï¿½ß¼ï¿½
+        // ?????????????
         if (coin_count > 0 && coin_count <= coin_limit / 4) {
             start_x = 137;
         }
@@ -66,14 +66,14 @@ public:
     goldcoin() : resource(5000) {};
     ~goldcoin() {};
 
-    void modify() override { // ï¿½ï¿½ï¿½ï¿½ï¿½é¡¿ï¿½ï¿½ï¿½ï¿½ override ï¿½Ø¼ï¿½ï¿½Ö£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        // ï¿½Ş¸ï¿½ï¿½ß¼ï¿½
+    void modify() override { // ?????¶Ù???? override ???????????????????
+        // ??????
     }
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½Ë£ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ Node*
+    // ?????????????????????????§Õ????????????? Node*
     void print(Node* parentNode) override {
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ä»ï¿½ß´ï¿½
+        // ?????? 2???????????????????
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
@@ -84,24 +84,24 @@ public:
 
         _displaySprite = Sprite::create(filename, tileRect);
 
-        // ï¿½ï¿½È«ï¿½ï¿½ï¿½
+        // ??????
         if (_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // È·ï¿½ï¿½ scaleAmount ï¿½Ú»ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
 
-            // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+            // ????¦Ë??
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
 
-            // ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½Úµï¿½
+            // ??????????
             parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
         if (_displaySprite != nullptr) {
-            // 1. ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ Rect (ï¿½ï¿½Îª coin_count ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½)
+            // 1. ??????? Rect (??? coin_count ???????)
             Rect newRect = this->calculateRect();
 
-            // 2. ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½Ö»ï¿½Ş¸Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ò£¬²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½
+            // 2. ???????????????????????????????????
             _displaySprite->setTextureRect(newRect);
 
             // log("Coin icon refreshed!"); 
@@ -120,7 +120,7 @@ private:
         float tileWidth = 43;
         float tileHeight = 10;
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½ï¿½ß¼ï¿½
+        // ?????????????
         if (water_count > 0 && water_count <= water_limit / 4) {
             start_x = 137;
         }
@@ -143,13 +143,13 @@ public:
     water() : resource(5000) {};
     ~water() {};
 
-    void modify() override { // ï¿½ï¿½ï¿½ï¿½ï¿½é¡¿ï¿½ï¿½ï¿½ï¿½ override ï¿½Ø¼ï¿½ï¿½Ö£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        // ï¿½Ş¸ï¿½ï¿½ß¼ï¿½
+    void modify() override { // ?????¶Ù???? override ???????????????????
+        // ??????
     }
 
     void print(Node* parentNode) override {
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ä»ï¿½ß´ï¿½
+        // ?????? 2???????????????????
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
@@ -160,24 +160,24 @@ public:
 
         _displaySprite = Sprite::create(filename, tileRect);
 
-        // ï¿½ï¿½È«ï¿½ï¿½ï¿½
+        // ??????
         if (_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // È·ï¿½ï¿½ scaleAmount ï¿½Ú»ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
 
-            // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+            // ????¦Ë??
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 120);
 
-            // ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½Úµï¿½
+            // ??????????
             parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
         if (_displaySprite != nullptr) {
-            // 1. ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ Rect (ï¿½ï¿½Îª coin_count ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½)
+            // 1. ??????? Rect (??? coin_count ???????)
             Rect newRect = this->calculateRect();
 
-            // 2. ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½Ö»ï¿½Ş¸Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ò£¬²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½
+            // 2. ???????????????????????????????????
             _displaySprite->setTextureRect(newRect);
 
             // log("Coin icon refreshed!"); 
@@ -197,7 +197,7 @@ private:
         float tileWidth = 43;
         float tileHeight = 10;
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½ï¿½ß¼ï¿½
+        // ?????????????
         if (gem_count > 0 && gem_count <= gem_limit / 4) {
             start_x = 137;
         }
@@ -223,10 +223,10 @@ public:
     void modify() override {
     }
 
-
+    
     void print(Node* parentNode) override {
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ä»ï¿½ß´ï¿½
+        // ?????? 2???????????????????
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
@@ -237,24 +237,24 @@ public:
 
         _displaySprite = Sprite::create(filename, tileRect);
 
-        // ï¿½ï¿½È«ï¿½ï¿½ï¿½
+        // ??????
         if (_displaySprite) {
             _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // È·ï¿½ï¿½ scaleAmount ï¿½Ú»ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
 
-            // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+            // ????¦Ë??
             _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 182);
 
-            // ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½Úµï¿½
+            // ??????????
             parentNode->addChild(_displaySprite, 2);
         }
     }
     void refresh() {
         if (_displaySprite != nullptr) {
-            // 1. ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ Rect (ï¿½ï¿½Îª coin_count ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½)
+            // 1. ??????? Rect (??? coin_count ???????)
             Rect newRect = this->calculateRect();
 
-            // 2. ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½Ö»ï¿½Ş¸Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ò£¬²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½
+            // 2. ???????????????????????????????????
             _displaySprite->setTextureRect(newRect);
 
             // log("Coin icon refreshed!"); 
@@ -266,42 +266,18 @@ public:
 };
 
 Scene* GameScene::createScene(Building* purchasedBuilding) {
-    auto scene = GameScene::create(); // ï¿½ï¿½ï¿½ï¿½ GameScene Êµï¿½ï¿½
+    auto scene = GameScene::create(); // ???? GameScene ???
 
-    // ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½Ş¸Ä¡ï¿½ï¿½ï¿½ï¿½Ù½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½Â³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½æµ½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ????????????????????????????????????›Ô???????
     if (scene && purchasedBuilding) {
-        // È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½
+        // ????????????????
         purchasedBuilding->retain();
         g_allPurchasedBuildings.pushBack(purchasedBuilding);
-        purchasedBuilding->release(); // GameSceneï¿½ï¿½ï¿½Ú³ï¿½ï¿½ï¿½ï¿½ï¿½
+        purchasedBuilding->release(); // GameScene?????????
     }
     return scene;
 }
 
-
-//
-//   
-//    auto startBattleItem = MenuItemFont::create(
-//        "Ready To Fight",
-//        CC_CALLBACK_1(GameScene::menuGotoBattleCallback, this)
-//    );
-//
-//    startBattleItem->setFontNameObj("fonts/Marker Felt.ttf");
-//    startBattleItem->setFontSize(48);
-//
-//    startBattleItem->setColor(Color3B::WHITE);
-//
-//    startBattleItem->setPosition(
-//        Vec2(origin.x + visibleSize.width / 2, origin.y + 200)
-//    );
-//
-//    auto battleMenu = Menu::create(startBattleItem, NULL);
-//    battleMenu->setPosition(Vec2::ZERO);
-//
-//    // Z-Order:
-//    this->addChild(battleMenu, 10); 
-//
-//}
 
 void GameScene::menuGotoBattleCallback(Ref* pSender)
 {
@@ -322,33 +298,36 @@ bool GameScene::init()
         log("Error: Failed to load map!");
         return false;
     }
-    this->addChild(_tiledMap, 1); // Z-Order è®¾ä¸º 1 (ä¹‹å‰ä¿®å¤è§¦æ‘¸å†²çªæ”¹çš„)
+    this->addChild(_tiledMap, 1); // Z-Order ÉèÎª 1 (Ö®Ç°ĞŞ¸´´¥Ãş³åÍ»¸ÄµÄ)
 
     // ============================================================
-    // ã€æ ¸å¿ƒä¿®æ”¹ 1ã€‘è®¡ç®—åˆå§‹ç¼©æ”¾ï¼Œè®©åœ°å›¾å®Œæ•´æ˜¾ç¤ºåœ¨å±å¹•å†…
+    // ¡¾ºËĞÄĞŞ¸Ä 1¡¿¼ÆËã³õÊ¼Ëõ·Å£¬ÈÃµØÍ¼ÍêÕûÏÔÊ¾ÔÚÆÁÄ»ÄÚ
     // ============================================================
     Size mapSize = _tiledMap->getContentSize();
 
-    // è®¡ç®— X è½´å’Œ Y è½´åˆ†åˆ«éœ€è¦çš„ç¼©æ”¾æ¯”ä¾‹
+    // ¼ÆËã X ÖáºÍ Y Öá·Ö±ğĞèÒªµÄËõ·Å±ÈÀı
     float scaleX = visibleSize.width / mapSize.width;
     float scaleY = visibleSize.height / mapSize.height;
 
-    // å–ä¸¤è€…çš„è¾ƒå°å€¼ï¼Œä¿è¯åœ°å›¾å®½æˆ–é«˜å®Œå…¨å¡è¿›å±å¹•ï¼Œä¸ä¼šè¢«åˆ‡æ‰
+    // È¡Á½ÕßµÄ½ÏĞ¡Öµ£¬±£Ö¤µØÍ¼¿í»ò¸ßÍêÈ«Èû½øÆÁÄ»£¬²»»á±»ÇĞµô
     float minScale = std::min(scaleX, scaleY);
 
-    // è®¾ç½®åˆå§‹ç¼©æ”¾
+    // ÉèÖÃ³õÊ¼Ëõ·Å
     _tiledMap->setScale(minScale);
 
-    // ç«‹å³è°ƒç”¨ä¸€æ¬¡è¾¹ç•Œä¿®æ­£å‡½æ•°ï¼Œå®ƒä¼šè‡ªåŠ¨æŠŠç¼©æ”¾åçš„åœ°å›¾â€œå±…ä¸­â€æ˜¾ç¤º
+    // Á¢¼´µ÷ÓÃÒ»´Î±ß½çĞŞÕıº¯Êı£¬Ëü»á×Ô¶¯°ÑËõ·ÅºóµÄµØÍ¼¡°¾ÓÖĞ¡±ÏÔÊ¾
     this->checkAndClampMapPosition();
 
+    // ¡¾ĞÂÔö¡¿ÔÚÌí¼Ó½¨ÖşÖ®Ç°£¬ÏÈÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ
+    this->recalculateArmyLimit();
+
     // ============================================================
-    // ã€æ ¸å¿ƒä¿®æ”¹ 2ã€‘è®¡ç®—åœ°å›¾çš„â€œç‰©ç†ä¸­å¿ƒâ€ (Local Coordinate)
+    // ¡¾ºËĞÄĞŞ¸Ä 2¡¿¼ÆËãµØÍ¼µÄ¡°ÎïÀíÖĞĞÄ¡± (Local Coordinate)
     // ============================================================
-    // æ³¨æ„ï¼šä¸è¦ç”¨å±å¹•ä¸­å¿ƒï¼Œè¦ç”¨åœ°å›¾ä¸­å¿ƒï¼
+    // ×¢Òâ£º²»ÒªÓÃÆÁÄ»ÖĞĞÄ£¬ÒªÓÃµØÍ¼ÖĞĞÄ£¡
     Vec2 mapCenterLocal = Vec2(mapSize.width / 2, mapSize.height / 2);
     auto objectGroup = _tiledMap->getObjectGroup("Objects");
-    //æ£€æµ‹åœ°å›¾ä¸­å¯¹è±¡å±‚çš„æ ‘
+    //¼ì²âµØÍ¼ÖĞ¶ÔÏó²ãµÄÊ÷
     if (objectGroup) {
         ValueVector objects = objectGroup->getObjects();
 
@@ -371,7 +350,7 @@ bool GameScene::init()
                     float x = dict["x"].asFloat();
                     float y = dict["y"].asFloat();
 
-                    sprite->setPosition(x, y+150);
+                    sprite->setPosition(x, y + 150);
 
                     if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
                         float width = dict["width"].asFloat();
@@ -418,28 +397,28 @@ bool GameScene::init()
         }
     }
 
-    // å¦‚æœæ²¡æœ‰åŸºåœ°å»ºç­‘ï¼Œåˆ›å»ºé»˜è®¤çš„
+    // Èç¹ûÃ»ÓĞ»ùµØ½¨Öş£¬´´½¨Ä¬ÈÏµÄ
     if (!hasBaseBuilding) {
-        // ä½¿ç”¨ getNearestFreePosition å¯»æ‰¾ä¸­å¿ƒé™„è¿‘æœ€è¿‘çš„ç©ºåœ° (é˜²æ­¢ä¸­å¿ƒæ­£å¥½æœ‰æ£µæ ‘)
-        // è¿™é‡Œçš„ mapCenterLocal æ˜¯åœ°å›¾å†…éƒ¨åæ ‡ï¼Œå¯ä»¥ç›´æ¥ä¼ ç»™ getNearestFreePosition (æˆ‘ä»¬ä¹‹å‰ä¿®è¿‡è¿™ä¸ªå‡½æ•°ï¼Œå®ƒæ¥æ”¶ Local)
-        // æ³¨æ„ï¼šè¿™é‡Œæˆ‘ä»¬è¿˜æ²¡åˆ›å»º Building å¯¹è±¡ï¼Œæ— æ³•ä¼ ç»™ getNearestFreePosition ç®—å¤§å°ï¼Œ
-        // æ‰€ä»¥æˆ‘ä»¬å…ˆç®€å•åœ°ä¼  targetPosï¼Œåœ¨ setbuilding å†…éƒ¨æˆ–è€…æ‰‹åŠ¨å¾®è°ƒ
+        // Ê¹ÓÃ getNearestFreePosition Ñ°ÕÒÖĞĞÄ¸½½ü×î½üµÄ¿ÕµØ (·ÀÖ¹ÖĞĞÄÕıºÃÓĞ¿ÃÊ÷)
+        // ÕâÀïµÄ mapCenterLocal ÊÇµØÍ¼ÄÚ²¿×ø±ê£¬¿ÉÒÔÖ±½Ó´«¸ø getNearestFreePosition (ÎÒÃÇÖ®Ç°ĞŞ¹ıÕâ¸öº¯Êı£¬Ëü½ÓÊÕ Local)
+        // ×¢Òâ£ºÕâÀïÎÒÃÇ»¹Ã»´´½¨ Building ¶ÔÏó£¬ÎŞ·¨´«¸ø getNearestFreePosition Ëã´óĞ¡£¬
+        // ËùÒÔÎÒÃÇÏÈ¼òµ¥µØ´« targetPos£¬ÔÚ setbuilding ÄÚ²¿»òÕßÊÖ¶¯Î¢µ÷
 
-        // ç®€å•å¤„ç†ï¼šç›´æ¥å°è¯•æ”¾åœ¨ä¸­å¿ƒï¼Œç¨å setbuilding ä¼šå¤„ç† ZOrder
+        // ¼òµ¥´¦Àí£ºÖ±½Ó³¢ÊÔ·ÅÔÚÖĞĞÄ£¬ÉÔºó setbuilding »á´¦Àí ZOrder
         this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, mapCenterLocal);
         CCLOG("Created default base at Map Center");
     }
 
-    // åˆ›å»ºé»˜è®¤å…µè¥ (æ”¾åœ¨åœ°å›¾ä¸­å¿ƒç¨å¾®åå³ä¸€ç‚¹çš„ä½ç½®)
+    // ´´½¨Ä¬ÈÏ±øÓª (·ÅÔÚµØÍ¼ÖĞĞÄÉÔÎ¢Æ«ÓÒÒ»µãµÄÎ»ÖÃ)
     if (!hasBarracksBuilding) {
-        Vec2 barracksPos = mapCenterLocal + Vec2(200, 0); // å¾€å³åç§» 200 åƒç´ 
+        Vec2 barracksPos = mapCenterLocal + Vec2(200, 0); // ÍùÓÒÆ«ÒÆ 200 ÏñËØ
         this->setbuilding("junying.png", Rect::ZERO, "My junying", 500, BuildingType::BARRACKS, barracksPos);
         CCLOG("Created default barracks near Map Center");
     }
 
 
 
-    // æ·»åŠ æ‰€æœ‰å·²è´­ä¹°çš„å»ºç­‘
+    // Ìí¼ÓËùÓĞÒÑ¹ºÂòµÄ½¨Öş
     this->addAllPurchasedBuildings();
 
     myCoin = new goldcoin();
@@ -451,7 +430,7 @@ bool GameScene::init()
     mywater = new water();
     mywater->print(this);
     txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
-    
+
     _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
 
     mygem = new Gem();
@@ -459,23 +438,23 @@ bool GameScene::init()
     txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
     _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
-   
+
     this->addShopButton();
-    this->addSaveButton(); // ã€æ–°å¢ã€‘è°ƒç”¨ä¿å­˜æ¸¸æˆæŒ‰é’®å¸ƒå±€å‡½æ•°
+    this->addSaveButton(); // ¡¾ĞÂÔö¡¿µ÷ÓÃ±£´æÓÎÏ·°´Å¥²¼¾Öº¯Êı
 
     isMapDragging = false;
 
-    // 2. æ·»åŠ è§¦æ‘¸ç›‘å¬ (ç”¨äºç§»åŠ¨åœ°å›¾)
-    // æ³¨æ„ï¼šæˆ‘ä»¬è¦æŠŠè¿™ä¸ªç›‘å¬å™¨è®¾ä¸ºè¾ƒä½çš„ä¼˜å…ˆçº§ï¼Œæˆ–è€…è®©å®ƒåå™¬è§¦æ‘¸
-    // ä½†å› ä¸ºæˆ‘ä»¬è¦ç‚¹å»ºç­‘ï¼Œæ‰€ä»¥è¿™é‡Œä¸åå™¬ï¼Œè€Œæ˜¯é€šè¿‡é€»è¾‘åˆ¤æ–­
+    // 2. Ìí¼Ó´¥Ãş¼àÌı (ÓÃÓÚÒÆ¶¯µØÍ¼)
+    // ×¢Òâ£ºÎÒÃÇÒª°ÑÕâ¸ö¼àÌıÆ÷ÉèÎª½ÏµÍµÄÓÅÏÈ¼¶£¬»òÕßÈÃËüÍÌÊÉ´¥Ãş
+    // µ«ÒòÎªÎÒÃÇÒªµã½¨Öş£¬ËùÒÔÕâÀï²»ÍÌÊÉ£¬¶øÊÇÍ¨¹ıÂß¼­ÅĞ¶Ï
     auto touchListener = EventListenerTouchOneByOne::create();
-    touchListener->setSwallowTouches(true); // è®¾ä¸ºtrueï¼Œå¹¶åœ¨ onTouchBegan é‡Œåˆ¤æ–­
+    touchListener->setSwallowTouches(true); // ÉèÎªtrue£¬²¢ÔÚ onTouchBegan ÀïÅĞ¶Ï
     touchListener->onTouchBegan = CC_CALLBACK_2(GameScene::onTouchBegan, this);
     touchListener->onTouchMoved = CC_CALLBACK_2(GameScene::onTouchMoved, this);
     touchListener->onTouchEnded = CC_CALLBACK_2(GameScene::onTouchEnded, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, _tiledMap);
 
-    // 3. æ·»åŠ é¼ æ ‡ç›‘å¬ (ç”¨äºæ»šè½®ç¼©æ”¾)
+    // 3. Ìí¼ÓÊó±ê¼àÌı (ÓÃÓÚ¹öÂÖËõ·Å)
     auto mouseListener = EventListenerMouse::create();
     mouseListener->onMouseScroll = CC_CALLBACK_1(GameScene::onMouseScroll, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
@@ -508,21 +487,26 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
             coin_limit += 1500;
             water_limit += 1500;
         }
-        // 2. ï¿½ï¿½ï¿½ï¿½Ç±ï¿½Óª -> ï¿½ï¿½ï¿½Ë¿ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Ğ¸ï¿½È«ï¿½Ö±ï¿½ï¿½ï¿½ army_limit)
+        // 2. ??????? -> ????????? (?????§Ú??????? army_limit)
         else if (type1 == BuildingType::BARRACKS) {
-            army_limit += 10;
-            log("Army limit increased to %d", army_limit);
+            this->recalculateArmyLimit();
+            log("Barracks upgraded, army limit recalculated to %d", army_limit);
         }
 
         this->updateResourceDisplay();
         });
 
-    // 4. ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½
+    // 4. ?????????
     this->addObstacle(building);
     _tiledMap->addChild(building, 1);
     _allBuildings.pushBack(building);
 
-    // ã€å…³é”®ä¿®æ”¹ã€‘æ·»åŠ åˆ°å…¨å±€å®¹å™¨ï¼Œè¿™æ ·ä¿å­˜æ—¶æ‰èƒ½æ‰¾åˆ°
+    // ¡¾ĞÂÔö¡¿Èç¹ûÊÇ±øÓª£¬ÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ
+    if (type1 == BuildingType::BARRACKS) {
+        this->recalculateArmyLimit();
+    }
+
+    // ¡¾¹Ø¼üĞŞ¸Ä¡¿Ìí¼Óµ½È«¾ÖÈİÆ÷£¬ÕâÑù±£´æÊ±²ÅÄÜÕÒµ½
     if (!g_allPurchasedBuildings.contains(building)) {
         building->retain();
         g_allPurchasedBuildings.pushBack(building);
@@ -534,43 +518,43 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
 }
 void GameScene::checkAndClampMapPosition()
 {
-    // è·å–å±å¹•å°ºå¯¸
+    // »ñÈ¡ÆÁÄ»³ß´ç
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    // è·å–åœ°å›¾å½“å‰çš„ç¼©æ”¾åçš„å®é™…å°ºå¯¸
-    // å†…å®¹å°ºå¯¸ * ç¼©æ”¾å€ç‡
+    // »ñÈ¡µØÍ¼µ±Ç°µÄËõ·ÅºóµÄÊµ¼Ê³ß´ç
+    // ÄÚÈİ³ß´ç * Ëõ·Å±¶ÂÊ
     float mapWidth = _tiledMap->getContentSize().width * _tiledMap->getScale();
     float mapHeight = _tiledMap->getContentSize().height * _tiledMap->getScale();
 
-    // è·å–å½“å‰ä½ç½®
+    // »ñÈ¡µ±Ç°Î»ÖÃ
     Vec2 currentPos = _tiledMap->getPosition();
 
     // ==========================================
-    // æ ¸å¿ƒç®—æ³•ï¼šè®¡ç®— X å’Œ Y çš„å…è®¸èŒƒå›´
+    // ºËĞÄËã·¨£º¼ÆËã X ºÍ Y µÄÔÊĞí·¶Î§
     // ==========================================
 
-    // åŸç†ï¼š
-    // 1. å¦‚æœåœ°å›¾æ¯”å±å¹•å°(ç¼©æ”¾å¾ˆå°)ï¼Œé€šå¸¸å±…ä¸­æ˜¾ç¤ºã€‚
-    // 2. å¦‚æœåœ°å›¾æ¯”å±å¹•å¤§(æ­£å¸¸æƒ…å†µ)ï¼Œåˆ™ä½ç½® x å¿…é¡»åœ¨ [minX, 0] ä¹‹é—´ã€‚
-    //    å¦‚æœ x > 0ï¼Œå·¦è¾¹å°±ä¼šæ¼é»‘è¾¹ã€‚
-    //    å¦‚æœ x < minXï¼Œå³è¾¹å°±ä¼šæ¼é»‘è¾¹ã€‚
+    // Ô­Àí£º
+    // 1. Èç¹ûµØÍ¼±ÈÆÁÄ»Ğ¡(Ëõ·ÅºÜĞ¡)£¬Í¨³£¾ÓÖĞÏÔÊ¾¡£
+    // 2. Èç¹ûµØÍ¼±ÈÆÁÄ»´ó(Õı³£Çé¿ö)£¬ÔòÎ»ÖÃ x ±ØĞëÔÚ [minX, 0] Ö®¼ä¡£
+    //    Èç¹û x > 0£¬×ó±ß¾Í»áÂ©ºÚ±ß¡£
+    //    Èç¹û x < minX£¬ÓÒ±ß¾Í»áÂ©ºÚ±ß¡£
 
-    // --- X è½´é™åˆ¶ ---
-    float minX = visibleSize.width - mapWidth; // è¿™æ˜¯ä¸€ä¸ªè´Ÿæ•°
+    // --- X ÖáÏŞÖÆ ---
+    float minX = visibleSize.width - mapWidth; // ÕâÊÇÒ»¸ö¸ºÊı
     float maxX = 0;
 
     if (mapWidth < visibleSize.width) {
-        // å¦‚æœåœ°å›¾æ¯”å±å¹•çª„ï¼Œç›´æ¥å±…ä¸­
+        // Èç¹ûµØÍ¼±ÈÆÁÄ»Õ­£¬Ö±½Ó¾ÓÖĞ
         currentPos.x = (visibleSize.width - mapWidth) / 2;
     }
     else {
-        // é™åˆ¶åœ¨ [minX, 0] ä¹‹é—´
+        // ÏŞÖÆÔÚ [minX, 0] Ö®¼ä
         if (currentPos.x > maxX) currentPos.x = maxX;
         if (currentPos.x < minX) currentPos.x = minX;
     }
 
-    // --- Y è½´é™åˆ¶ ---
-    float minY = visibleSize.height - mapHeight; // è¿™æ˜¯ä¸€ä¸ªè´Ÿæ•°
+    // --- Y ÖáÏŞÖÆ ---
+    float minY = visibleSize.height - mapHeight; // ÕâÊÇÒ»¸ö¸ºÊı
     float maxY = 0;
 
     if (mapHeight < visibleSize.height) {
@@ -581,7 +565,7 @@ void GameScene::checkAndClampMapPosition()
         if (currentPos.y < minY) currentPos.y = minY;
     }
 
-    // åº”ç”¨ä¿®æ­£åçš„ä½ç½®
+    // Ó¦ÓÃĞŞÕıºóµÄÎ»ÖÃ
     _tiledMap->setPosition(currentPos);
 }
 void GameScene::onMouseScroll(Event* event)
@@ -589,7 +573,7 @@ void GameScene::onMouseScroll(Event* event)
     EventMouse* e = (EventMouse*)event;
     float scrollY = e->getScrollY();
 
-    // 1. è®¡ç®—æ–°çš„ç¼©æ”¾å€¼
+    // 1. ¼ÆËãĞÂµÄËõ·ÅÖµ
     float factor = 0.1f;
     float newScale = _tiledMap->getScale() + (scrollY > 0 ? factor : -factor);
 
@@ -598,60 +582,60 @@ void GameScene::onMouseScroll(Event* event)
 
     float scaleX = visibleSize.width / mapSize.width;
     float scaleY = visibleSize.height / mapSize.height;
-    float minLimit = std::min(scaleX, scaleY); // è¿™å°±æ˜¯â€œå…¨å›¾æ˜¾ç¤ºâ€çš„ç¼©æ”¾å€¼
+    float minLimit = std::min(scaleX, scaleY); // Õâ¾ÍÊÇ¡°È«Í¼ÏÔÊ¾¡±µÄËõ·ÅÖµ
 
-    // é™åˆ¶èŒƒå›´
-    if (newScale < minLimit) newScale = minLimit; // ä¸èƒ½æ¯”å…¨å›¾æ›´å°
-    if (newScale > 2.0f) newScale = 2.0f;         // æœ€å¤§æ”¾å¤§å€æ•°
+    // ÏŞÖÆ·¶Î§
+    if (newScale < minLimit) newScale = minLimit; // ²»ÄÜ±ÈÈ«Í¼¸üĞ¡
+    if (newScale > 2.0f) newScale = 2.0f;         // ×î´ó·Å´ó±¶Êı
 
-    // è®¾ç½®ç¼©æ”¾
+    // ÉèÖÃËõ·Å
     _tiledMap->setScale(newScale);
 
-    // ä¿®æ­£ä½ç½® (ä¿è¯ç¼©æ”¾æ—¶å±…ä¸­æˆ–è´´è¾¹)
+    // ĞŞÕıÎ»ÖÃ (±£Ö¤Ëõ·ÅÊ±¾ÓÖĞ»òÌù±ß)
     checkAndClampMapPosition();
 }
 bool GameScene::onTouchBegan(Touch* touch, Event* event)
 {
-    // è®°å½•åˆå§‹çŠ¶æ€ï¼Œä¸ä¸€å®šå°±æ˜¯æ‹–æ‹½ï¼Œä¹Ÿå¯èƒ½æ˜¯æƒ³ç‚¹å»ºç­‘
+    // ¼ÇÂ¼³õÊ¼×´Ì¬£¬²»Ò»¶¨¾ÍÊÇÍÏ×§£¬Ò²¿ÉÄÜÊÇÏëµã½¨Öş
     isMapDragging = false;
-    return true; // å¿…é¡»è¿”å› true æ‰èƒ½æ¥æ”¶åç»­çš„ Moved å’Œ Ended
+    return true; // ±ØĞë·µ»Ø true ²ÅÄÜ½ÓÊÕºóĞøµÄ Moved ºÍ Ended
 }
 
 void GameScene::onTouchMoved(Touch* touch, Event* event)
 {
-    // 1. è·å–ç§»åŠ¨çš„è·ç¦» (Delta)
+    // 1. »ñÈ¡ÒÆ¶¯µÄ¾àÀë (Delta)
     Vec2 delta = touch->getDelta();
 
-    // 2. å¦‚æœç§»åŠ¨è·ç¦»æå°ï¼Œå¯èƒ½æ˜¯æ‰‹æŒ‡æŠ–åŠ¨ï¼Œå¿½ç•¥
+    // 2. Èç¹ûÒÆ¶¯¾àÀë¼«Ğ¡£¬¿ÉÄÜÊÇÊÖÖ¸¶¶¶¯£¬ºöÂÔ
     if (delta.getLength() < 2.0f && !isMapDragging) {
         return;
     }
 
-    // 3. ç¡®è®¤ä¸ºæ‹–æ‹½æ¨¡å¼
+    // 3. È·ÈÏÎªÍÏ×§Ä£Ê½
     isMapDragging = true;
 
-    // 4. è®¡ç®—æ–°ä½ç½®ï¼šå½“å‰ä½ç½® + åç§»é‡
+    // 4. ¼ÆËãĞÂÎ»ÖÃ£ºµ±Ç°Î»ÖÃ + Æ«ÒÆÁ¿
     Vec2 newPos = _tiledMap->getPosition() + delta;
     _tiledMap->setPosition(newPos);
 
-    // 5. ã€å…³é”®ã€‘å®æ—¶ä¿®æ­£ä½ç½®ï¼Œé˜²æ­¢æ‹–å‡ºç•Œ
+    // 5. ¡¾¹Ø¼ü¡¿ÊµÊ±ĞŞÕıÎ»ÖÃ£¬·ÀÖ¹ÍÏ³ö½ç
     checkAndClampMapPosition();
 }
 
 void GameScene::onTouchEnded(Touch* touch, Event* event)
 {
-    
+
     isMapDragging = false;
 }
 void GameScene::menuBackCallback(Ref* pSender)
 {
     log("Back button clicked!");
-    // 1. ï¿½ï¿½ï¿½ï¿½ HelloWorld ï¿½ï¿½ï¿½ï¿½
-    // Ò²ï¿½ï¿½ï¿½Ç»Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½
+    // 1. ???? HelloWorld ????
+    // ???????????????????
     auto scene = HelloWorld::createScene();
 
-    // 2. ï¿½Ğ»ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½Ò»ï¿½ï¿½ 0.5ï¿½ï¿½ ï¿½Ä·ï¿½Ò³ï¿½ï¿½Ğ§)
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ï¿½ï¿½ TransitionSlideInL::create(...) ï¿½ï¿½ï¿½Ô²ï¿½Í¬ï¿½ï¿½Ğ§ï¿½ï¿½
+    // 2. ?§İ????? (????? 0.5?? ??????§¹)
+    // ???????????? TransitionSlideInL::create(...) ????????§¹??
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }
 
@@ -659,16 +643,16 @@ void GameScene::addShopButton() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // Ê¹ï¿½ï¿½Í¼Æ¬ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö°ï¿½Å¥
-    auto shopNormal = Sprite::create("ui/shop_normal.png"); // ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Æ¬
-    auto shopSelected = Sprite::create("ui/shop_selected.png"); // ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½Í¬Ò»ï¿½ï¿½Í¼Æ¬
+    // ????????????????????
+    auto shopNormal = Sprite::create("ui/shop_normal.png"); // ??????????????
+    auto shopSelected = Sprite::create("ui/shop_selected.png"); // ?????????????
 
-    // ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½òµ¥µÄ°ï¿½Å¥ï¿½ï¿½ï¿½
+    // ????????????????????????????
     if (!shopNormal) {
-        // ï¿½ï¿½ï¿½ï¿½ï¿½òµ¥µï¿½Ô²ï¿½Î°ï¿½Å¥
+        // ?????????????
         shopNormal = Sprite::create();
         shopNormal->setTextureRect(Rect(0, 0, 150, 80));
-        shopNormal->setColor(Color3B(255, 200, 0)); // ï¿½ï¿½É«
+        shopNormal->setColor(Color3B(255, 200, 0)); // ???
 
         auto shopLabel = Label::createWithTTF("MARKET", "fonts/Marker Felt.ttf", 30);
         shopLabel->setPosition(Vec2(75, 40));
@@ -679,28 +663,28 @@ void GameScene::addShopButton() {
     if (!shopSelected) {
         shopSelected = Sprite::create();
         shopSelected->setTextureRect(Rect(0, 0, 85, 85));
-        shopSelected->setColor(Color3B(255, 150, 0)); // ï¿½ï¿½ï¿½ï¿½Ä½ï¿½É«
+        shopSelected->setColor(Color3B(255, 150, 0)); // ???????
     }
 
     auto shopItem = MenuItemSprite::create(shopNormal, shopSelected,
         [](Ref* pSender) {
-            // Ê¹ï¿½ï¿½pushSceneï¿½ï¿½ï¿½ï¿½ï¿½ï¿½replaceScene
+            // ???pushScene??????replaceScene
             auto scene = ShopScene::createScene();
             Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
         }
     );
 
 
-    // ï¿½ï¿½ï¿½Ã°ï¿½Å¥Î»ï¿½Ã£ï¿½ï¿½ï¿½ï¿½Ï½Ç£ï¿½
-    float x = origin.x + 150; // ï¿½ï¿½ï¿½Î»ï¿½ï¿½
-    float y = origin.y + visibleSize.height - 100; // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+    // ??????¦Ë?????????
+    float x = origin.x + 150; // ???¦Ë??
+    float y = origin.y + visibleSize.height - 100; // ????¦Ë??
 
     shopItem->setPosition(Vec2(x, y));
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½
+    // ???????????
     auto shopMenu = Menu::create(shopItem, NULL);
     shopMenu->setPosition(Vec2::ZERO);
-    this->addChild(shopMenu, 200); // Ê¹ï¿½Ã¸ï¿½ï¿½ßµÄ²ã¼¶
+    this->addChild(shopMenu, 200); // ????????
 
 }
 
@@ -714,14 +698,18 @@ void GameScene::addAllPurchasedBuildings() {
             if (building->getPositionX() == 0 && building->getPositionY() == 0) {
                 Vec2 mapCenter = Vec2(mapSize.width / 2, mapSize.height / 2);
 
-                // ä»åœ°å›¾ä¸­å¿ƒå¼€å§‹æ‰¾æœ€è¿‘çš„ç©ºä½
+                // ´ÓµØÍ¼ÖĞĞÄ¿ªÊ¼ÕÒ×î½üµÄ¿ÕÎ»
                 Vec2 pos = getNearestFreePosition(building, mapCenter);
 
                 building->setPosition(pos);
             }
 
-            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½
+            // ???????????????
             building->setOnUpgradeCallback([=]() {
+                // ÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ£¨Èç¹ûÊÇ±øÓª»ò´ó±¾Óª£©
+                if (building->getType() == BuildingType::BARRACKS ) {
+                    this->recalculateArmyLimit();
+                }
                 if (_coinTextLabel) {
                     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
                     _coinTextLabel->setString(txt);
@@ -734,12 +722,16 @@ void GameScene::addAllPurchasedBuildings() {
                     std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
                     _gemTextLabel->setString(txt);
                 }
+                // ¸üĞÂ×ÊÔ´ÏÔÊ¾
+                this->updateResourceDisplay();
                 });
 
-            // ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            // ?????????????
             _allBuildings.pushBack(building);
         }
     }
+    // ¡¾ĞÂÔö¡¿Ìí¼ÓÍêËùÓĞ½¨Öşºó£¬ÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ
+    this->recalculateArmyLimit();
 }
 
 void GameScene::onEnter() {
@@ -747,7 +739,7 @@ void GameScene::onEnter() {
     AudioEngine::stopAll();
     this->updateResourceDisplay();
 
-    // ï¿½ï¿½ï¿½Ì³Ç·ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Â½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
+    // ???????????????????????????????
     for (auto& building : g_allPurchasedBuildings) {
         if (building && !building->getParent()) {
             _tiledMap->addChild(building, 10);
@@ -762,8 +754,12 @@ void GameScene::onEnter() {
                 building->setPosition(x, y);
             }
             this->addObstacle(building);
-            // åˆ·æ–°UI
+            // Ë¢ĞÂUI
             building->setOnUpgradeCallback([=]() {
+                // ÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ£¨Èç¹ûÊÇ±øÓª»ò´ó±¾Óª£©
+                if (building->getType() == BuildingType::BARRACKS) {
+                    this->recalculateArmyLimit();
+                }
                 if (_coinTextLabel) {
                     std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
                     _coinTextLabel->setString(txt);
@@ -776,11 +772,14 @@ void GameScene::onEnter() {
                     std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
                     _gemTextLabel->setString(txt);
                 }
+                this->updateResourceDisplay();
                 });
 
             _allBuildings.pushBack(building);
         }
     }
+    // ¡¾ĞÂÔö¡¿½øÈë³¡¾°ºóÖØĞÂ¼ÆËãÈË¿ÚÉÏÏŞ
+    this->recalculateArmyLimit();
     AudioEngine::play2d("music/1.ogg", true, 0.5f);
 }
 
@@ -788,7 +787,7 @@ void GameScene::updateResourceDisplay() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // ï¿½ï¿½ï¿½Â½ï¿½ï¿½ï¿½ï¿½Ê¾
+    // ?????????
     if (_coinTextLabel) {
         std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
         _coinTextLabel->setString(txt);
@@ -797,7 +796,7 @@ void GameScene::updateResourceDisplay() {
         myCoin->refresh();
     }
 
-    // ï¿½ï¿½ï¿½ï¿½Ë®ï¿½ï¿½Ê¾
+    // ????????
     if (_waterTextLabel) {
         std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
         _waterTextLabel->setString(txt);
@@ -806,7 +805,7 @@ void GameScene::updateResourceDisplay() {
         mywater->refresh();
     }
 
-    // ï¿½ï¿½ï¿½Â±ï¿½Ê¯ï¿½ï¿½Ê¾
+    // ???¡À?????
     if (_gemTextLabel) {
         std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
         _gemTextLabel->setString(txt);
@@ -848,26 +847,26 @@ bool GameScene::checkCollision(Rect targetRect, Node* ignoreNode)
     {
         if (obstacle == ignoreNode) continue;
 
-        // ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½Ï°ï¿½ï¿½ï¿½ï¿½ï¿½Ğ§
+        // ??????????????§¹
         if (!obstacle->getParent()) continue;
 
-        // ï¿½ï¿½È¡ï¿½Ï°ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½Ô°ï¿½Î§ï¿½ï¿½
+        // ?????????????¦¶??
         Rect obstacleRect = obstacle->getBoundingBox();
 
-        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş¸Ä¡ï¿½Ö±ï¿½ï¿½ï¿½Ğ¶ï¿½ï¿½à½»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎºÎ¡ï¿½ï¿½İ´ï¿½ï¿½ï¿½
+        // ??????????????§Ø??????????¦Ê¦±??????
         if (targetRect.intersectsRect(obstacleRect))
         {
-            return true; // ×²ï¿½ï¿½
+            return true; // ???
         }
     }
-    return false; // ï¿½ï¿½È«
+    return false; // ???
 }
 Vec2 GameScene::getNearestFreePosition(Building* building, Vec2 targetMapPos)
 {
     Size size = building->getContentSize();
     float w = size.width * building->getScaleX();
     float h = size.height * building->getScaleY();
-    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // 2. ????????
     int step = (int)(w / 2);
     if (step < 10) step = 10;
     int maxRadius = 30;
@@ -880,18 +879,18 @@ Vec2 GameScene::getNearestFreePosition(Building* building, Vec2 targetMapPos)
                 Vec2 candidateMapPos = targetMapPos + Vec2(x * step, y * step);
 
                 // ====================================================
-                // ã€ä¿®æ”¹è¿™é‡Œã€‘ä¸è¦è½¬ WorldSpaceï¼Œç›´æ¥ç”¨ Local ç®—ï¼
+                // ¡¾ĞŞ¸ÄÕâÀï¡¿²»Òª×ª WorldSpace£¬Ö±½ÓÓÃ Local Ëã£¡
                 // ====================================================
 
-                // A. è¿™é‡Œçš„ candidateMapPos æœ¬èº«å°±æ˜¯ Local çš„
-                // B. è¿™é‡Œçš„ w å’Œ h æœ¬èº«ä¹Ÿæ˜¯ Local çš„ (Building çš„åŸå§‹å¤§å°)
+                // A. ÕâÀïµÄ candidateMapPos ±¾Éí¾ÍÊÇ Local µÄ
+                // B. ÕâÀïµÄ w ºÍ h ±¾ÉíÒ²ÊÇ Local µÄ (Building µÄÔ­Ê¼´óĞ¡)
                 Rect testLocalRect = Rect(
                     candidateMapPos.x - w * 0.5f,
                     candidateMapPos.y - h * 0.5f,
                     w, h
                 );
 
-                // C. ç›´æ¥ä¼ å…¥ Local Rect
+                // C. Ö±½Ó´«Èë Local Rect
                 if (!checkCollision(testLocalRect, nullptr)) {
                     return candidateMapPos;
                 }
@@ -904,7 +903,7 @@ void GameScene::addSaveButton() {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // åˆ›å»ºä¿å­˜æŒ‰é’®
+    // ´´½¨±£´æ°´Å¥
     auto saveLabel = Label::createWithTTF("SAVE GAME", "fonts/Marker Felt.ttf", 28);
     saveLabel->setColor(Color3B::GREEN);
     saveLabel->enableOutline(Color4B::BLACK, 2);
@@ -912,13 +911,13 @@ void GameScene::addSaveButton() {
     auto saveItem = MenuItemLabel::create(saveLabel,
         CC_CALLBACK_1(GameScene::menuSaveGameCallback, this));
 
-    // è®¾ç½®æŒ‰é’®ä½ç½®ï¼ˆå³ä¸‹è§’ï¼‰
+    // ÉèÖÃ°´Å¥Î»ÖÃ£¨ÓÒÏÂ½Ç£©
     float x = origin.x + visibleSize.width - 150;
     float y = origin.y + 100;
 
     saveItem->setPosition(Vec2(x, y));
 
-    // ã€æ–°å¢ã€‘è°ƒè¯•æŒ‰é’®
+    // ¡¾ĞÂÔö¡¿µ÷ÊÔ°´Å¥
     auto debugLabel = Label::createWithTTF("DEBUG SAVE", "fonts/Marker Felt.ttf", 20);
     debugLabel->setColor(Color3B::YELLOW);
 
@@ -927,7 +926,7 @@ void GameScene::addSaveButton() {
             CCLOG("=== Debug Save System ===");
             SaveGame::getInstance()->debugWritablePath();
 
-            // å°è¯•ä¿å­˜å’ŒåŠ è½½æµ‹è¯•æ•°æ®
+            // ³¢ÊÔ±£´æºÍ¼ÓÔØ²âÊÔÊı¾İ
             auto saveGame = SaveGame::getInstance();
             bool saveResult = saveGame->saveGameState("test_save.json");
             CCLOG("Test save result: %s", saveResult ? "SUCCESS" : "FAILED");
@@ -936,7 +935,7 @@ void GameScene::addSaveButton() {
             CCLOG("Test load result: %s", loadResult ? "SUCCESS" : "FAILED");
         });
 
-    // åˆ›å»ºèœå•å®¹å™¨
+    // ´´½¨²Ëµ¥ÈİÆ÷
     auto saveMenu = Menu::create(saveItem, NULL);
     saveMenu->setPosition(Vec2::ZERO);
     this->addChild(saveMenu, 200);
@@ -945,6 +944,33 @@ void GameScene::addSaveButton() {
 void GameScene::menuSaveGameCallback(Ref* pSender) {
     log("Saving game...");
 
-    // è°ƒç”¨SaveGameå•ä¾‹ä¿å­˜æ¸¸æˆ
+    // µ÷ÓÃSaveGameµ¥Àı±£´æÓÎÏ·
     SaveGame::getInstance()->saveGameState();
+}
+
+int GameScene::calculateArmyLimit()
+{
+    int totalLimit = 0; // »ù´¡ÈË¿ÚÉÏÏŞ
+
+    // ±éÀúËùÓĞ½¨Öş£¬ÕÒµ½±øÓª²¢ÀÛ¼ÓËüÃÇÌá¹©µÄÈË¿ÚÉÏÏŞ
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getType() == BuildingType::BARRACKS) {
+            // Ã¿¸ö±øÓªÌá¹©µÄ»ù´¡ÈË¿Ú + Ã¿¼¶¶îÍâÔö¼ÓµÄÈË¿Ú
+            // ÀıÈç£º1¼¶±øÓªÌá¹©10ÈË¿Ú£¬Ã¿ÉıÒ»¼¶Ôö¼Ó10ÈË¿Ú
+            totalLimit += 10 * building->getLevel();
+        }
+    }
+
+
+    CCLOG("=== GameScene: Calculated army limit: %d ===", totalLimit);
+    return totalLimit;
+}
+
+void GameScene::recalculateArmyLimit()
+{
+    army_limit = calculateArmyLimit();
+    CCLOG("=== GameScene: Army limit recalculated to: %d ===", army_limit);
+
+    // ¸üĞÂUIÏÔÊ¾£¨Èç¹ûĞèÒª£©
+    this->updateResourceDisplay();
 }

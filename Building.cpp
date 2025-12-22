@@ -134,9 +134,24 @@ float Building::getTimeLeft()
 // 开始生产
 void Building::startProduction()
 {
+    // 检查是否在升级中
+    if (state == BuildingState::UPGRADING) {
+        log("%s is upgrading, cannot start production!", buildingName.c_str());
+        return;
+    }
+
+    // 检查是否已经可以收集
+    if (state == BuildingState::READY) {
+        log("%s has resources ready to collect!", buildingName.c_str());
+        return;
+    }
+
     state = BuildingState::PRODUCING;
-    productionTimeLeft = 5.0f; // 5秒倒计时
+    productionTimeLeft = 5.0f; // 5秒生产周期
     isReadyToCollect = false;
+
+    // 根据等级计算生产量：每级增加50资源
+    productionAmount = 50 * a_level;
 
     // 移除可收集提示
     if (readyIndicator) {
@@ -144,7 +159,8 @@ void Building::startProduction()
         readyIndicator = nullptr;
     }
 
-    log("%s started production, time left: %f", buildingName.c_str(), productionTimeLeft);
+    log("%s started production, time left: %f, amount: %d",
+        buildingName.c_str(), productionTimeLeft, productionAmount);
 }
 
 // 生产完成
@@ -155,9 +171,8 @@ void Building::finishProduction()
 
     // 添加可收集提示
     if (!readyIndicator) {
-        readyIndicator = Sprite::create("ui/ready_indicator.png"); // 需要创建一个红色"!"图片
+        readyIndicator = Sprite::create("ui/ready_indicator.png");
         if (!readyIndicator) {
-            // 如果图片不存在，创建一个简单的红色感叹号
             readyIndicator = Sprite::create();
             auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
             label->setColor(Color3B::RED);
@@ -165,33 +180,49 @@ void Building::finishProduction()
             readyIndicator->addChild(label);
             readyIndicator->setContentSize(Size(30, 30));
         }
-        readyIndicator->setPosition(Vec2(this->getContentSize().width / 2, this->getContentSize().height + 20));
+        readyIndicator->setPosition(Vec2(this->getContentSize().width / 2,
+            this->getContentSize().height + 20));
         this->addChild(readyIndicator, 100);
     }
 
-    log("%s production ready! Collect %d resources.", buildingName.c_str(), productionAmount);
+    log("%s production ready! Collect %d resources.",
+        buildingName.c_str(), productionAmount);
 }
 
 // 收集资源
 void Building::collectResources()
 {
     if (state == BuildingState::READY && isReadyToCollect) {
-        if (buildingName == "Gold Mine") {
+        if (type == BuildingType::MINE) {
             coin_count += productionAmount;
-            // 确保不超过上限
             if (coin_count > coin_limit) coin_count = coin_limit;
-            log("Collected %d gold from Gold Mine. Total: %d", productionAmount, coin_count);
+            log("Collected %d gold from Gold Mine. Total: %d",
+                productionAmount, coin_count);
         }
-        else if (buildingName == "Water Collector") {
+        else if (type == BuildingType::WATER) {
             water_count += productionAmount;
-            // 确保不超过上限
             if (water_count > water_limit) water_count = water_limit;
-            log("Collected %d water from Water Collector. Total: %d", productionAmount, water_count);
+            log("Collected %d water from Water Collector. Total: %d",
+                productionAmount, water_count);
         }
+
+        // 更新UI显示
         auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
-        gamescene->updateResourceDisplay();
-        // 重新开始生产
-        startProduction();
+        if (gamescene) {
+            gamescene->updateResourceDisplay();
+        }
+
+        // 收集后回到IDLE状态，让玩家选择下一次行动
+        state = BuildingState::IDLE;
+        isReadyToCollect = false;
+
+        // 移除可收集提示
+        if (readyIndicator) {
+            readyIndicator->removeFromParent();
+            readyIndicator = nullptr;
+        }
+
+        log("%s resources collected, now in IDLE state.", buildingName.c_str());
     }
 }
 
@@ -471,7 +502,15 @@ void Building::finishUpgrade()
 
     // 3. 等级 +1
     a_level++;
-
+    
+    if (type == BuildingType::BARRACKS) {
+        // 【重要】不再直接增加 army_limit，而是让 GameScene 重新计算
+        auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+        if (gamescene) {
+            gamescene->recalculateArmyLimit();
+            CCLOG("=== Building: Barracks upgraded to level %d, army limit recalculated ===", a_level);
+        }
+    }
     // 4. 【核心】在这里调用回调！
     // 这时候才会执行 GameScene 里写的 coin_limit += 1500 代码
     if (UpgradeCallback_coin) {
@@ -480,7 +519,7 @@ void Building::finishUpgrade()
 
     log("Upgrade finished! Level is now %d", a_level);
 }
-// Building.cpp
+
 
 void Building::createGroundEffect()
 {

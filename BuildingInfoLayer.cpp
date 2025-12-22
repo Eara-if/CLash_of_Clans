@@ -175,27 +175,33 @@ void BuildingInfoLayer::setBuilding(Building* building)
         BuildingState state = _targetBuilding->getState();
 
         if (state == BuildingState::PRODUCING) {
-            // 正在生产中，显示倒计时
+            // 正在生产中
             float timeLeft = _targetBuilding->getProductionTimeLeft();
+            int amount = _targetBuilding->getProducedAmount();
             std::string info = "Gold Mine Lv." + std::to_string(level) +
-                "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
+                "\nProducing " + std::to_string(amount) + " coins" +
+                "\nTime left: " + std::to_string((int)timeLeft) + "s" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
             _infoLabel->setString(info);
 
-            // 设置按钮为不可用
             _actionBtn->setString("Producing");
             _actionBtn->setCallback(nullptr);
+            _actionBtn->setColor(Color3B::GRAY);
 
-            // 启动生产倒计时更新
+            // 定时器更新显示
             this->schedule([=](float dt) {
                 float remainingTime = _targetBuilding->getProductionTimeLeft();
+                int currentAmount = _targetBuilding->getProducedAmount();
                 if (remainingTime > 0) {
                     std::string info = "Gold Mine Lv." + std::to_string(level) +
-                        "\nProducing...\nTime left: " + std::to_string((int)remainingTime) + "s";
+                        "\nProducing " + std::to_string(currentAmount) + " coins" +
+                        "\nTime left: " + std::to_string((int)remainingTime) + "s" +
+                        "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
                     _infoLabel->setString(info);
                 }
                 else {
                     this->unschedule("production_timer");
-                    this->setBuilding(_targetBuilding);
+                    this->setBuilding(_targetBuilding); // 刷新显示
                 }
                 }, 1.0f, "production_timer");
         }
@@ -203,36 +209,71 @@ void BuildingInfoLayer::setBuilding(Building* building)
             // 资源可收集
             int amount = _targetBuilding->getProducedAmount();
             std::string info = "Gold Mine Lv." + std::to_string(level) +
-                "\nReady to collect!\nAmount: " + std::to_string(amount) + " coins";
-            _infoLabel->setString(info);
+                "\nReady to collect!" +
+                "\nAmount: " + std::to_string(amount) + " coins" +
+                "\nNext production: " + std::to_string(50 * level) + " coins/5s" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
 
-            // 设置收集按钮
+            if (isMaxLevel) {
+                info += "\n(MAX Level for TH" + std::to_string(townHallLevel) + ")";
+            }
+
+            _infoLabel->setString(info);
+            _infoLabel->setDimensions(350, 0);
+
             _actionBtn->setString("Collect");
             _actionBtn->setCallback([=](Ref*) {
                 _targetBuilding->collectResources();
-                this->closeLayer();
+                this->setBuilding(_targetBuilding); // 收集后刷新显示
                 });
+            _actionBtn->setColor(Color3B::GREEN);
         }
         else if (state == BuildingState::UPGRADING) {
             // 正在升级
             this->handleUpgradeTimer();
         }
-        else {
-            // 空闲状态
-            std::string info = "Gold Mine Lv." + std::to_string(level) +
-                "\nCost: " + std::to_string(cost) + " Coin" +
-                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+        else if (state == BuildingState::IDLE) {
+            // 闲置状态 - 显示两个按钮：升级和开始生产
+            int nextProduction = 50 * level; // 下一次生产量
+            int cost = _targetBuilding->getNextLevelCost();
 
-            if (isMaxLevel) {
-                info = "Gold Mine Lv." + std::to_string(level) + " (MAX)" +
+            std::string info = "Gold Mine Lv." + std::to_string(level) +
+                "\nProduction: " + std::to_string(nextProduction) + " coins/5s";
+
+            if (!isMaxLevel) {
+                info += "\nNext level: " + std::to_string(nextProduction + 50) + " coins/5s" +
+                    "\nUpgrade Cost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+            }
+            else {
+                info += "\n(MAX Level for TH" + std::to_string(townHallLevel) + ")" +
                     "\nUpgrade TH to increase level limit";
             }
 
             _infoLabel->setString(info);
+            _infoLabel->setDimensions(350, 0);
 
-            // 设置升级按钮
-            _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
-            _actionBtn->setCallback([=](Ref*) {
+            // 清空当前菜单项
+            menu->removeAllChildren();
+
+            // 开始生产按钮
+            auto produceLabel = Label::createWithTTF("Start Production", "fonts/Marker Felt.ttf", 28);
+            produceLabel->setColor(Color3B::GREEN);
+            produceLabel->enableOutline(Color4B::BLACK, 2);
+
+            auto produceBtn = MenuItemLabel::create(produceLabel, [=](Ref*) {
+                _targetBuilding->startProduction();
+                this->setBuilding(_targetBuilding); // 刷新显示
+                });
+            produceBtn->setPosition(0, 20); // 上方的按钮
+
+            // 升级按钮
+            std::string upgradeText = isMaxLevel ? "MAX" : "Upgrade";
+            auto upgradeLabel = Label::createWithTTF(upgradeText, "fonts/Marker Felt.ttf", 28);
+            upgradeLabel->setColor(isMaxLevel ? Color3B::GRAY : Color3B::YELLOW);
+            upgradeLabel->enableOutline(Color4B::BLACK, 2);
+
+            auto upgradeBtn = MenuItemLabel::create(upgradeLabel, [=](Ref*) {
                 if (isMaxLevel) {
                     this->showMaxLevelWarning("Gold Mine", townHallLevel);
                 }
@@ -240,6 +281,19 @@ void BuildingInfoLayer::setBuilding(Building* building)
                     this->handleStartUpgrade();
                 }
                 });
+            upgradeBtn->setPosition(0, -40); // 下方的按钮
+
+            // 关闭按钮
+            auto closeLabel = Label::createWithTTF("Close", "fonts/Marker Felt.ttf", 28);
+            closeLabel->setColor(Color3B::RED);
+            auto closeBtn = MenuItemLabel::create(closeLabel, [=](Ref*) {
+                this->closeLayer();
+                });
+            closeBtn->setPosition(0, -100); // 最下方的按钮
+
+            menu->addChild(produceBtn);
+            menu->addChild(upgradeBtn);
+            menu->addChild(closeBtn);
         }
     }
     // ============================================================
@@ -251,23 +305,30 @@ void BuildingInfoLayer::setBuilding(Building* building)
         if (state == BuildingState::PRODUCING) {
             // 正在生产中
             float timeLeft = _targetBuilding->getProductionTimeLeft();
+            int amount = _targetBuilding->getProducedAmount();
             std::string info = "Water Collector Lv." + std::to_string(level) +
-                "\nProducing...\nTime left: " + std::to_string((int)timeLeft) + "s";
+                "\nProducing " + std::to_string(amount) + " water" +
+                "\nTime left: " + std::to_string((int)timeLeft) + "s" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
             _infoLabel->setString(info);
 
             _actionBtn->setString("Producing");
             _actionBtn->setCallback(nullptr);
+            _actionBtn->setColor(Color3B::GRAY);
 
             this->schedule([=](float dt) {
                 float remainingTime = _targetBuilding->getProductionTimeLeft();
+                int currentAmount = _targetBuilding->getProducedAmount();
                 if (remainingTime > 0) {
                     std::string info = "Water Collector Lv." + std::to_string(level) +
-                        "\nProducing...\nTime left: " + std::to_string((int)remainingTime) + "s";
+                        "\nProducing " + std::to_string(currentAmount) + " water" +
+                        "\nTime left: " + std::to_string((int)remainingTime) + "s" +
+                        "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
                     _infoLabel->setString(info);
                 }
                 else {
                     this->unschedule("production_timer");
-                    this->setBuilding(_targetBuilding);
+                    this->setBuilding(_targetBuilding); // 刷新显示
                 }
                 }, 1.0f, "production_timer");
         }
@@ -275,33 +336,71 @@ void BuildingInfoLayer::setBuilding(Building* building)
             // 资源可收集
             int amount = _targetBuilding->getProducedAmount();
             std::string info = "Water Collector Lv." + std::to_string(level) +
-                "\nReady to collect!\nAmount: " + std::to_string(amount) + " water";
+                "\nReady to collect!" +
+                "\nAmount: " + std::to_string(amount) + " water" +
+                "\nNext production: " + std::to_string(50 * level) + " water/5s" +
+                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+
+            if (isMaxLevel) {
+                info += "\n(MAX Level for TH" + std::to_string(townHallLevel) + ")";
+            }
+
             _infoLabel->setString(info);
+            _infoLabel->setDimensions(350, 0);
 
             _actionBtn->setString("Collect");
             _actionBtn->setCallback([=](Ref*) {
                 _targetBuilding->collectResources();
-                this->closeLayer();
+                this->setBuilding(_targetBuilding); // 收集后刷新显示
                 });
+            _actionBtn->setColor(Color3B::GREEN);
         }
         else if (state == BuildingState::UPGRADING) {
+            // 正在升级
             this->handleUpgradeTimer();
         }
-        else {
-            // 空闲状态
-            std::string info = "Water Collector Lv." + std::to_string(level) +
-                "\nCost: " + std::to_string(cost) + " Coin" +
-                "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+        else if (state == BuildingState::IDLE) {
+            // 闲置状态 - 显示两个按钮：升级和开始生产
+            int nextProduction = 50 * level; // 下一次生产量
+            int cost = _targetBuilding->getNextLevelCost();
 
-            if (isMaxLevel) {
-                info = "Water Collector Lv." + std::to_string(level) + " (MAX)" +
+            std::string info = "Water Collector Lv." + std::to_string(level) +
+                "\nProduction: " + std::to_string(nextProduction) + " water/5s";
+
+            if (!isMaxLevel) {
+                info += "\nNext level: " + std::to_string(nextProduction + 50) + " water/5s" +
+                    "\nUpgrade Cost: " + std::to_string(cost) + " Coin" +
+                    "\nMax: Lv." + std::to_string(maxLevel) + " (TH" + std::to_string(townHallLevel) + ")";
+            }
+            else {
+                info += "\n(MAX Level for TH" + std::to_string(townHallLevel) + ")" +
                     "\nUpgrade TH to increase level limit";
             }
 
             _infoLabel->setString(info);
+            _infoLabel->setDimensions(350, 0);
 
-            _actionBtn->setString(isMaxLevel ? "MAX" : "Upgrade");
-            _actionBtn->setCallback([=](Ref*) {
+            // 清空当前菜单项
+            menu->removeAllChildren();
+
+            // 开始生产按钮
+            auto produceLabel = Label::createWithTTF("Start Production", "fonts/Marker Felt.ttf", 28);
+            produceLabel->setColor(Color3B::GREEN);
+            produceLabel->enableOutline(Color4B::BLACK, 2);
+
+            auto produceBtn = MenuItemLabel::create(produceLabel, [=](Ref*) {
+                _targetBuilding->startProduction();
+                this->setBuilding(_targetBuilding); // 刷新显示
+                });
+            produceBtn->setPosition(0, 20); // 上方的按钮
+
+            // 升级按钮
+            std::string upgradeText = isMaxLevel ? "MAX" : "Upgrade";
+            auto upgradeLabel = Label::createWithTTF(upgradeText, "fonts/Marker Felt.ttf", 28);
+            upgradeLabel->setColor(isMaxLevel ? Color3B::GRAY : Color3B::YELLOW);
+            upgradeLabel->enableOutline(Color4B::BLACK, 2);
+
+            auto upgradeBtn = MenuItemLabel::create(upgradeLabel, [=](Ref*) {
                 if (isMaxLevel) {
                     this->showMaxLevelWarning("Water Collector", townHallLevel);
                 }
@@ -309,6 +408,19 @@ void BuildingInfoLayer::setBuilding(Building* building)
                     this->handleStartUpgrade();
                 }
                 });
+            upgradeBtn->setPosition(0, -40); // 下方的按钮
+
+            // 关闭按钮
+            auto closeLabel = Label::createWithTTF("Close", "fonts/Marker Felt.ttf", 28);
+            closeLabel->setColor(Color3B::RED);
+            auto closeBtn = MenuItemLabel::create(closeLabel, [=](Ref*) {
+                this->closeLayer();
+                });
+            closeBtn->setPosition(0, -100); // 最下方的按钮
+
+            menu->addChild(produceBtn);
+            menu->addChild(upgradeBtn);
+            menu->addChild(closeBtn);
         }
     }
     // ============================================================
