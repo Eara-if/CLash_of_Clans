@@ -55,9 +55,11 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
     isReadyToCollect = false;
     readyIndicator = nullptr;
 
-    // 如果是金矿或圣水收集器，开始生产
+    // 【修改】金矿和圣水收集器初始状态为IDLE，不自动开始生产
+    // 需要玩家手动点击生产按钮
     if (type == BuildingType::MINE || type == BuildingType::WATER) {
-        startProduction();
+        state = BuildingState::IDLE;
+        // 不调用 startProduction()，等待玩家手动开始
     }
 
     this->initTouchListener();
@@ -92,12 +94,12 @@ int Building::getNextLevelCost()
 // 每帧自动调用
 void Building::update(float dt)
 {
-    if (state == BuildingState::UPGRADING)
-    {
-        timeLeft -= dt; // 扣除时间
+    // 升级倒计时
+    if (state == BuildingState::UPGRADING) {
+        timeLeft -= dt;
 
         if (timeLeft <= 0) {
-            this->finishUpgrade(); // 时间到了，完成！
+            this->finishUpgrade();
         }
     }
 
@@ -106,8 +108,10 @@ void Building::update(float dt)
         if (state == BuildingState::PRODUCING) {
             productionTimeLeft -= dt;
 
+            // 生产完成，自动转为READY状态
             if (productionTimeLeft <= 0) {
-                finishProduction();
+                productionTimeLeft = 0;
+                this->finishProduction();
             }
         }
     }
@@ -134,26 +138,28 @@ float Building::getTimeLeft()
 // 开始生产
 void Building::startProduction()
 {
-    // 检查是否在升级中
+    // 检查状态：只有在IDLE状态下才能开始生产
+    if (state != BuildingState::IDLE) {
+        log("%s cannot start production: current state is %d",
+            buildingName.c_str(), (int)state);
+        return;
+    }
+
+    // 检查是否正在升级
     if (state == BuildingState::UPGRADING) {
         log("%s is upgrading, cannot start production!", buildingName.c_str());
         return;
     }
 
-    // 检查是否已经可以收集
-    if (state == BuildingState::READY) {
-        log("%s has resources ready to collect!", buildingName.c_str());
-        return;
-    }
-
+    // 设置为生产状态
     state = BuildingState::PRODUCING;
     productionTimeLeft = 5.0f; // 5秒生产周期
     isReadyToCollect = false;
 
-    // 根据等级计算生产量：每级增加50资源
+    // 根据等级计算生产量
     productionAmount = 50 * a_level;
 
-    // 移除可收集提示
+    // 移除可收集提示（如果有）
     if (readyIndicator) {
         readyIndicator->removeFromParent();
         readyIndicator = nullptr;
@@ -166,13 +172,20 @@ void Building::startProduction()
 // 生产完成
 void Building::finishProduction()
 {
+    if (state != BuildingState::PRODUCING) {
+        log("%s cannot finish production: not in PRODUCING state", buildingName.c_str());
+        return;
+    }
+
     state = BuildingState::READY;
+    productionTimeLeft = 0;
     isReadyToCollect = true;
 
     // 添加可收集提示
     if (!readyIndicator) {
         readyIndicator = Sprite::create("ui/ready_indicator.png");
         if (!readyIndicator) {
+            // 如果图片不存在，创建一个简单的红色感叹号
             readyIndicator = Sprite::create();
             auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
             label->setColor(Color3B::RED);
@@ -515,6 +528,10 @@ void Building::finishUpgrade()
     // 这时候才会执行 GameScene 里写的 coin_limit += 1500 代码
     if (UpgradeCallback_coin) {
         UpgradeCallback_coin();
+    }
+
+    if (type == BuildingType::MINE || type == BuildingType::WATER) {
+        productionAmount = 50 * a_level;
     }
 
     log("Upgrade finished! Level is now %d", a_level);
