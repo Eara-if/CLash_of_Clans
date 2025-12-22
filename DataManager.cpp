@@ -27,7 +27,6 @@ bool DataManager::trainTroop(std::string type)
         return false;
     }
 
-
     // 5. 增加兵种数量
     _myArmy[type]++;
 
@@ -190,4 +189,17 @@ int DataManager::getBuildingMaxCount(int buildingId)
         default:
             return 99; // 其他建筑默认无限制
     }
+}
+
+// 【新增】直接设置兵种数量（绕过资源检查）
+void DataManager::setTroopCount(std::string type, int count)
+{
+    _myArmy[type] = count;
+    CCLOG("=== DataManager: Set %s count to %d ===", type.c_str(), count);
+}
+
+// 【新增】获取所有军队数据
+std::map<std::string, int> DataManager::getAllArmyData()
+{
+    return _myArmy;
 }

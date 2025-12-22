@@ -114,16 +114,17 @@ bool SaveGame::saveGameState(const std::string& filename)
     rapidjson::Value armyArray(rapidjson::kArrayType);
     DataManager* dm = DataManager::getInstance();
 
-    std::vector<std::string> troopTypes = { "Soldier", "Arrow", "Boom", "Giant" };
+    // 获取所有兵种类型
+    std::vector<std::string> troopTypes = { "Soldier", "Arrow", "Boom", "Giant", "Airforce" };
 
     for (const auto& troopType : troopTypes) {
         int count = dm->getTroopCount(troopType);
-        if (count > 0) {
-            rapidjson::Value troopObj(rapidjson::kObjectType);
-            troopObj.AddMember("type", rapidjson::Value(troopType.c_str(), allocator).Move(), allocator);
-            troopObj.AddMember("count", count, allocator);
-            armyArray.PushBack(troopObj, allocator);
-        }
+        rapidjson::Value troopObj(rapidjson::kObjectType);
+        troopObj.AddMember("type", rapidjson::Value(troopType.c_str(), allocator).Move(), allocator);
+        troopObj.AddMember("count", count, allocator);
+        armyArray.PushBack(troopObj, allocator);
+
+        CCLOG("=== SaveGame: Saving troop %s x%d ===", troopType.c_str(), count);
     }
 
     document.AddMember("army", armyArray, allocator);
@@ -441,16 +442,13 @@ bool SaveGame::loadGameState(const std::string& filename)
 
                 CCLOG("=== SaveGame: Loading troop %s x%d ===", troopType.c_str(), count);
 
-                // 训练指定数量的兵种
-                for (int j = 0; j < count; j++) {
-                    bool success = dm->trainTroop(troopType);
-                    if (!success) {
-                        CCLOG("=== SaveGame: WARNING: Failed to train troop %s (iteration %d) ===",
-                            troopType.c_str(), j);
-                    }
-                }
+                // 【关键修改】直接设置数量，不检查资源
+                dm->setTroopCount(troopType, count);
             }
         }
+
+        // 记录总人口
+        CCLOG("=== SaveGame: Total army population after load: %d ===", dm->getTotalPopulation());
     }
     else {
         CCLOG("=== SaveGame: No army data found in save file ===");

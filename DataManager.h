@@ -37,6 +37,12 @@ public:
     // 【新增】获取建筑最大数量限制
     int getBuildingMaxCount(int buildingId);
 
+    // 【新增】直接设置兵种数量（用于存档加载）
+    void setTroopCount(std::string type, int count);
+
+    // 【新增】获取所有军队数据
+    std::map<std::string, int> getAllArmyData();
+
 private:
     DataManager() {}; // ????????л?
 
