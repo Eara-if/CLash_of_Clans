@@ -127,7 +127,7 @@ bool TrainingLayer::init()
     // 第三关：需要打过第二关 (进度 >= 3)
     createFightBtn("FIGHT 3RD PASS", Color3B::ORANGE, -100, "Enemy_map3.tmx", 3);
 
-    createFightBtn("FIGHT 4TH PASS", Color3B(250,182,169), -150, "Enemy_map4.tmx", 1);
+    createFightBtn("FIGHT 4TH PASS", Color3B(250,182,169), -150, "Enemy_map4.tmx", 4);
 
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 10);
