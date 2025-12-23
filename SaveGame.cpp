@@ -30,16 +30,11 @@ SaveGame* SaveGame::getInstance()
     return _instance;
 }
 
-bool SaveGame::saveGameState(const std::string& filename)
-{
-    CCLOG("=== SaveGame: Starting save process ===");
-
-    // ʹ�� rapidjson �����ĵ�
-    rapidjson::Document document;
-    document.SetObject();
+void SaveGame::fillJsonDocument(rapidjson::Document& document) {
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    document.SetObject();
 
-    // ������Դ����
+    // 1. 资源
     document.AddMember("coin_count", coin_count, allocator);
     document.AddMember("water_count", water_count, allocator);
     document.AddMember("gem_count", gem_count, allocator);
@@ -47,177 +42,61 @@ bool SaveGame::saveGameState(const std::string& filename)
     document.AddMember("water_limit", water_limit, allocator);
     document.AddMember("gem_limit", gem_limit, allocator);
 
-    // 2. 【新增】保存所有建筑信息
-    rapidjson::Value buildingsArray(rapidjson::kArrayType); // 创建一个 JSON 数组
+    // 2. 关卡进度
+    DataManager* dm_level = DataManager::getInstance();
+    document.AddMember("max_level_unlocked", dm_level->getMaxLevelUnlocked(), allocator);
 
-    // 遍历全局建筑列表 (你在 GameScene 里定义的 g_allPurchasedBuildings)
+    // 3. 建筑列表
+    rapidjson::Value buildingsArray(rapidjson::kArrayType);
     for (auto building : g_allPurchasedBuildings) {
         if (!building) continue;
-
-        rapidjson::Value bObj(rapidjson::kObjectType); // 创建一个建筑对象 {}
-
-        // 存类型 (假设 Building 类里有个 getType() 返回 BuildingType)
-        // 如果你还没有 getType，你需要去 Building.h 里加一个
-        int typeInt = static_cast<int>(building->getType());
-        bObj.AddMember("type", typeInt, allocator);
-
-        // 存等级
+        rapidjson::Value bObj(rapidjson::kObjectType);
+        bObj.AddMember("type", static_cast<int>(building->getType()), allocator);
         bObj.AddMember("level", building->getLevel(), allocator);
+        bObj.AddMember("pos_x", building->getPositionX(), allocator);
+        bObj.AddMember("pos_y", building->getPositionY(), allocator);
+        bObj.AddMember("state", static_cast<int>(building->getState()), allocator);
+        bObj.AddMember("name", rapidjson::Value(building->getName().c_str(), allocator).Move(), allocator);
 
-        // 存坐标
-        bObj.AddMember("x", building->getPositionX(), allocator);
-        bObj.AddMember("y", building->getPositionY(), allocator);
-
-        // 把这个建筑加进数组
+        if (building->getState() == BuildingState::UPGRADING) {
+            bObj.AddMember("upgrade_time_left", building->getRemainingTime(), allocator);
+        }
+        if (building->getType() == BuildingType::MINE || building->getType() == BuildingType::WATER) {
+            bObj.AddMember("production_time_left", building->getProductionTimeLeft(), allocator);
+        }
         buildingsArray.PushBack(bObj, allocator);
     }
-
-    // 把数组放进总存档里
     document.AddMember("buildings", buildingsArray, allocator);
 
-    CCLOG("=== SaveGame: Resources saved ===");
-    CCLOG("=== SaveGame: Global buildings count: %d ===", (int)g_allPurchasedBuildings.size());
-
-    DataManager* dm_level = DataManager::getInstance();
-    int maxLevelUnlocked = dm_level->getMaxLevelUnlocked();
-    document.AddMember("max_level_unlocked", maxLevelUnlocked, allocator);
-    CCLOG("=== SaveGame: Level progress saved - Max level unlocked: %d ===", maxLevelUnlocked);
-
-    // ����Ҫ�޸ġ��������н����������Ƿ��и��ڵ�
-    Vector<Building*> tempBuildings;
-    for (auto& building : g_allPurchasedBuildings) {
-        if (building) {
-            tempBuildings.pushBack(building);
-            CCLOG("=== SaveGame: Found building for save - Type: %d, Name: %s, Pos: (%.1f, %.1f) ===",
-                (int)building->getType(), building->getName().c_str(),
-                building->getPositionX(), building->getPositionY());
-        }
-    }
-
-    CCLOG("=== SaveGame: Total buildings to save: %d ===", (int)tempBuildings.size());
-
-    for (auto& building : tempBuildings) {
-        if (building) {
-            rapidjson::Value buildingObj(rapidjson::kObjectType);
-
-            // ���潨��������Ϣ
-            buildingObj.AddMember("type", static_cast<int>(building->getType()), allocator);
-            buildingObj.AddMember("level", building->getLevel(), allocator);
-
-            // ����λ��
-            buildingObj.AddMember("pos_x", building->getPositionX(), allocator);
-            buildingObj.AddMember("pos_y", building->getPositionY(), allocator);
-            buildingObj.AddMember("state", static_cast<int>(building->getState()), allocator);
-
-            // �����������潨�����ƣ����ڵ��ԣ�
-            buildingObj.AddMember("name",
-                rapidjson::Value(building->getName().c_str(), allocator).Move(),
-                allocator);
-
-            // ��������ʣ��ʱ��
-            if (building->getState() == BuildingState::UPGRADING) {
-                buildingObj.AddMember("upgrade_time_left", building->getRemainingTime(), allocator);
-                CCLOG("=== SaveGame: Building UPGRADING, time left: %f ===", building->getRemainingTime());
-            }
-
-            // ��������״̬
-            if (building->getType() == BuildingType::MINE || building->getType() == BuildingType::WATER) {
-                buildingObj.AddMember("production_time_left", building->getProductionTimeLeft(), allocator);
-                CCLOG("=== SaveGame: Production building, time left: %f ===", building->getProductionTimeLeft());
-            }
-
-            buildingsArray.PushBack(buildingObj, allocator);
-
-            CCLOG("=== SaveGame: Saved building - Type:%d, Name:%s, Level:%d, Pos:(%.1f,%.1f) ===",
-                (int)building->getType(), building->getName().c_str(),
-                building->getLevel(), building->getPositionX(), building->getPositionY());
-        }
-    }
-
-    document.AddMember("buildings", buildingsArray, allocator);
-
-    // �����������
+    // 4. 军队
     rapidjson::Value armyArray(rapidjson::kArrayType);
-    DataManager* dm = DataManager::getInstance();
-
-    // ��ȡ���б�������
     std::vector<std::string> troopTypes = { "Soldier", "Arrow", "Boom", "Giant", "Airforce" };
-
     for (const auto& troopType : troopTypes) {
-        int count = dm->getTroopCount(troopType);
         rapidjson::Value troopObj(rapidjson::kObjectType);
         troopObj.AddMember("type", rapidjson::Value(troopType.c_str(), allocator).Move(), allocator);
-        troopObj.AddMember("count", count, allocator);
+        troopObj.AddMember("count", DataManager::getInstance()->getTroopCount(troopType), allocator);
         armyArray.PushBack(troopObj, allocator);
-
-        CCLOG("=== SaveGame: Saving troop %s x%d ===", troopType.c_str(), count);
     }
-
     document.AddMember("army", armyArray, allocator);
 
-    // ��ӱ���ʱ���
-    time_t now = time(0);
-    document.AddMember("save_timestamp", static_cast<int64_t>(now), allocator);
+    // 5. 时间戳
+    document.AddMember("save_timestamp", static_cast<int64_t>(time(0)), allocator);
+}
 
-    // ת��ΪJSON�ַ���
+
+bool SaveGame::saveGameState(const std::string& filename) {
+    rapidjson::Document document;
+    this->fillJsonDocument(document); // 使用通用逻辑
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
-
     std::string jsonStr = buffer.GetString();
 
-    // �������޸���ʹ��Cocos2d-x��FileUtils�����ᴦ��·����������
-    std::string writablePath = FileUtils::getInstance()->getWritablePath();
-    std::string fullPath = writablePath + filename;
-
-    CCLOG("=== SaveGame: Writable path: %s ===", writablePath.c_str());
-    CCLOG("=== SaveGame: Full path: %s ===", fullPath.c_str());
-    CCLOG("=== SaveGame: JSON size: %d bytes ===", (int)jsonStr.length());
-
-    // ʹ��FileUtilsд���ļ�
-    if (FileUtils::getInstance()->writeStringToFile(jsonStr, fullPath)) {
-        CCLOG("=== SaveGame: Game saved successfully to: %s ===", fullPath.c_str());
-
-        // ��ʾ����ɹ�����ʾ
-        auto scene = Director::getInstance()->getRunningScene();
-        if (scene) {
-            auto visibleSize = Director::getInstance()->getVisibleSize();
-            auto label = Label::createWithTTF("Game Saved!", "fonts/Marker Felt.ttf", 32);
-            label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-            label->setColor(Color3B::GREEN);
-            scene->addChild(label, 999);
-
-            label->runAction(Sequence::create(
-                DelayTime::create(3.0f),
-                RemoveSelf::create(),
-                nullptr
-            ));
-        }
-
-        return true;
-    }
-    else {
-        CCLOG("=== SaveGame: ERROR: Failed to save game to: %s ===", fullPath.c_str());
-
-        // ��ʾ������ʾ
-        auto scene = Director::getInstance()->getRunningScene();
-        if (scene) {
-            auto visibleSize = Director::getInstance()->getVisibleSize();
-            auto label = Label::createWithTTF("Save Failed!", "fonts/Marker Felt.ttf", 32);
-            label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-            label->setColor(Color3B::RED);
-            scene->addChild(label, 999);
-
-            label->runAction(Sequence::create(
-                DelayTime::create(3.0f),
-                RemoveSelf::create(),
-                nullptr
-            ));
-        }
-
-        return false;
-    }
+    std::string fullPath = FileUtils::getInstance()->getWritablePath() + filename;
+    return FileUtils::getInstance()->writeStringToFile(jsonStr, fullPath);
 }
+
 
 bool SaveGame::loadGameState(const std::string& filename)
 {
@@ -559,4 +438,113 @@ void SaveGame::listSaveFiles()
     // for (const auto& file : files) {
     //     CCLOG("File: %s", file.c_str());
     // }
+}
+bool SaveGame::loadFromRemoteString(const std::string& jsonData)
+{
+    CCLOG("=== SaveGame: Starting remote load process ===");
+
+    if (jsonData.empty() || jsonData == "\"\"" || jsonData == "{}") {
+        CCLOG("=== SaveGame: Remote data is empty, treating as new player. ===");
+        return false;
+    }
+
+    rapidjson::Document document;
+    document.Parse(jsonData.c_str());
+
+    if (document.HasParseError()) {
+        CCLOG("=== SaveGame: ERROR: Remote JSON parse error: %s ===", document.GetParseError());
+        return false;
+    }
+
+    // --- 1. 恢复资源 ---
+    if (document.HasMember("coin_count")) coin_count = document["coin_count"].GetInt();
+    if (document.HasMember("water_count")) water_count = document["water_count"].GetInt();
+    if (document.HasMember("gem_count")) gem_count = document["gem_count"].GetInt();
+    if (document.HasMember("coin_limit")) coin_limit = document["coin_limit"].GetInt();
+    if (document.HasMember("water_limit")) water_limit = document["water_limit"].GetInt();
+    if (document.HasMember("gem_limit")) gem_limit = document["gem_limit"].GetInt();
+
+    // --- 2. 恢复关卡进度 ---
+    if (document.HasMember("max_level_unlocked")) {
+        DataManager::getInstance()->setMaxLevelUnlocked(document["max_level_unlocked"].GetInt());
+    }
+
+    // --- 3. 彻底清理旧建筑 ---
+    for (auto& building : g_allPurchasedBuildings) {
+        if (building && building->getParent()) {
+            building->removeFromParent();
+        }
+    }
+    g_allPurchasedBuildings.clear();
+
+    // --- 4. 恢复建筑 (核心补全) ---
+    if (document.HasMember("buildings") && document["buildings"].IsArray()) {
+        const rapidjson::Value& buildingsArray = document["buildings"];
+        for (rapidjson::SizeType i = 0; i < buildingsArray.Size(); i++) {
+            const rapidjson::Value& bData = buildingsArray[i];
+
+            BuildingType type = static_cast<BuildingType>(bData["type"].GetInt());
+            int savedLevel = bData["level"].GetInt();
+            float posX = bData["pos_x"].GetFloat();
+            float posY = bData["pos_y"].GetFloat();
+            BuildingState savedState = bData.HasMember("state") ?
+                static_cast<BuildingState>(bData["state"].GetInt()) : BuildingState::IDLE;
+
+            float upgradeTimeLeft = bData.HasMember("upgrade_time_left") ? bData["upgrade_time_left"].GetFloat() : 0;
+            float productionTimeLeft = bData.HasMember("production_time_left") ? bData["production_time_left"].GetFloat() : 0;
+            std::string bName = bData.HasMember("name") ? bData["name"].GetString() : "Building";
+
+            // 根据类型选择图片 (这里复用你 loadGameState 里的 switch 逻辑)
+            std::string filename = "House.png";
+            if (type == BuildingType::BARRACKS) filename = "junying.png";
+            else if (type == BuildingType::MINE) filename = "Mine.png";
+            else if (type == BuildingType::WATER) filename = "waterwell.png";
+            // ... (其他类型保持一致)
+
+            auto newBuilding = Building::create(filename, Rect::ZERO, bName, 300, type);
+            if (newBuilding) {
+                newBuilding->setPosition(posX, posY);
+                newBuilding->setScale(0.5f);
+                newBuilding->initFromSaveData(savedLevel, savedState, upgradeTimeLeft, productionTimeLeft);
+
+                // 重新绑定回调（这步很重要，否则加载出来的建筑点击升级没反应）
+                newBuilding->setOnUpgradeCallback([=]() {
+                    if (type == BuildingType::BASE) { coin_limit += 1500; water_limit += 1500; }
+                    else if (type == BuildingType::BARRACKS) { army_limit += 10; }
+                    auto scene = Director::getInstance()->getRunningScene();
+                    auto gameScene = dynamic_cast<GameScene*>(scene);
+                    if (gameScene) gameScene->updateResourceDisplay();
+                    });
+
+                g_allPurchasedBuildings.pushBack(newBuilding);
+            }
+        }
+    }
+
+    // --- 5. 恢复军队 ---
+    if (document.HasMember("army") && document["army"].IsArray()) {
+        DataManager::getInstance()->clearArmy();
+        const rapidjson::Value& armyArray = document["army"];
+        for (rapidjson::SizeType i = 0; i < armyArray.Size(); i++) {
+            const rapidjson::Value& troopData = armyArray[i];
+            DataManager::getInstance()->setTroopCount(troopData["type"].GetString(), troopData["count"].GetInt());
+        }
+    }
+
+    CCLOG("=== SaveGame: Remote game state loaded successfully! ===");
+    return true;
+}
+
+std::string SaveGame::getGameStateAsJsonString() {
+    rapidjson::Document document;
+
+    // 调用刚才提取的核心逻辑
+    this->fillJsonDocument(document);
+
+    // 转换为字符串
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+
+    return buffer.GetString();
 }

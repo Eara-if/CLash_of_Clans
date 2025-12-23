@@ -36,9 +36,12 @@ public:
 
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
-    void menuGotoNextScene(cocos2d::Ref* pSender); // ¿ªÊ¼ĞÂÓÎÏ·
-    void menuContinueGame(cocos2d::Ref* pSender);  // ¡¾ĞÂÔö¡¿¼ÌĞøÓÎÏ·
+    void menuGotoNextScene(cocos2d::Ref* pSender); // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ï·
+    void menuContinueGame(cocos2d::Ref* pSender);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·
+    void HelloWorld::loginToServer(std::string username);
     // implement the "static create()" method manually
+    void HelloWorld::startNewGame();
+    std::string _currentUsername; // è®°å½•å½“å‰ç™»å½•å
     CREATE_FUNC(HelloWorld);
 };
 
