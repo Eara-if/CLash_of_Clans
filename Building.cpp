@@ -1,4 +1,4 @@
-#include "Building.h"
+﻿#include "Building.h"
 #include "BuildingInfoLayer.h" // 一定要引用之前写的弹窗类
 #include "BuildingUpgradeLimits.h"
 #include "GameScene.h"
@@ -206,6 +206,14 @@ void Building::finishProduction()
 // 收集资源
 void Building::collectResources()
 {
+    // ================== 【拦截开始】 ==================
+    auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+    extern std::string g_currentUsername;
+    if (gameScene && gameScene->_currentSceneOwner != g_currentUsername) {
+        gameScene->showToast("Cannot collect others' resources!", Color3B::RED);
+        return;
+    }
+    // ================== 【拦截结束】 ==================
     if (state == BuildingState::READY && isReadyToCollect) {
         if (type == BuildingType::MINE) {
             coin_count += productionAmount;
@@ -394,10 +402,6 @@ void Building::speedUp()
         log("Not enough gems!");
     }
 }
-// Building.cpp
-
-// Building.cpp
-
 void Building::initTouchListener()
 {
     auto listener = EventListenerTouchOneByOne::create();
@@ -410,6 +414,17 @@ void Building::initTouchListener()
 
         if (this->getBoundingBox().containsPoint(nodePos))
         {
+
+            // ================== 【拦截开始】 ==================
+            auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+            extern std::string g_currentUsername;
+            if (gameScene && gameScene->_currentSceneOwner != g_currentUsername) {
+                // 访客模式下，点击建筑依然返回 true (为了触发后面 onTouchEnded 的弹窗查看信息)
+                // 但我们要标记，这不是一次合法的“拿起”操作
+                this->isDragging = false;
+                return true;
+            }
+            // ================== 【拦截结束】 =================
             // 1. 记录数据
             touchOffset = this->getPosition() - nodePos;
             originalPos = this->getPosition();
@@ -429,6 +444,13 @@ void Building::initTouchListener()
 
     // --- 触摸移动 (保持不变) ---
     listener->onTouchMoved = [=](Touch* touch, Event* event) {
+        // ================== 【拦截开始】 ==================
+        auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+        extern std::string g_currentUsername;
+        if (gameScene && gameScene->_currentSceneOwner != g_currentUsername) {
+            return; // 访客禁止移动
+        }
+        // ================== 【拦截结束】 ==================
         if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f) {
             isDragging = true;
         }
@@ -441,6 +463,17 @@ void Building::initTouchListener()
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
         this->setScale(0.5f); // 恢复大小
 
+        // ================== 【核心修改：访客模式拦截】 ==================
+        auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+        extern std::string g_currentUsername;
+
+        // 如果当前场景的主人不是我，说明我在参观
+        if (gameScene && gameScene->_currentSceneOwner != g_currentUsername) {
+            log("Visitor mode: Block all building interactions.");
+            isDragging = false;
+            // 直接返回，不执行任何拖拽判定，更不执行下面的弹窗代码
+            return;
+        }
         if (isDragging) {
             auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
 

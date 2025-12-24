@@ -539,11 +539,7 @@ void BattleScene::loadLevelCampaign(int levelIndex)
             float y = dict["y"].asFloat();
             float w = dict["width"].asFloat();
             float h = dict["height"].asFloat();
-            if (dict["fileName"].asString() == "Tree.png"
-                || dict["fileName"].asString() == "Tree1.png"
-                || dict["fileName"].asString() == "Tree2.png"){
-                y += 100;
-            }
+
             // A. 处理禁放区（除了炸弹以外的所有建筑/障碍物区域）
             if (name != "boom") {
                 // 将地图局部坐标转换为世界坐标，用于放置士兵时的碰撞检测
@@ -600,7 +596,8 @@ void BattleScene::loadLevelCampaign(int levelIndex)
                 if (sprite) {
                     sprite->setAnchorPoint(Vec2::ZERO);
                     // 树木等装饰物向上偏移一点，视觉效果更好
-                    sprite->setPosition(x, y );
+                    float yOffset = (path.find("Tree") != std::string::npos) ? 100.0f : 0.0f;
+                    sprite->setPosition(x, y + yOffset);
 
                     // 设置缩放
                     if (dict.count("width") && dict.count("height")) {

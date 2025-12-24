@@ -229,7 +229,7 @@ public:
     void modify() override {
     }
 
-    
+
     void print(Node* parentNode) override {
 
         // ?????? 2???????????????????
@@ -374,13 +374,15 @@ bool GameScene::init()
     _gemTextLabel = this->showText("Gem " + std::to_string(gem_count), origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
     // 6. 【功能按钮】
-    this->addShopButton();
-    this->addSaveButton();
+    this->scheduleOnce([=](float dt) {
+        this->addShopButton();
+        this->addSaveButton();
+        }, 0, "setup_ui_key");
 
     // Back 按钮 (左下角)
-    auto backItem = MenuItemFont::create("Cloud Save & Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
+    auto backItem = MenuItemFont::create("Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
     backItem->setColor(Color3B::YELLOW);
-    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 40, origin.y + backItem->getContentSize().height / 2 + 40));
+    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20, origin.y + backItem->getContentSize().height / 2 + 20));
     auto menu = Menu::create(backItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 100);
@@ -677,19 +679,28 @@ void GameScene::menuBackCallback(Ref* pSender)
 }
 
 void GameScene::addShopButton() {
+    // --- 核心修改：如果是访客模式，直接返回，不创建商店按钮 ---
+    // 假设你的 GameScene 中有 _isVisitorMode 变量，或者通过用户名判断
+    // 逻辑：如果当前查看的不是自己的基地，就不显示商店
+    if (_currentSceneOwner != g_currentUsername) {
+        return; 
+    }
+    // 或者如果你使用了之前定义的标记位：
+    // if (_isVisitorMode) return; 
+    // -------------------------------------------------------
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // ????????????????????
-    auto shopNormal = Sprite::create("ui/shop_normal.png"); // ??????????????
-    auto shopSelected = Sprite::create("ui/shop_selected.png"); // ?????????????
+    // 1. 创建商店按钮精灵
+    auto shopNormal = Sprite::create("ui/shop_normal.png"); 
+    auto shopSelected = Sprite::create("ui/shop_selected.png"); 
 
-    // ????????????????????????????
+    // 2. 容错处理：如果图片资源丢失，创建备用的彩色矩形按钮
     if (!shopNormal) {
-        // ?????????????
         shopNormal = Sprite::create();
         shopNormal->setTextureRect(Rect(0, 0, 150, 80));
-        shopNormal->setColor(Color3B(255, 200, 0)); // ???
+        shopNormal->setColor(Color3B(255, 200, 0)); 
 
         auto shopLabel = Label::createWithTTF("MARKET", "fonts/Marker Felt.ttf", 30);
         shopLabel->setPosition(Vec2(75, 40));
@@ -699,30 +710,27 @@ void GameScene::addShopButton() {
 
     if (!shopSelected) {
         shopSelected = Sprite::create();
-        shopSelected->setTextureRect(Rect(0, 0, 85, 85));
-        shopSelected->setColor(Color3B(255, 150, 0)); // ???????
+        shopSelected->setTextureRect(Rect(0, 0, 150, 80)); // 建议大小与Normal保持一致
+        shopSelected->setColor(Color3B(255, 150, 0)); 
     }
 
+    // 3. 创建菜单项
     auto shopItem = MenuItemSprite::create(shopNormal, shopSelected,
         [](Ref* pSender) {
-            // ???pushScene??????replaceScene
             auto scene = ShopScene::createScene();
             Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
         }
     );
 
-
-    // ??????��?????????
-    float x = origin.x + 150; // ???��??
-    float y = origin.y + visibleSize.height - 100; // ????��??
-
+    // 4. 设置按钮位置 (左上角)
+    float x = origin.x + 150; 
+    float y = origin.y + visibleSize.height - 100; 
     shopItem->setPosition(Vec2(x, y));
 
-    // ???????????
+    // 5. 将按钮加入菜单并添加到层中
     auto shopMenu = Menu::create(shopItem, NULL);
     shopMenu->setPosition(Vec2::ZERO);
-    this->addChild(shopMenu, 200); // ????????
-
+    this->addChild(shopMenu, 200); 
 }
 
 void GameScene::addAllPurchasedBuildings() {
@@ -744,7 +752,7 @@ void GameScene::addAllPurchasedBuildings() {
             // ???????????????
             building->setOnUpgradeCallback([=]() {
                 // ���¼����˿����ޣ�����Ǳ�Ӫ���Ӫ��
-                if (building->getType() == BuildingType::BARRACKS ) {
+                if (building->getType() == BuildingType::BARRACKS) {
                     this->recalculateArmyLimit();
                 }
                 if (_coinTextLabel) {
@@ -946,7 +954,7 @@ void GameScene::addSaveButton() {
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     // �������水ť
-    auto saveLabel = Label::createWithTTF("Local Save", "fonts/Marker Felt.ttf", 28);
+    auto saveLabel = Label::createWithTTF("SAVE GAME", "fonts/Marker Felt.ttf", 28);
     saveLabel->setColor(Color3B::GREEN);
     saveLabel->enableOutline(Color4B::BLACK, 2);
 
@@ -954,7 +962,7 @@ void GameScene::addSaveButton() {
         CC_CALLBACK_1(GameScene::menuSaveGameCallback, this));
 
     // ���ð�ťλ�ã����½ǣ�
-    float x = origin.x + 150;
+    float x = origin.x + visibleSize.width - 150;
     float y = origin.y + 100;
 
     saveItem->setPosition(Vec2(x, y));
