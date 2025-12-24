@@ -378,9 +378,9 @@ bool GameScene::init()
     this->addSaveButton();
 
     // Back 按钮 (左下角)
-    auto backItem = MenuItemFont::create("Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
+    auto backItem = MenuItemFont::create("Cloud Save & Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
     backItem->setColor(Color3B::YELLOW);
-    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20, origin.y + backItem->getContentSize().height / 2 + 20));
+    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 40, origin.y + backItem->getContentSize().height / 2 + 40));
     auto menu = Menu::create(backItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 100);
@@ -946,7 +946,7 @@ void GameScene::addSaveButton() {
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     // �������水ť
-    auto saveLabel = Label::createWithTTF("SAVE GAME", "fonts/Marker Felt.ttf", 28);
+    auto saveLabel = Label::createWithTTF("Local Save", "fonts/Marker Felt.ttf", 28);
     saveLabel->setColor(Color3B::GREEN);
     saveLabel->enableOutline(Color4B::BLACK, 2);
 
@@ -954,7 +954,7 @@ void GameScene::addSaveButton() {
         CC_CALLBACK_1(GameScene::menuSaveGameCallback, this));
 
     // ���ð�ťλ�ã����½ǣ�
-    float x = origin.x + visibleSize.width - 150;
+    float x = origin.x + 150;
     float y = origin.y + 100;
 
     saveItem->setPosition(Vec2(x, y));
