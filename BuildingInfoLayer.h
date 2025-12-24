@@ -21,7 +21,6 @@ public:
     void BuildingInfoLayer::showTrainingMenu();
     // 设置“点击升级按钮”后要执行的逻辑
     // std::function 是一种通用的函数包装器
-    virtual void update(float dt) override;
 
     // 关闭弹窗
     void closeLayer();

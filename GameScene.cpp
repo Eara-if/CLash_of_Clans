@@ -793,7 +793,7 @@ void GameScene::onEnter() {
 
             // 添加到当前地图
             _tiledMap->addChild(building, 10);
-
+            building->scheduleUpdate();
             // 【关键修复 3】：只有真正坐标为 0 的新建筑才自动找位置
             // 已经保存过坐标的老建筑不要去动它的 Position
             if (building->getPositionX() == 0 && building->getPositionY() == 0) {

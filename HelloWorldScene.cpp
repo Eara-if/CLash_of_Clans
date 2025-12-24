@@ -336,6 +336,11 @@ void HelloWorld::loginToServer(std::string username) {
 
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "success") {
 
+            coin_count = 5000;
+            water_count = 5000;
+            gem_count = 500;
+            army_limit = 10;
+            g_allPurchasedBuildings.clear();
             g_currentUsername = username;
 
             bool isNewUser = true; // 标记是否为新用户

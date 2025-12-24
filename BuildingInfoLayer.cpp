@@ -64,7 +64,6 @@ bool BuildingInfoLayer::init()
     // 【修改点 F】添加到 Layer，层级设为 1
     this->addChild(menu, 1);
 
-    this->scheduleUpdate();
     return true;
 }
 
@@ -634,36 +633,6 @@ void BuildingInfoLayer::handleUpgradeTimer()
         }
 
         }, 0.01f, "upgrade_timer");
-}
-void BuildingInfoLayer::update(float dt)
-{
-    if (_targetBuilding)
-    {
-        // ==============================================================
-        // 【核心修复】
-        // 只有当“原本在显示倒计时”(_isShowingTimer == true) 
-        // 且“现在变回空闲了” (State == IDLE) 时，才自动关闭。
-        // ==============================================================
-        if (_isShowingTimer == true && _targetBuilding->getState() == BuildingState::IDLE)
-        {
-            this->closeLayer();
-            return;
-        }
-
-        // 如果建筑从PRODUCING状态变为READY（生产完成），自动刷新UI
-        if (_targetBuilding->getState() == BuildingState::READY) {
-            this->setBuilding(_targetBuilding);
-        }
-
-        // 刷新倒计时文字 (保持不变)
-        if (_targetBuilding->getState() == BuildingState::UPGRADING)
-        {
-            int seconds = (int)_targetBuilding->getRemainingTime();
-            char buf[64];
-            sprintf(buf, "Upgrading...\n%ds", seconds + 1);
-            _infoLabel->setString(buf);
-        }
-    }
 }
 
 void BuildingInfoLayer::closeLayer()
