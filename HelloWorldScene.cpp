@@ -240,19 +240,6 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     //_eventDispatcher->dispatchEvent(&customEndEvent);
 }
 void HelloWorld::startNewGame() {
-    coin_count = 5000;
-    water_count = 5000;
-    gem_count = 500;
-    coin_limit = 5000;
-    water_limit = 5000;
-    gem_limit = 5000;
-    army_limit = 10;
-
-    for (auto& building : g_allPurchasedBuildings) {
-        if (building) building->removeFromParent();
-    }
-    g_allPurchasedBuildings.clear();
-
     auto scene = GameScene::createScene();
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }
@@ -347,29 +334,49 @@ void HelloWorld::loginToServer(std::string username) {
             return;
         }
 
-        // 检查服务器状态码
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "success") {
 
-            // 保存当前用户名到全局，方便后面存盘用
-             g_currentUsername = username;
+            g_currentUsername = username;
 
-            // 提取存档字符串 (data 字段)
+            bool isNewUser = true; // 标记是否为新用户
+
+            // 提取存档字符串
             if (doc.HasMember("data") && doc["data"].IsString()) {
                 std::string gameSaveData = doc["data"].GetString();
 
-                // 如果存档不为空，让 SaveGame 解析并加载建筑
+                // 如果存档不为空，加载数据
                 if (!gameSaveData.empty() && gameSaveData != "") {
                     log("Loading game data for user: %s", username.c_str());
+
+                    // 【关键】先清空旧数据，防止叠加（这也是你之前想做的事，但要在这里做）
+                    g_allPurchasedBuildings.clear();
+
                     SaveGame::getInstance()->loadFromRemoteString(gameSaveData);
-                }
-                else {
-                    log("New user detected, starting fresh game.");
+                    isNewUser = false; // 标记为老玩家
                 }
             }
 
-            // 登录成功，进入游戏
-            this->startNewGame();
+            //如果是新玩家，才执行初始化逻辑
+            if (isNewUser) {
+                log("New user detected, initializing fresh game data.");
+
+                // 这里执行你原来写在 startNewGame 里的初始化代码
+                coin_count = 5000;
+                water_count = 5000;
+                gem_count = 500;
+                coin_limit = 5000;
+                water_limit = 5000;
+                gem_limit = 5000;
+                army_limit = 10;
+
+                g_allPurchasedBuildings.clear(); // 确保容器是空的
+            }
+
+            // 登录成功，进入游戏场景
+            // 此时数据状态已经正确（老玩家是加载的数据，新玩家是初始数据）
+            this->startNewGame(); // 调用修改后的函数
         }
+
         else {
             log("Login failed: Username or password error.");
         }
