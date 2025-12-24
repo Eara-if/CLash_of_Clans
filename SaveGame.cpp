@@ -365,6 +365,12 @@ bool SaveGame::loadGameState(const std::string& filename)
     auto scene = Director::getInstance()->getRunningScene();
     if (scene) {
         auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto gameScene = dynamic_cast<GameScene*>(scene);
+        if (gameScene) {
+            // 不仅刷新资源，还要刷新整图建筑！
+            gameScene->reloadBuildingsFromSave();
+        }
+
         auto label = Label::createWithTTF("Game Loaded!", "fonts/Marker Felt.ttf", 32);
         label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
         label->setColor(Color3B::GREEN);
@@ -456,6 +462,21 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData)
         return false;
     }
 
+    // --- 1. 恢复关卡进度 (同步到本地缓存) ---
+        // 关键点：服务器传回什么，我们就强制本地 CurrentLevel 变为什么
+    if (document.HasMember("currentLevel") && document["currentLevel"].IsInt()) {
+        int levelFromServer = document["currentLevel"].GetInt();
+        this->_currentLevel = levelFromServer;
+
+        // 更新本地 UserDefault 记录，这会影响 BattleScene 的关卡选择
+        UserDefault::getInstance()->setIntegerForKey("CurrentLevel", levelFromServer);
+        // 如果你的 DataManager 使用的是 max_level_unlocked，也一并同步
+        DataManager::getInstance()->setMaxLevelUnlocked(levelFromServer);
+
+        UserDefault::getInstance()->flush();
+        CCLOG("=== SaveGame: Syncing Level from Server: %d ===", levelFromServer);
+    }
+
     // --- 1. 恢复资源 ---
     if (document.HasMember("coin_count")) coin_count = document["coin_count"].GetInt();
     if (document.HasMember("water_count")) water_count = document["water_count"].GetInt();
@@ -537,14 +558,61 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData)
 
 std::string SaveGame::getGameStateAsJsonString() {
     rapidjson::Document document;
-
-    // 调用刚才提取的核心逻辑
+    // 1. 调用你原本提取的核心逻辑，填充建筑和资源数据
     this->fillJsonDocument(document);
 
-    // 转换为字符串
+    // 2. 获取分配器
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    // 3. 【新增逻辑】：将当前关卡进度存入 JSON 对象
+    // 假设你的关卡变量名为 _currentLevel，如果没有该变量，请在 SaveGame.h 中定义
+    int currentLevel = UserDefault::getInstance()->getIntegerForKey("CurrentLevel", 1);
+    document.AddMember("currentLevel", currentLevel, allocator);
+
+    // 4. 转换为字符串（保持你原本的逻辑不变）
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
 
     return buffer.GetString();
+}
+
+// SaveGame.cpp
+#include "network/HttpClient.h"
+using namespace cocos2d::network;
+
+void SaveGame::syncDataToCloud(std::function<void(bool)> callback) {
+    // 1. 获取最新的 JSON 数据
+    std::string currentData = this->getGameStateAsJsonString();
+
+    // 2. 获取当前全局用户名
+    extern std::string g_currentUsername;
+    if (g_currentUsername.empty()) return;
+
+    auto request = new (std::nothrow) HttpRequest();
+    request->setUrl("http://100.80.248.229:5000/save");
+    request->setRequestType(HttpRequest::Type::POST);
+    request->setHeaders({ "Content-Type: application/json; charset=utf-8" });
+
+    // 构造发送数据
+    std::string postData = "{\"username\":\"" + g_currentUsername + "\", \"gameData\":" + currentData + "}";
+    request->setRequestData(postData.c_str(), postData.length());
+
+    request->setResponseCallback([=](HttpClient* client, HttpResponse* response) {
+        bool success = (response && response->isSucceed());
+        if (success) {
+            log("Cloud Save: OK");
+        }
+        else {
+            log("Cloud Save: FAILED");
+        }
+
+        // 如果外部（比如 GameScene）传入了处理 UI 的回调，就执行它
+        if (callback) {
+            callback(success);
+        }
+        });
+
+    HttpClient::getInstance()->send(request);
+    request->release();
 }

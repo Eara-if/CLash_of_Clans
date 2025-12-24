@@ -6,6 +6,7 @@
 #include "json/document.h"
 #include "json/writer.h"
 #include "json/stringbuffer.h"
+#include "network/HttpClient.h"
 
 class SaveGame
 {
@@ -32,6 +33,8 @@ public:
 
     // ���Ժ������г�����Ŀ¼�е��ļ�
     void listSaveFiles();
+    void syncDataToCloud(std::function<void(bool)> callback = nullptr);
+    int _currentLevel;
 private:
     SaveGame() {}
     // 核心逻辑：将当前所有数据填入 rapidjson 对象

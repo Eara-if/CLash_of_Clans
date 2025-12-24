@@ -6,6 +6,11 @@
 #include "ShopScene.h"
 #include "SaveGame.h"
 #include "AudioEngine.h"
+#include "network/HttpClient.h" // 必须
+#include "json/document.h"
+#include "json/writer.h"
+#include "json/stringbuffer.h"
+using namespace cocos2d::network;
 USING_NS_CC;
 extern int coin_count = 5000;
 extern int water_count = 5000;
@@ -14,6 +19,7 @@ extern int gem_count = 500;
 extern int coin_limit = 5000;
 extern int water_limit = 5000;
 extern int gem_limit = 5000;
+extern std::string g_currentUsername;
 
 cocos2d::Vector<Building*> g_allPurchasedBuildings;// ????????????????????
 
@@ -290,68 +296,53 @@ void GameScene::menuGotoBattleCallback(Ref* pSender)
 }
 bool GameScene::init()
 {
+    if (!Scene::init()) return false;
+
+    extern std::string g_currentUsername;
+
+    // 1. 【所有权初始化】
+    // 如果是从 loadOtherPlayerData 传过来的值，则保持；如果是首次登录进入，则设为自己
+    if (_currentSceneOwner.empty()) {
+        _currentSceneOwner = g_currentUsername;
+    }
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
+    // 2. 【加载地图】
     _tiledMap = TMXTiledMap::create("Grass.tmx");
     if (!_tiledMap) {
         log("Error: Failed to load map!");
         return false;
     }
-    this->addChild(_tiledMap, 1); // Z-Order ��Ϊ 1 (֮ǰ�޸�������ͻ�ĵ�)
+    this->addChild(_tiledMap, 1);
 
-    // ============================================================
-    // �������޸� 1�������ʼ���ţ��õ�ͼ������ʾ����Ļ��
-    // ============================================================
+    // 适配屏幕缩放
     Size mapSize = _tiledMap->getContentSize();
-
-    // ���� X ��� Y ��ֱ���Ҫ�����ű���
     float scaleX = visibleSize.width / mapSize.width;
     float scaleY = visibleSize.height / mapSize.height;
-
-    // ȡ���ߵĽ�Сֵ����֤��ͼ������ȫ������Ļ�����ᱻ�е�
     float minScale = std::min(scaleX, scaleY);
-
-    // ���ó�ʼ����
     _tiledMap->setScale(minScale);
 
-    // ��������һ�α߽����������������Զ������ź�ĵ�ͼ�����С���ʾ
     this->checkAndClampMapPosition();
-
-    // ������������ӽ���֮ǰ�������¼����˿�����
     this->recalculateArmyLimit();
 
-    // ============================================================
-    // �������޸� 2�������ͼ�ġ��������ġ� (Local Coordinate)
-    // ============================================================
-    // ע�⣺��Ҫ����Ļ���ģ�Ҫ�õ�ͼ���ģ�
-    Vec2 mapCenterLocal = Vec2(mapSize.width / 2, mapSize.height / 2);
+    // 3. 【加载地图装饰物/障碍物】
     auto objectGroup = _tiledMap->getObjectGroup("Objects");
-    //����ͼ�ж�������
     if (objectGroup) {
         ValueVector objects = objectGroup->getObjects();
-
         for (const auto& v : objects) {
             ValueMap dict = v.asValueMap();
-
-            if (dict.find("fileName") != dict.end())
-            {
+            if (dict.find("fileName") != dict.end()) {
                 std::string path = dict["fileName"].asString();
-
                 auto sprite = Sprite::create(path);
-
                 if (sprite) {
                     _tiledMap->addChild(sprite, 1);
-
                     this->addObstacle(sprite);
                     sprite->setAnchorPoint(Vec2::ZERO);
-                    sprite->getTexture()->setAliasTexParameters();
-
                     float x = dict["x"].asFloat();
                     float y = dict["y"].asFloat();
-
                     sprite->setPosition(x, y + 150);
-
                     if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
                         float width = dict["width"].asFloat();
                         float height = dict["height"].asFloat();
@@ -359,107 +350,69 @@ bool GameScene::init()
                         sprite->setScaleX(width / sprite->getContentSize().width);
                         sprite->setScaleY(height / sprite->getContentSize().height);
                     }
-
                     sprite->setLocalZOrder(10000 - (int)y);
-                }
-                else {
-                    log("Error: Can't load image: %s", path.c_str());
                 }
             }
         }
     }
 
-    auto backLabel = Label::createWithTTF("Back", "fonts/Marker Felt.ttf", 36);
-    backLabel->setTextColor(Color4B::YELLOW);
+    // 4. 【生成/加载建筑】
+    if (_currentSceneOwner == g_currentUsername) {
+        this->reloadBuildingsFromSave(); // 调用我们写好的同步函数
+    }
+    // 5. 【UI 资源条显示】
+    myCoin = new goldcoin();
+    myCoin->print(this);
+    _coinTextLabel = this->showText("Coin " + std::to_string(coin_count), origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 50, Color4B::WHITE);
 
+    mywater = new water();
+    mywater->print(this);
+    _waterTextLabel = this->showText("Water " + std::to_string(water_count), origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
+
+    mygem = new Gem();
+    mygem->print(this);
+    _gemTextLabel = this->showText("Gem " + std::to_string(gem_count), origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
+
+    // 6. 【功能按钮】
+    this->addShopButton();
+    this->addSaveButton();
+
+    // Back 按钮 (左下角)
     auto backItem = MenuItemFont::create("Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
-
     backItem->setColor(Color3B::YELLOW);
-
-    float x = origin.x + backItem->getContentSize().width / 2 + 20;
-    float y = origin.y + backItem->getContentSize().height / 2 + 20;
-    backItem->setPosition(Vec2(x, y));
+    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20, origin.y + backItem->getContentSize().height / 2 + 20));
     auto menu = Menu::create(backItem, NULL);
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 100);
 
-
-    bool hasBaseBuilding = false;
-    bool hasBarracksBuilding = false;
-    for (auto& building : g_allPurchasedBuildings) {
-        if (building) {
-            if (building->getType() == BuildingType::BASE) {
-                hasBaseBuilding = true;
-            }
-            else if (building->getType() == BuildingType::BARRACKS) {
-                hasBarracksBuilding = true;
-            }
-        }
-    }
-
-    // ���û�л��ؽ���������Ĭ�ϵ�
-    if (!hasBaseBuilding) {
-        // ʹ�� getNearestFreePosition Ѱ�����ĸ�������Ŀյ� (��ֹ���������п���)
-        // ����� mapCenterLocal �ǵ�ͼ�ڲ����꣬����ֱ�Ӵ��� getNearestFreePosition (����֮ǰ�޹���������������� Local)
-        // ע�⣺�������ǻ�û���� Building �����޷����� getNearestFreePosition ���С��
-        // ���������ȼ򵥵ش� targetPos���� setbuilding �ڲ������ֶ�΢��
-
-        // �򵥴����ֱ�ӳ��Է������ģ��Ժ� setbuilding �ᴦ�� ZOrder
-        this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, mapCenterLocal);
-        CCLOG("Created default base at Map Center");
-    }
-
-    // ����Ĭ�ϱ�Ӫ (���ڵ�ͼ������΢ƫ��һ���λ��)
-    if (!hasBarracksBuilding) {
-        Vec2 barracksPos = mapCenterLocal + Vec2(200, 0); // ����ƫ�� 200 ����
-        this->setbuilding("junying.png", Rect::ZERO, "My junying", 500, BuildingType::BARRACKS, barracksPos);
-        CCLOG("Created default barracks near Map Center");
-    }
-
-
-
-    // ��������ѹ���Ľ���
-    this->addAllPurchasedBuildings();
-
-    myCoin = new goldcoin();
-    myCoin->print(this);
-
-    std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
-    _coinTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 50, Color4B::WHITE);
-
-    mywater = new water();
-    mywater->print(this);
-    txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
-
-    _waterTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 120, Color4B::WHITE);
-
-    mygem = new Gem();
-    mygem->print(this);
-    txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
-    _gemTextLabel = this->showText(txt, origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
-
-
-    this->addShopButton();
-    this->addSaveButton(); // �����������ñ�����Ϸ��ť���ֺ���
-
+    // 7. 【交互监听】
     isMapDragging = false;
-
-    // 2. ��Ӵ������� (�����ƶ���ͼ)
-    // ע�⣺����Ҫ�������������Ϊ�ϵ͵����ȼ��������������ɴ���
-    // ����Ϊ����Ҫ�㽨�����������ﲻ���ɣ�����ͨ���߼��ж�
     auto touchListener = EventListenerTouchOneByOne::create();
-    touchListener->setSwallowTouches(true); // ��Ϊtrue������ onTouchBegan ���ж�
+    touchListener->setSwallowTouches(true);
     touchListener->onTouchBegan = CC_CALLBACK_2(GameScene::onTouchBegan, this);
     touchListener->onTouchMoved = CC_CALLBACK_2(GameScene::onTouchMoved, this);
     touchListener->onTouchEnded = CC_CALLBACK_2(GameScene::onTouchEnded, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, _tiledMap);
 
-    // 3. ��������� (���ڹ�������)
     auto mouseListener = EventListenerMouse::create();
     mouseListener->onMouseScroll = CC_CALLBACK_1(GameScene::onMouseScroll, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
+
+    // 8. 【社交与自动保存逻辑】
+    this->setupLeftPanel(); // 加载左侧玩家列表
+
+    // 只有在【自己家】才开启每 60 秒一次的自动保存
+    if (_currentSceneOwner == g_currentUsername) {
+        this->schedule(CC_CALLBACK_1(GameScene::onAutoSave, this), 60.0f, "auto_save_key");
+        log("Auto-save ENABLED for: %s", _currentSceneOwner.c_str());
+    }
+    else {
+        log("Visiting Mode: Auto-save DISABLED.");
+    }
+
     return true;
 }
+
 
 Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color4B color)
 {
@@ -470,6 +423,44 @@ Label* GameScene::showText(std::string content, float x, float y, cocos2d::Color
         this->addChild(label, 100);
     }
     return label;
+}
+
+void GameScene::reloadBuildingsFromSave() {
+    if (!_tiledMap) return;
+
+    // 1. 清理当前地图上旧的建筑
+    for (auto b : _allBuildings) {
+        if (b->getParent()) b->removeFromParent();
+    }
+    _allBuildings.clear();
+
+    // 2. 核心判断：存档容器到底有没有货？
+    if (g_allPurchasedBuildings.empty()) {
+        // --- 情况 A：真的是新玩家（或存档还没加载到） ---
+        Size mapSize = _tiledMap->getContentSize();
+        Vec2 center = Vec2(mapSize.width / 2, mapSize.height / 2);
+
+        // 创建初始建筑
+        this->setbuilding("House.png", Rect::ZERO, "My House", 500, BuildingType::BASE, center);
+        this->setbuilding("junying.png", Rect::ZERO, "My junying", 500, BuildingType::BARRACKS, center + Vec2(200, 0));
+        log("reload: No data found, showing default buildings.");
+    }
+    else {
+        // --- 情况 B：老玩家，且存档数据已经就位 ---
+        for (auto& building : g_allPurchasedBuildings) {
+            if (building) {
+                if (building->getParent()) building->removeFromParent();
+                _tiledMap->addChild(building, 2);
+                _allBuildings.pushBack(building);
+                this->addObstacle(building);
+                building->setPosition(building->getPosition());
+            }
+        }
+        log("reload: Successfully restored %d buildings.", (int)g_allPurchasedBuildings.size());
+    }
+
+    this->recalculateArmyLimit();
+    this->updateResourceDisplay();
 }
 
 void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int cost, BuildingType type1, cocos2d::Vec2 position)
@@ -629,14 +620,60 @@ void GameScene::onTouchEnded(Touch* touch, Event* event)
 }
 void GameScene::menuBackCallback(Ref* pSender)
 {
-    log("Back button clicked!");
-    // 1. ???? HelloWorld ????
-    // ???????????????????
-    auto scene = HelloWorld::createScene();
+    log("Back button clicked! Syncing to cloud before exit...");
 
-    // 2. ?��????? (????? 0.5?? ??????��)
-    // ???????????? TransitionSlideInL::create(...) ????????��??
-    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+    // --- 权限检查 (防止访问别人家时点返回把别人家的数据存到自己名下) ---
+    extern std::string g_currentUsername;
+    if (this->_currentSceneOwner != g_currentUsername) {
+        log("Visiting mode: Skip cloud save, just return.");
+        // 如果是访问模式，直接清空并返回，不触发保存
+        g_allPurchasedBuildings.clear();
+        auto scene = HelloWorld::createScene();
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+        return;
+    }
+
+    // 1. 获取 JSON (确保此时 g_allPurchasedBuildings 是最新的)
+    std::string currentData = SaveGame::getInstance()->getGameStateAsJsonString();
+
+    // 2. 准备网络请求
+    auto request = new (std::nothrow) cocos2d::network::HttpRequest();
+    request->setUrl("http://100.80.248.229:5000/save"); // 注意：这是你 Python 服务器的地址
+    request->setRequestType(cocos2d::network::HttpRequest::Type::POST);
+
+    // 设置请求头，告诉服务器我们要发 JSON
+    std::vector<std::string> headers;
+    headers.push_back("Content-Type: application/json; charset=utf-8");
+    request->setHeaders(headers);
+
+    // 3. 构造发送给服务器的完整包 (包含用户名和存档数据)
+    // 假设你在 SharedData.h 中定义了全局变量 g_currentUsername
+    extern std::string g_currentUsername;
+
+    // 这里构造一个合法的 JSON 字符串
+    std::string postData = "{\"username\":\"" + g_currentUsername + "\", \"gameData\":" + currentData + "}";
+    request->setRequestData(postData.c_str(), postData.length());
+
+    // 4. 设置回调：无论成功失败，最后都要切换场景
+    request->setResponseCallback([=](cocos2d::network::HttpClient* client, cocos2d::network::HttpResponse* response) {
+        if (response && response->isSucceed()) {
+            log("Cloud Save Success!");
+        }
+        else {
+            log("Cloud Save Failed!");
+        }
+
+        // 【关键修复点】：在离开场景前，必须彻底清空全局容器
+        // 否则下次登录或切换回来时，旧的指针还在 vector 里，会导致建筑重叠或报错
+        g_allPurchasedBuildings.clear();
+
+        // 切换场景
+        auto scene = HelloWorld::createScene();
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+        });
+
+    cocos2d::network::HttpClient::getInstance()->send(request);
+    request->release();
 }
 
 void GameScene::addShopButton() {
@@ -735,51 +772,56 @@ void GameScene::addAllPurchasedBuildings() {
 }
 
 void GameScene::onEnter() {
-    Scene::onEnter();
+    cocos2d::Scene::onEnter();
+
+    extern std::string g_currentUsername;
     AudioEngine::stopAll();
-    this->updateResourceDisplay();
 
-    // ???????????????????????????????
+    // 【关键修复 1】：进入场景前，清空当前场景的逻辑容器，防止重复添加
+    _allBuildings.clear();
+    // 如果你有 _obstacles 容器，也建议清空一下
+    // _obstacles.clear(); 
+
+    // 【核心渲染逻辑】
     for (auto& building : g_allPurchasedBuildings) {
-        if (building && !building->getParent()) {
-            _tiledMap->addChild(building, 10);
-            Size mapSize = _tiledMap->getContentSize();
-            auto visibleSize = Director::getInstance()->getVisibleSize();
-            if (building->getPositionX() == 0 && building->getPositionY() == 0) {
+        if (building) {
+            // 【关键修复 2】：强行断开旧父节点。
+            // 只有先执行这个，addChild 到新地图才不会报错
+            if (building->getParent()) {
+                building->removeFromParent();
+            }
 
+            // 添加到当前地图
+            _tiledMap->addChild(building, 10);
+
+            // 【关键修复 3】：只有真正坐标为 0 的新建筑才自动找位置
+            // 已经保存过坐标的老建筑不要去动它的 Position
+            if (building->getPositionX() == 0 && building->getPositionY() == 0) {
+                Size mapSize = _tiledMap->getContentSize();
                 Vec2 center = Vec2(mapSize.width / 2, mapSize.height / 2);
                 Vec2 pos = getNearestFreePosition(building, center);
-                auto x = pos.x;
-                auto y = pos.y;
-                building->setPosition(x, y);
+                building->setPosition(pos);
             }
+
+            // 重新绑定碰撞逻辑（障碍物列表）
             this->addObstacle(building);
-            // ˢ��UI
+
+            // 重新绑定回调（确保 UI 刷新逻辑指向当前最新的场景实例）
             building->setOnUpgradeCallback([=]() {
-                // ���¼����˿����ޣ�����Ǳ�Ӫ���Ӫ��
                 if (building->getType() == BuildingType::BARRACKS) {
                     this->recalculateArmyLimit();
                 }
-                if (_coinTextLabel) {
-                    std::string txt = "Coin " + std::to_string(coin_count) + "/" + std::to_string(coin_limit);
-                    _coinTextLabel->setString(txt);
-                }
-                if (_waterTextLabel) {
-                    std::string txt = "Water " + std::to_string(water_count) + "/" + std::to_string(water_limit);
-                    _waterTextLabel->setString(txt);
-                }
-                if (_gemTextLabel) {
-                    std::string txt = "Gem " + std::to_string(gem_count) + "/" + std::to_string(gem_limit);
-                    _gemTextLabel->setString(txt);
-                }
-                this->updateResourceDisplay();
+                this->updateResourceDisplay(); // 建议直接封装一个总刷新函数
                 });
 
+            // 加入当前场景的活跃建筑容器
             _allBuildings.pushBack(building);
         }
     }
-    // �����������볡�������¼����˿�����
+
+    // 刷新显示
     this->recalculateArmyLimit();
+    this->updateResourceDisplay();
     AudioEngine::play2d("music/1.ogg", true, 0.5f);
 }
 
@@ -973,4 +1015,165 @@ void GameScene::recalculateArmyLimit()
 
     // ����UI��ʾ�������Ҫ��
     this->updateResourceDisplay();
+}
+
+// GameScene.cpp
+
+// 1. 通用的气泡提示函数 (Toast)
+void GameScene::showToast(std::string message, Color3B color) {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto label = Label::createWithTTF(message, "fonts/Marker Felt.ttf", 30);
+    label->setColor(color);
+    label->enableOutline(Color4B::BLACK, 2);
+    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+    this->addChild(label, 1000); // 放在最上层
+
+    // 动画：出现 -> 停留 -> 上浮消失
+    label->runAction(Sequence::create(
+        FadeIn::create(0.2f),
+        DelayTime::create(1.0f),
+        Spawn::create(MoveBy::create(0.5f, Vec2(0, 50)), FadeOut::create(0.5f), nullptr),
+        RemoveSelf::create(),
+        nullptr
+    ));
+}
+
+void GameScene::onManualSaveClicked() {
+    // 只有在自己的基地时才允许存盘
+    extern std::string g_currentUsername;
+    if (this->_currentSceneOwner != g_currentUsername) {
+        this->showToast("Cannot save while visiting!", Color3B::RED);
+        return;
+    }
+
+    // 调用 SaveGame 的同步逻辑，并传入 Lambda 回调来显示 UI 反馈
+    SaveGame::getInstance()->syncDataToCloud([this](bool success) {
+        if (success) {
+            this->showToast("Save Success!", Color3B::GREEN);
+        }
+        else {
+            this->showToast("Save Failed!", Color3B::RED);
+        }
+        });
+}
+
+// 3. 定时器回调
+void GameScene::onAutoSave(float dt) {
+    log("Auto-saving...");
+    SaveGame::getInstance()->syncDataToCloud([this](bool success) {
+        if (success) {
+            log("Auto save success.");
+        }
+        });
+}
+
+// GameScene.cpp
+
+void GameScene::setupLeftPanel() {
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+
+    // 1. 创建左侧背景条
+    auto panel = LayerColor::create(Color4B(0, 0, 0, 150), 120, visibleSize.height - 100);
+    panel->setPosition(origin.x, origin.y + 50);
+    this->addChild(panel, 100);
+
+    // 2. 标题
+    auto title = Label::createWithTTF("Neighbors", "fonts/Marker Felt.ttf", 20);
+    title->setPosition(60, panel->getContentSize().height - 20);
+    panel->addChild(title);
+
+    // 3. 从服务器获取列表
+    auto request = new HttpRequest();
+    request->setUrl("http://100.80.248.229:5000/users");
+    request->setRequestType(HttpRequest::Type::GET);
+    request->setResponseCallback([=](HttpClient* client, HttpResponse* response) {
+        if (!response || !response->isSucceed()) return;
+
+        std::vector<char>* buffer = response->getResponseData();
+        std::string resultStr(buffer->begin(), buffer->end());
+
+        rapidjson::Document doc;
+        doc.Parse(resultStr.c_str());
+
+        if (doc.HasMember("users") && doc["users"].IsArray()) {
+            auto users = doc["users"].GetArray();
+
+            // 简单创建一个菜单列表
+            auto menu = Menu::create();
+            float startY = panel->getContentSize().height - 60;
+
+            // --- 新增：在列表最上方添加“回到自己家”的按钮 ---
+            extern std::string g_currentUsername;
+            auto homeLabel = Label::createWithTTF(">>> MY HOME <<<", "fonts/Marker Felt.ttf", 20);
+            homeLabel->setColor(Color3B::YELLOW); // 用黄色区分
+            auto homeItem = MenuItemLabel::create(homeLabel, [=](Ref* sender) {
+                log("Returning to own home: %s", g_currentUsername.c_str());
+                this->loadOtherPlayerData(g_currentUsername); // 加载自己的数据
+                });
+            homeItem->setPosition(60, startY);
+            menu->addChild(homeItem);
+            // ------------------------------------------
+
+            for (int i = 0; i < users.Size(); i++) {
+                std::string name = users[i].GetString();
+                if (name == g_currentUsername) continue; // 列表里依然跳过自己
+
+                auto label = Label::createWithTTF(name, "fonts/Marker Felt.ttf", 18);
+                auto item = MenuItemLabel::create(label, [=](Ref* sender) {
+                    this->loadOtherPlayerData(name);
+                    });
+                // i + 1 是为了给上面的 My Home 留出位置
+                item->setPosition(60, startY - ((i + 1) * 30));
+                menu->addChild(item);
+            }
+            menu->setPosition(Vec2::ZERO);
+            panel->addChild(menu);
+        }
+        });
+    HttpClient::getInstance()->send(request);
+    request->release();
+}
+
+void GameScene::loadOtherPlayerData(std::string targetUsername) {
+    // 请求那个人的数据
+    auto request = new HttpRequest();
+    request->setUrl("http://100.80.248.229:5000/get_user_data");
+    request->setRequestType(HttpRequest::Type::POST);
+
+    std::string postData = "{\"username\":\"" + targetUsername + "\"}";
+    request->setRequestData(postData.c_str(), postData.length());
+    request->setHeaders({ "Content-Type: application/json" });
+
+    request->setResponseCallback([=](HttpClient* client, HttpResponse* response) {
+        if (response && response->isSucceed()) {
+            std::vector<char>* buffer = response->getResponseData();
+            std::string res(buffer->begin(), buffer->end());
+
+            rapidjson::Document doc;
+            doc.Parse(res.c_str());
+
+            if (doc.HasMember("data") && doc["data"].IsString()) {
+                std::string saveData = doc["data"].GetString();
+
+                // 1. 彻底清空全局建筑容器（这是解决重叠的关键）
+                g_allPurchasedBuildings.clear();
+
+                // 2. 告诉 SaveGame 重新开始（重置它内部的变量）
+                SaveGame::getInstance()->loadFromRemoteString(saveData);
+
+                auto scene = GameScene::create();
+                // 找到新场景对象，并标记它现在属于谁
+                auto gameLayer = static_cast<GameScene*>(scene);
+                gameLayer->_currentSceneOwner = targetUsername;
+
+                // 4. 跳转
+                Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+
+                log("Now viewing %s's home", targetUsername.c_str());
+            }
+        }
+        });
+    HttpClient::getInstance()->send(request);
+    request->release();
 }

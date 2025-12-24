@@ -8,8 +8,7 @@ bool AirforceSoldier::init(BattleScene* battleScene, SoldierType type)
     this->setupProperties(type);
     this->setupHealthBar();
 
-    // 【新增】添加地面的阴影
-    // 使用 DrawNode 画一个半透明黑色椭圆，或者用 Sprite
+    // 使用 DrawNode 画一个半透明黑色椭圆
     auto shadow = DrawNode::create();
     // 画一个扁的椭圆模拟阴影
     shadow->drawSolidCircle(Vec2::ZERO, 15.0f, 0.0f, 20, 0.5f, 1.0f, Color4F(0, 0, 0, 0.4f));

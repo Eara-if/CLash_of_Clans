@@ -6,6 +6,7 @@
 #include"MapTrap.h"
 #include "SharedData.h"
 #include "json/document.h"
+#include "SaveGame.h"
 
 USING_NS_CC;
 extern int coin_count;
@@ -63,22 +64,29 @@ Scene* BattleScene::createScene(int levelIndex, std::string pvpJsonData)
 
 void BattleScene::setupBattle(int levelIndex, std::string pvpJsonData)
 {
+    // 防御性检查：防止重复调用或状态错乱
+    if (_tileMap != nullptr) return;
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 1. 确定地图文件名
+    // 1. 加载地图数据
     if (levelIndex > 0) {
         _mapFileName = StringUtils::format("Enemy_map%d.tmx", levelIndex);
-        this->loadLevelCampaign(levelIndex); // 内部会创建 _tileMap
+        this->loadLevelCampaign(levelIndex);
     }
     else {
         _mapFileName = "BaseMap.tmx";
-        this->loadLevelPVP(pvpJsonData); // 内部会创建 _tileMap
+        this->loadLevelPVP(pvpJsonData);
     }
 
-    // 检查地图是否加载成功
-    if (!_tileMap) {
-        log("Map load failed!");
+    // --- 关键检查 ---
+    if (!_tileMap || _tileMap->getParent() == nullptr) {
+        log("CRITICAL ERROR: Map load failed or addChild missing!");
+        // 给用户一个反馈，而不是直接关掉
+        auto label = Label::createWithTTF("Map File Missing!", "fonts/arial.ttf", 32);
+        label->setPosition(visibleSize / 2);
+        this->addChild(label);
         return;
     }
 
@@ -171,14 +179,15 @@ void BattleScene::update(float dt)
 
 void BattleScene::menuBackToGameScene(Ref* pSender)
 {
-    // �����Ϸ�ѽ�������ʾʤ������ʱ�������������
     if (_isGameOver) {
         hideVictoryPopup();
         _isGameOver = false;
         _isGamePaused = false;
     }
 
-    Director::getInstance()->popScene();
+    // 调用带参数的 createScene，传入 nullptr
+    auto scene = GameScene::createScene(nullptr);
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }
 
 void BattleScene::checkGameEnd()
@@ -271,20 +280,25 @@ void BattleScene::showVictoryPopup()
     if (_mapFileName == "Enemy_map1.tmx") {
         if (DataManager::getInstance()->getMaxLevelUnlocked() < 2) {
             DataManager::getInstance()->setMaxLevelUnlocked(2);
+            UserDefault::getInstance()->setIntegerForKey("CurrentLevel", 2);
         }
     }
     // �����ǰ���ص��� map2��������� 3����ʱ�վ�������
     else if (_mapFileName == "Enemy_map2.tmx") {
         if (DataManager::getInstance()->getMaxLevelUnlocked() < 3) {
             DataManager::getInstance()->setMaxLevelUnlocked(3);
+            UserDefault::getInstance()->setIntegerForKey("CurrentLevel", 3);
         }
     }
     // �����ǰ���ص��� map2��������� 3����ʱ�վ�������
     else if (_mapFileName == "Enemy_map3.tmx") {
         if (DataManager::getInstance()->getMaxLevelUnlocked() < 4) {
             DataManager::getInstance()->setMaxLevelUnlocked(4);
+            UserDefault::getInstance()->setIntegerForKey("CurrentLevel", 4);
         }
     }
+    UserDefault::getInstance()->flush();
+    SaveGame::getInstance()->syncDataToCloud();
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
     Vec2 center = Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y);
@@ -486,243 +500,116 @@ void BattleScene::hideVictoryPopup()
 
 void BattleScene::loadLevelCampaign(int levelIndex)
 {
-    // ================= 1. ���� Tiled Map (ֻ����һ��) =================
-    // ��������ֻʹ�� _mapFileName �������ص�ͼ��
+    // 1. 【路径修正】：直接从根目录加载 Enemy_map%d.tmx
+    _mapFileName = StringUtils::format("Enemy_map%d.tmx", levelIndex);
     _tileMap = TMXTiledMap::create(_mapFileName);
 
     if (!_tileMap) {
-        // �������ʧ�ܣ������־������
-        log("Error: Failed to load TMX map: %s", _mapFileName.c_str());
-        return;
+        log("CRITICAL ERROR: Map file %s not found in Resources!", _mapFileName.c_str());
+        // 保底逻辑：如果找不到，尝试加载第一关，若还找不到则直接返回防止后续 addChild(nullptr) 崩溃
+        _tileMap = TMXTiledMap::create("Enemy_map1.tmx");
+        if (!_tileMap) return;
     }
 
+    // 2. 添加到场景并设置层级
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // ���õ�ͼλ�ã�����
     float mapWidth = _tileMap->getContentSize().width;
     float mapHeight = _tileMap->getContentSize().height;
 
+    // 居中地图
     _tileMap->setPosition(Vec2(
         origin.x + (visibleSize.width - mapWidth) / 2,
         origin.y + (visibleSize.height - mapHeight) / 2
     ));
 
-    // Z-order ��Ϊ -1 ��֤�ڵذ��
+    // 地图放在最底层
     this->addChild(_tileMap, -1);
 
-    // ================= 2. ��������� (Object Layer) =================
-    // ��Ӧ Tiled ��� "object" ��
+    // 3. 【核心修复】：合并后的对象解析逻辑
     auto objectGroup = _tileMap->getObjectGroup("object");
-
     if (objectGroup) {
-        auto& objects = objectGroup->getObjects();
+        ValueVector objects = objectGroup->getObjects();
 
-        for (auto& obj : objects) {
-            ValueMap& dict = obj.asValueMap();
-
-            // ��ȡ��������
+        for (auto& v : objects) {
+            ValueMap dict = v.asValueMap();
             std::string name = dict["name"].asString();
             float x = dict["x"].asFloat();
             float y = dict["y"].asFloat();
             float w = dict["width"].asFloat();
             float h = dict["height"].asFloat();
-            if (dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png" || dict["fileName"].asString() == "Tree2.png") {
-                y += 100;
-            }
+
+            // A. 处理禁放区（除了炸弹以外的所有建筑/障碍物区域）
             if (name != "boom") {
+                // 将地图局部坐标转换为世界坐标，用于放置士兵时的碰撞检测
                 Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
                 Rect worldRect(worldPos.x, worldPos.y, w, h);
                 _forbiddenRects.push_back(worldRect);
             }
 
-            // 2. ����ʵ����� (Base �� Tower)����ӵ� _tileMap �� (ʹ�þֲ����� x, y)
-
-            // ----------------------------------------------------
-            // ���� A: ��Ӫ (Base)
-            // ----------------------------------------------------
+            // B. 处理逻辑单位 (Base, Tower, Cannon, Wall)
             if (name == "Base") {
-                int hp = dict["HP"].asInt();
-                if (hp == 0) hp = 80;
-
-                int damagePerNotch = hp / 4; // ʾ��: 80 / 4 = 20
-                if (damagePerNotch == 0) damagePerNotch = 1; // ��������Ѫ��̫�͵��� Notch Ϊ 0
-
-                // ���� Base
-                _base = EnemyBuilding::create(
-                    "map/buildings/Base.png",
-                    "ui/Heart2.png",
-                    hp,
-                    damagePerNotch,
-                    0,
-                    0.0f // Base ������
-                );
-
+                int hp = dict.count("HP") ? dict["HP"].asInt() : 80;
+                _base = EnemyBuilding::create("map/buildings/Base.png", "ui/Heart2.png", hp, hp / 4, 0, 0.0f);
                 if (_base) {
                     _base->setType(EnemyType::BASE);
                     _base->setPosition(x + w / 2, y + h / 2);
                     _tileMap->addChild(_base, 3);
                 }
             }
+            else if (name == "tower" || name == "cannon") {
+                int hp = dict.count("HP") ? dict["HP"].asInt() : 50;
+                int atk = dict.count("Attack") ? dict["Attack"].asInt() : 10;
+                float range = 250.0f;
+                std::string img = (name == "tower") ? "map/buildings/TilesetTowers.png" : "map/buildings/Cannon1.png";
 
-            // ----------------------------------------------------
-            // ���� B: ������ (tower)
-            // ----------------------------------------------------
-            // �ڽ��� "tower" �ĵط���
-
-            else if (name == "tower") {
-                int hp = dict["HP"].asInt();
-                int atk = dict["Attack"].asInt(); // ����������
-                float range = 250.0f;//������� 250, ������ TMX ����һ�� "Range" ���Զ�����
-
-                // ���� notch
-                int damagePerNotch = hp / 4;
-                if (damagePerNotch == 0) damagePerNotch = 1;
-
-                // ʹ���µ� create ����
-                auto tower = EnemyBuilding::create(
-                    "map/buildings/TilesetTowers.png",
-                    "ui/Heart2.png",
-                    hp,
-                    damagePerNotch,
-                    atk,   // ���빥����
-                    range  // �������
-                );
-
-                if (tower) {
-                    tower->setPosition(x + w / 2, y + h / 2);
-                    // ��������ȷ����ͨ�����Ϊ TOWER
-                    tower->setType(EnemyType::TOWER);
-                    _tileMap->addChild(tower, 3);
-                    // �����б��ʿ��Ѱ��
-                    _towers.pushBack(tower);
-                }
-            }
-            else if (name == "cannon") {
-                int hp = dict["HP"].asInt();
-                int atk = dict["Attack"].asInt(); // ����������
-                float range = 200.0f;//������� 250, ������ TMX ����һ�� "Range" ���Զ�����
-
-                // ���� notch
-                int damagePerNotch = hp / 4;
-                if (damagePerNotch == 0)
-                    damagePerNotch = 1;
-
-                // ʹ���µ� create ����
-                auto cannon = EnemyBuilding::create(
-                    "map/buildings/Cannon1.png",
-                    "ui/Heart2.png",
-                    hp,
-                    damagePerNotch,
-                    atk,   // ���빥����
-                    range  // �������
-                );
-
-                if (cannon) {
-                    cannon->setPosition(x + w / 2, y + h / 2);
-                    // ����������ʽ����Ϊ CANNON ����
-                    cannon->setType(EnemyType::CANNON);
-                    _tileMap->addChild(cannon, 3);
-                    // �����б��ʿ��Ѱ��
-                    _towers.pushBack(cannon);
+                auto building = EnemyBuilding::create(img, "ui/Heart2.png", hp, hp / 4, atk, range);
+                if (building) {
+                    building->setType(name == "tower" ? EnemyType::TOWER : EnemyType::CANNON);
+                    building->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(building, 3);
+                    _towers.pushBack(building);
                 }
             }
             else if (name == "fence") {
-                int hp = 40; // ǽͨ��Ѫ�ȽϺ�
-
-                // ǽû�й����������Ϊ0
-                int atk = 0;
-                float range = 0;
-
-                // ���� Notch (Ѫ������)
-                int damagePerNotch = hp / 4;
-                if (damagePerNotch == 0) damagePerNotch = 1;
-
-                // 2. ����ʵ��
-                // ע�⣺׼��һ�� fence.png �� vertical_fence.png (�����Ҫ���ŵ�)
-                auto fence = EnemyBuilding::create(
-                    "map/buildings/fence.png", // ���դ��ͼƬ·��
-                    "",
-                    hp,
-                    damagePerNotch,
-                    atk,
-                    range
-                );
-
+                auto fence = EnemyBuilding::create("map/buildings/fence.png", "", 40, 10, 0, 0);
                 if (fence) {
-                    fence->setPosition(x + w / 2, y + h / 2);
                     fence->setType(EnemyType::WALL);
-                    _tileMap->addChild(fence, 2); // �㼶������΢��һ��
+                    fence->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(fence, 2);
                     _towers.pushBack(fence);
                 }
             }
             else if (name == "boom") {
-                // ��ȡ�˺�����
-                int damage = dict["Damage"].asInt();
-                if (damage == 0) 
-                    damage = 1000; // Ĭ����ɱ���˺�
-
-                // ������������ (ʹ�õ�ͼ�ֲ����꣬��Ϊʿ���ƶ�Ҳ�ǻ��ڵ�ͼ����)
-                Rect trapRect(x, y, w, h);
-
-                // ������������
-                auto trap = MapTrap::create(trapRect, damage);
+                int damage = dict.count("Damage") ? dict["Damage"].asInt() : 1000;
+                auto trap = MapTrap::create(Rect(x, y, w, h), damage);
                 if (trap) {
-                    _tileMap->addChild(trap); // �ӵ���ͼ��
-                    _traps.pushBack(trap);    // ��������б�
+                    _tileMap->addChild(trap);
+                    _traps.pushBack(trap);
                 }
             }
-            // ----------------------------------------------------
-            // ���� C: �ϰ��� (Tree, grass)
-            // ----------------------------------------------------
-            else if (name == "grass"||name=="mine"||name=="root") {
-                // ����Ҫ����ʵ���࣬����� _forbiddenRects.push_back �Ѿ��������赲�߼�
-            }
-        }
-        auto objectGroup = _tileMap->getObjectGroup("object");
-        //����ͼ�ж�������
-        if (objectGroup) {
-            ValueVector objects = objectGroup->getObjects();
+            // C. 处理纯装饰物（基于 fileName 属性）
+            else if (dict.find("fileName") != dict.end()) {
+                std::string path = dict["fileName"].asString();
+                auto sprite = Sprite::create(path);
+                if (sprite) {
+                    sprite->setAnchorPoint(Vec2::ZERO);
+                    // 树木等装饰物向上偏移一点，视觉效果更好
+                    float yOffset = (path.find("Tree") != std::string::npos) ? 100.0f : 0.0f;
+                    sprite->setPosition(x, y + yOffset);
 
-            for (const auto& v : objects) {
-                ValueMap dict = v.asValueMap();
-
-                if (dict.find("fileName") != dict.end())
-                {
-                    std::string path = dict["fileName"].asString();
-
-                    auto sprite = Sprite::create(path);
-
-                    if (sprite) {
-                        _tileMap->addChild(sprite, 1);
-
-                        sprite->setAnchorPoint(Vec2::ZERO);
-                        sprite->getTexture()->setAliasTexParameters();
-
-                        float x = dict["x"].asFloat();
-                        float y = dict["y"].asFloat();
-
-                        sprite->setPosition(x, y + 100);
-
-                        if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
-                            float width = dict["width"].asFloat();
-                            float height = dict["height"].asFloat();
-
-                            sprite->setScaleX(width / sprite->getContentSize().width);
-                            sprite->setScaleY(height / sprite->getContentSize().height);
-                        }
-
-                        sprite->setLocalZOrder(3);
+                    // 设置缩放
+                    if (dict.count("width") && dict.count("height")) {
+                        sprite->setScaleX(dict["width"].asFloat() / sprite->getContentSize().width);
+                        sprite->setScaleY(dict["height"].asFloat() / sprite->getContentSize().height);
                     }
-                    else {
-                        log("Error: Can't load image: %s", path.c_str());
-                    }
+                    _tileMap->addChild(sprite, 2);
                 }
             }
         }
     }
 }
-
 void BattleScene::loadLevelPVP(const std::string& jsonContent)
 {
     // 1. 加载基础地图

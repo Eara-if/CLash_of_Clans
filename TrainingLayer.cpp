@@ -107,10 +107,15 @@ bool TrainingLayer::init()
                 return;
             }
 
-            // 3. ����ս�� (ԭ�߼�)
-            this->removeFromParent();
-            auto scene = BattleScene::createScene(levelRequired,mapName);
-            Director::getInstance()->pushScene(TransitionFade::create(0.5f, scene));
+            // 【重要修复 1】：不要 removeFromParent()！
+             // 我们可以直接 replaceScene，这样更彻底且不容易内存冲突
+
+            // 【重要修复 2】：确保参数传递正确。如果是闯关模式，传 levelIndex 即可
+            auto scene = BattleScene::createScene(levelRequired, "");
+
+            // 【重要修复 3】：使用 replaceScene 替代 pushScene 
+            // pushScene 会让两个场景同时占内存，手机端很容易崩
+            Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
             });
 
         btn->setPosition(center.x + 80, baseY + yOffset);

@@ -3,32 +3,32 @@
 #include "BattleScene.h"
 
 // =========================================================
-// 1. ×ÓÀà³õÊ¼»¯
+// 1. ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
 // =========================================================
 bool GiantSoldier::init(BattleScene* battleScene, SoldierType type)
 {
-    // 1. µ÷ÓÃ»ùÀàµÄ init£¬Íê³ÉÍ¨ÓÃ³õÊ¼»¯
+    // 1. ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ initï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½Ã³ï¿½Ê¼ï¿½ï¿½
     if (!Soldier::init(battleScene, type)) return false;
 
-    // 2. ÉèÖÃ¾ÞÈËÊ¿±ø¶ÀÓÐµÄÊôÐÔºÍÍ¼Æ¬ (±ØÐëÔÚµ÷ÓÃ setupHealthBar Ç°Íê³É)
+    // 2. ï¿½ï¿½ï¿½Ã¾ï¿½ï¿½ï¿½Ê¿ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ôºï¿½Í¼Æ¬ (ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ setupHealthBar Ç°ï¿½ï¿½ï¿½)
     this->setupProperties(type);
 
 
-    // 4. ³õÊ¼»¯ÑªÌõ£¨Ê¹ÓÃ»ùÀàµÄÊµÏÖ£©
+    // 4. ï¿½ï¿½Ê¼ï¿½ï¿½Ñªï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö£ï¿½
     this->setupHealthBar();
 
     return true;
 }
 
 // =========================================================
-// 2. ÊôÐÔÉèÖÃ (ÌØÓÐÂß¼­)
+// 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½)
 // =========================================================
 void GiantSoldier::setupProperties(SoldierType type)
 {
-    // ¼ÓÔØ¾ÞÈËµÄµÚÒ»Ö¡Í¼Æ¬
+    // ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ËµÄµï¿½Ò»Ö¡Í¼Æ¬
     if (!this->initWithFile(StringUtils::format("%s%d.png", WALK_ANIM_BASE.c_str(), 1))) return;
 
-    // ÉèÖÃ¾ÞÈËµÄÊôÐÔ
+    // ï¿½ï¿½ï¿½Ã¾ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½
     _maxHp = 100;
     _currentHp = _maxHp;
     _attackDamage = 3;
@@ -36,14 +36,14 @@ void GiantSoldier::setupProperties(SoldierType type)
     _attackInterval = 1.0f;
     _moveSpeed = 80.0f;
 
-    // ¼ÆËã¾ÞÈËµÄÃ¿¸ñÑªÁ¿
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ã¿ï¿½ï¿½Ñªï¿½ï¿½
     const int NOTCH_COUNT = 5;
     _damagePerNotch = _maxHp / NOTCH_COUNT;
     if (_damagePerNotch < 1) _damagePerNotch = 1;
 }
 
 // =========================================================
-// 3. ¶¯»­Âß¼­ (ÌØÓÐÂß¼­)
+// 3. ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½)
 // =========================================================
 void GiantSoldier::playWalkAnim()
 {
