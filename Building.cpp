@@ -1,10 +1,10 @@
 #include "Building.h"
-#include "BuildingInfoLayer.h" // һ��Ҫ����֮ǰд�ĵ�����
+#include "BuildingInfoLayer.h" // 一定要引用之前写的弹窗类
 #include "BuildingUpgradeLimits.h"
 #include "GameScene.h"
 USING_NS_CC;
 
-// ����ȫ�ֱ��� (���߱�����ȥ��ĵط����������)
+// 引用全局变量 (告诉编译器去别的地方找这个变量)
 extern int coin_count;
 extern int water_count;
 extern int gem_count;
@@ -17,7 +17,7 @@ extern int gem_limit;
 Building* Building::create(const std::string& filename, const Rect& rect, const std::string& name, int baseCost, BuildingType type)
 {
     Building* ret = new (std::nothrow) Building();
-    if (ret && ret->init(filename, rect, name, baseCost, type)) // ���� type
+    if (ret && ret->init(filename, rect, name, baseCost, type)) // 传入 type
     {
         ret->autorelease();
         return ret;
@@ -31,33 +31,35 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
 
     if (rect.equals(Rect::ZERO))
     {
-        // initWithFile ֻ���ļ��������Ǽ�������ͼ
+        // initWithFile 只传文件名，就是加载整张图
         if (!Sprite::initWithFile(filename)) return false;
     }
     else
     {
-        // ���򣬰��� rect ���вü�
+        // 否则，按照 rect 进行裁剪
         if (!Sprite::initWithFile(filename, rect)) return false;
-        // ע�⣺��Щ�汾�� Cocos �ڴ� rect ��ʼ��ʱ����Ҫ�� setTextureRect��
-        // ��Ϊ�˱��������������״�����ʵ����ʾ����
+        // 注意：有些版本的 Cocos 在带 rect 初始化时不需要再 setTextureRect，
+        // 但为了保险起见，保持现状或根据实际显示调整
     }
 
-    type = type1; // ���������͡�
+    type = type1; // 【保存类型】
     a_level = 1;
     buildingName = name;
     baseCost1 = baseCost;
     state = BuildingState::IDLE;
     timeLeft = 0;
 
-    // ��ʼ��������ر���
+    // 初始化生产相关变量
     productionTimeLeft = 0;
-    productionAmount = 50; // Ĭ������50��Դ
+    productionAmount = 50; // 默认生产50资源
     isReadyToCollect = false;
     readyIndicator = nullptr;
 
-    // ����ǽ���ʥˮ�ռ�������ʼ����
+    // 【修改】金矿和圣水收集器初始状态为IDLE，不自动开始生产
+    // 需要玩家手动点击生产按钮
     if (type == BuildingType::MINE || type == BuildingType::WATER) {
-        startProduction();
+        state = BuildingState::IDLE;
+        // 不调用 startProduction()，等待玩家手动开始
     }
 
     this->initTouchListener();
@@ -69,11 +71,11 @@ bool Building::init(const std::string& filename, const Rect& rect, const std::st
 
 void Building::onEnter()
 {
-    // 1. ������ø��� onEnter
+    // 1. 必须调用父类 onEnter
     Sprite::onEnter();
 
-    // 2. ����ʱ�����ػ�
-    // ��Ϊ�Ǽ����Լ����ϣ�����������԰�ȫ�����ᵼ�� Crash
+    // 2. 进场时创建地基
+    // 因为是加在自己身上，所以这里绝对安全，不会导致 Crash
     this->createGroundEffect();
 }
 void Building::setOnUpgradeCallback(std::function<void()> callback)
@@ -83,77 +85,81 @@ void Building::setOnUpgradeCallback(std::function<void()> callback)
 
 int Building::getNextLevelCost()
 {
-    // �������߼���������ȼ�����
-    // ���磺1����2��=500��2����3��=1000��3����4��=1500
+    // 【核心逻辑】花费随等级增长
+    // 比如：1级升2级=500，2级升3级=1000，3级升4级=1500
     return baseCost1 * a_level;
 
-    // ������ָ�������� return _baseCost * std::pow(2, _level - 1);
+    // 或者是指数增长： return _baseCost * std::pow(2, _level - 1);
 }
-// ÿ֡�Զ�����
+// 每帧自动调用
 void Building::update(float dt)
 {
-    if (state == BuildingState::UPGRADING)
-    {
-        timeLeft -= dt; // �۳�ʱ��
+    // 升级倒计时
+    if (state == BuildingState::UPGRADING) {
+        timeLeft -= dt;
 
         if (timeLeft <= 0) {
-            this->finishUpgrade(); // ʱ�䵽�ˣ���ɣ�
+            this->finishUpgrade();
         }
     }
 
-    // ��������ʱ
+    // 生产倒计时
     if (type == BuildingType::MINE || type == BuildingType::WATER) {
         if (state == BuildingState::PRODUCING) {
             productionTimeLeft -= dt;
 
+            // 生产完成，自动转为READY状态
             if (productionTimeLeft <= 0) {
-                finishProduction();
+                productionTimeLeft = 0;
+                this->finishProduction();
             }
         }
     }
 
 }
-// ����������ʱ (���磺�ȼ� * 5��)
+// 计算升级耗时 (比如：等级 * 5秒)
 int Building::getUpgradeTime() {
-    return a_level * 5; // 1����2��Ҫ5�룬������
+    return a_level * 5; // 1级升2级要5秒，测试用
 }
 
-// ���������Ҫ�ı�ʯ (���磺1�� = 1��ʯ�����߹̶� 5 ��ʯ)
+// 计算加速需要的宝石 (比如：1秒 = 1宝石，或者固定 5 宝石)
 int Building::getSpeedUpCost() {
-    return std::ceil(timeLeft / 60); // �򵥴ֱ���ʣ�¼���ͼ�����ʯ
+    return std::ceil(timeLeft / 60); // 简单粗暴：剩下几秒就几个宝石
 }
 
 
 float Building::getTimeLeft()
 {
-    // ����ʣ�µ�ʱ��
-    // ���С��0���ͷ���0����ֹ��ʾ����
+    // 返回剩下的时间
+    // 如果小于0，就返回0，防止显示负数
     return (timeLeft > 0) ? timeLeft : 0;
 }
 
-// ��ʼ����
+// 开始生产
 void Building::startProduction()
 {
-    // ����Ƿ���������
+    // 检查状态：只有在IDLE状态下才能开始生产
+    if (state != BuildingState::IDLE) {
+        log("%s cannot start production: current state is %d",
+            buildingName.c_str(), (int)state);
+        return;
+    }
+
+    // 检查是否正在升级
     if (state == BuildingState::UPGRADING) {
         log("%s is upgrading, cannot start production!", buildingName.c_str());
         return;
     }
 
-    // ����Ƿ��Ѿ������ռ�
-    if (state == BuildingState::READY) {
-        log("%s has resources ready to collect!", buildingName.c_str());
-        return;
-    }
-
+    // 设置为生产状态
     state = BuildingState::PRODUCING;
-    productionTimeLeft = 5.0f; // 5����������
+    productionTimeLeft = 5.0f; // 5秒生产周期
     isReadyToCollect = false;
 
-    // ���ݵȼ�������������ÿ������50��Դ
+    // 根据等级计算生产量
     productionAmount = 50 * a_level;
 
-    // �Ƴ����ռ���ʾ
+    // 移除可收集提示（如果有）
     if (readyIndicator) {
         readyIndicator->removeFromParent();
         readyIndicator = nullptr;
@@ -163,16 +169,23 @@ void Building::startProduction()
         buildingName.c_str(), productionTimeLeft, productionAmount);
 }
 
-// �������
+// 生产完成
 void Building::finishProduction()
 {
+    if (state != BuildingState::PRODUCING) {
+        log("%s cannot finish production: not in PRODUCING state", buildingName.c_str());
+        return;
+    }
+
     state = BuildingState::READY;
+    productionTimeLeft = 0;
     isReadyToCollect = true;
 
-    // ��ӿ��ռ���ʾ
+    // 添加可收集提示
     if (!readyIndicator) {
         readyIndicator = Sprite::create("ui/ready_indicator.png");
         if (!readyIndicator) {
+            // 如果图片不存在，创建一个简单的红色感叹号
             readyIndicator = Sprite::create();
             auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
             label->setColor(Color3B::RED);
@@ -187,9 +200,10 @@ void Building::finishProduction()
 
     log("%s production ready! Collect %d resources.",
         buildingName.c_str(), productionAmount);
+
 }
 
-// �ռ���Դ
+// 收集资源
 void Building::collectResources()
 {
     if (state == BuildingState::READY && isReadyToCollect) {
@@ -206,17 +220,17 @@ void Building::collectResources()
                 productionAmount, water_count);
         }
 
-        // ����UI��ʾ
+        // 更新UI显示
         auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
         if (gamescene) {
             gamescene->updateResourceDisplay();
         }
 
-        // �ռ���ص�IDLE״̬�������ѡ����һ���ж�
+        // 收集后回到IDLE状态，让玩家选择下一次行动
         state = BuildingState::IDLE;
         isReadyToCollect = false;
 
-        // �Ƴ����ռ���ʾ
+        // 移除可收集提示
         if (readyIndicator) {
             readyIndicator->removeFromParent();
             readyIndicator = nullptr;
@@ -226,31 +240,31 @@ void Building::collectResources()
     }
 }
 
-// ��ȡ����ʣ��ʱ��
+// 获取生产剩余时间
 float Building::getProductionTimeLeft() {
     return productionTimeLeft;
 }
 
-// ��ȡ���ռ�����Դ��
+// 获取可收集的资源量
 int Building::getProducedAmount() {
     return productionAmount;
 }
 
-// ��ʼ���� (ֻ��Ǯ�����ӵȼ�)
-// ����ȫ�ֱ��� (����Ҫ�������ʵ�ʱ������޸�����)
+// 开始升级 (只扣钱，不加等级)
+// 引入全局变量 (你需要根据你的实际变量名修改这里)
 extern int coin_count;
 extern int water_count;
 
 void Building::startUpgrade()
 {
-    // 1. ������飺����Ѿ����������������ˣ��Ͳ�������
+    // 1. 基本检查：如果已经在升级，或者满了，就不能再升
     if (state != BuildingState::IDLE) return;
 
-    // ������������Ӫ��ߵȼ����ƣ�10����
+    // 【新增】检查大本营最高等级限制（10级）
     if (type == BuildingType::BASE && a_level >= 10) {
         log("Town Hall has reached maximum level (10)!");
 
-        // ��ʾ��ʾ��Ϣ
+        // 显示提示消息
         auto scene = Director::getInstance()->getRunningScene();
         auto visibleSize = Director::getInstance()->getVisibleSize();
         auto label = Label::createWithTTF("Town Hall is at max level!", "fonts/Marker Felt.ttf", 28);
@@ -265,10 +279,10 @@ void Building::startUpgrade()
         return;
     }
 
-    // ����������齨����ߵȼ����ƣ���Ӫ���10�����������ط������
+    // 【新增】检查建筑最高等级限制（大本营最高10级已在其他地方处理）
     int nextLevel = a_level + 1;
 
-    // ��ȡ��ǰ��Ӫ�ȼ�
+    // 获取当前大本营等级
     int townHallLevel = 1;
     for (auto& building : g_allPurchasedBuildings) {
         if (building && building->getType() == BuildingType::BASE) {
@@ -277,15 +291,15 @@ void Building::startUpgrade()
         }
     }
 
-    // ����Ƿ������������һ��
+    // 检查是否可以升级到下一级
     auto upgradeLimits = BuildingUpgradeLimits::getInstance();
     int maxLevelForThisTH = upgradeLimits->getMaxLevelForBuilding(type, townHallLevel);
 
-    if (nextLevel > maxLevelForThisTH&& type != BuildingType::BASE) {
+    if (nextLevel > maxLevelForThisTH && type != BuildingType::BASE) {
         log("Cannot upgrade %s to level %d: Maximum level for TH%d is %d",
             buildingName.c_str(), nextLevel, townHallLevel, maxLevelForThisTH);
 
-        // ��ʾ��ʾ��Ϣ
+        // 显示提示消息
         auto scene = Director::getInstance()->getRunningScene();
         auto visibleSize = Director::getInstance()->getVisibleSize();
 
@@ -303,7 +317,7 @@ void Building::startUpgrade()
             nullptr
         ));
 
-        // ����������ʾ��Ӫ������ʾ
+        // 【新增】显示大本营升级提示
         if (townHallLevel < 10) {
             std::string unlockInfo = upgradeLimits->getUnlockInfoForNextTownHallLevel(townHallLevel);
             auto infoLabel = Label::createWithTTF(unlockInfo, "fonts/Marker Felt.ttf", 24);
@@ -322,18 +336,18 @@ void Building::startUpgrade()
         return;
     }
 
-    // 2. ���㱾��������Ҫ�Ļ���
-    // (��������һ�� getNextLevelCost �������㻨��)
+    // 2. 计算本次升级需要的花费
+    // (假设你有一个 getNextLevelCost 函数计算花费)
     int cost = this->getNextLevelCost();
 
-    // 3. �������޸������ݽ������Ϳ۳���Ӧ����Դ
-    // ���裺��Ӫ�ͷ���������ң���Ӫ��ˮ
+    // 3. 【核心修复】根据建筑类型扣除对应的资源
+    // 假设：大本营和防御塔花金币，兵营花水
     bool isEnough = false;
 
     if (type == BuildingType::BARRACKS) {
-        // ��Ӫ����ˮ
+        // 兵营：扣水
         if (water_count >= cost) {
-            water_count -= cost; // �۷�
+            water_count -= cost; // 扣费
             isEnough = true;
             log("Spent %d Water for upgrade.", cost);
         }
@@ -342,9 +356,9 @@ void Building::startUpgrade()
         }
     }
     else {
-        // ����(��Ӫ/����)���۽��
+        // 其他(大本营/金矿等)：扣金币
         if (coin_count >= cost) {
-            coin_count -= cost; // �۷�
+            coin_count -= cost; // 扣费
             isEnough = true;
             log("Spent %d Coin for upgrade.", cost);
         }
@@ -353,28 +367,28 @@ void Building::startUpgrade()
         }
     }
 
-    // 4. ֻ��Ǯ���ˣ��ſ�ʼ��������ʱ
+    // 4. 只有钱够了，才开始升级倒计时
     if (isEnough) {
         state = BuildingState::UPGRADING;
 
-        // ����ʱ�� (���� ����ʱ�� * �ȼ�)
+        // 设置时间 (比如 基础时间 * 等级)
         timeLeft = 5.0f * a_level;
 
         log("Upgrade started... Time left: %f", timeLeft);
     }
     else {
-        // Ǯ���������������һ��������ʾ���߲���һ��������Ч
+        // 钱不够，这里可以做一个弹窗提示或者播放一个错误音效
         log("Cannot upgrade: Insufficient resources.");
     }
 }
 
-// ��ʯ����
+// 宝石加速
 void Building::speedUp()
 {
     int cost = getSpeedUpCost();
     if (gem_count >= cost) {
         gem_count -= cost;
-        finishUpgrade(); // ˲�����
+        finishUpgrade(); // 瞬间完成
     }
     else {
         log("Not enough gems!");
@@ -389,23 +403,23 @@ void Building::initTouchListener()
     auto listener = EventListenerTouchOneByOne::create();
     listener->setSwallowTouches(true);
 
-    // --- ������ʼ (������) ---
+    // --- 触摸开始 (拿起建筑) ---
     listener->onTouchBegan = [=](Touch* touch, Event* event) {
         Vec2 touchPos = touch->getLocation();
         Vec2 nodePos = this->getParent()->convertToNodeSpace(touchPos);
 
         if (this->getBoundingBox().containsPoint(nodePos))
         {
-            // 1. ��¼����
+            // 1. 记录数据
             touchOffset = this->getPosition() - nodePos;
             originalPos = this->getPosition();
             isDragging = false;
 
-            // 2. �Ӿ����������
+            // 2. 视觉反馈：变大
             this->setScale(0.55f);
 
-            // 3. ���ؼ���������ʱ���Ƴ��ػ���
-            // ����ԭ����λ�þͻ�¶���ݵأ����������ǻָ���ԭɫ
+            // 3. 【关键】拿起建筑时，移除地基！
+            // 这样原来的位置就会露出草地，看起来像是恢复了原色
             this->removeGroundEffect();
 
             return true;
@@ -413,7 +427,7 @@ void Building::initTouchListener()
         return false;
         };
 
-    // --- �����ƶ� (���ֲ���) ---
+    // --- 触摸移动 (保持不变) ---
     listener->onTouchMoved = [=](Touch* touch, Event* event) {
         if (touch->getStartLocation().distance(touch->getLocation()) > 10.0f) {
             isDragging = true;
@@ -423,35 +437,35 @@ void Building::initTouchListener()
         this->setPosition(nodePos);
         };
 
-    // --- �������� (���½���) ---
+    // --- 触摸结束 (放下建筑) ---
     listener->onTouchEnded = [=](Touch* touch, Event* event) {
-        this->setScale(0.5f); // �ָ���С
+        this->setScale(0.5f); // 恢复大小
 
         if (isDragging) {
             auto gameScene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
 
             if (gameScene) {
-                // ��ȡ��ײ���� (ʹ�� Local ����)
+                // 获取碰撞检测框 (使用 Local 坐标)
                 Rect myLocalRect = this->getBoundingBox();
-                // ��΢��С�ж���Χ�Ż��ָ�
+                // 稍微缩小判定范围优化手感
                 myLocalRect.origin.x += 10;
                 myLocalRect.origin.y += 10;
                 myLocalRect.size.width -= 20;
                 myLocalRect.size.height -= 20;
 
-                // �����ײ
+                // 检测碰撞
                 if (gameScene->checkCollision(myLocalRect, this)) {
-                    // === ������ײ������ԭ�� ===
+                    // === 发生碰撞，弹回原处 ===
                     log("COLLISION! Back to origin.");
 
                     auto seq = Sequence::create(
                         MoveTo::create(0.1f, originalPos),
                         CallFunc::create([=]() {
-                            // ����������ǿ�ƹ�λ
+                            // 动画结束后，强制归位
                             this->setPosition(originalPos);
                             this->setLocalZOrder(10000 - (int)originalPos.y);
 
-                            // ���ؼ����ص�ԭλ�����´����ػ�
+                            // 【关键】回到原位后，重新创建地基
                             this->createGroundEffect();
                             }),
                         NULL
@@ -459,30 +473,30 @@ void Building::initTouchListener()
                     this->runAction(seq);
                 }
                 else {
-                    // === ���óɹ� ===
+                    // === 放置成功 ===
                     log("Placed OK.");
                     originalPos = this->getPosition();
                     this->setLocalZOrder(10000 - (int)this->getPositionY());
 
-                    // ���ؼ�������λ�ô����ػ���
-                    // ������λ�õĵ���ͱ�ɫ��
+                    // 【关键】在新位置创建地基！
+                    // 这样新位置的地面就变色了
                     this->createGroundEffect();
                 }
             }
             isDragging = false;
         }
         else {
-            // === ����¼� (������ק) ===
-            // �����Ȼû��λ�ã���Ϊ�˱��գ�����Ϊ���Ӿ�һ���ԣ�Ҳ��������ˢһ�µػ�
+            // === 点击事件 (不是拖拽) ===
+            // 点击虽然没动位置，但为了保险，或者为了视觉一致性，也可以重新刷一下地基
             this->createGroundEffect();
 
             this->setLocalZOrder(10000 - (int)this->getPositionY());
             if (this->type == BuildingType::WALL)
             {
                 log("Clicked on a Wall - No popup.");
-                return; // ֱ�ӽ�������ִ�к���ĵ�������
+                return; // 直接结束，不执行后面的弹窗代码
             }
-            // ������Ϣ����
+            // 弹出信息窗口
             auto infoLayer = BuildingInfoLayer::create();
             infoLayer->setBuilding(this);
             Director::getInstance()->getRunningScene()->addChild(infoLayer, 999);
@@ -493,28 +507,32 @@ void Building::initTouchListener()
 }
 void Building::finishUpgrade()
 {
-    // 1. ֻ�������������ܽ���
+    // 1. 只有正在升级才能结算
     if (state != BuildingState::UPGRADING) return;
 
-    // 2. ״̬��ؿ���
+    // 2. 状态变回空闲
     state = BuildingState::IDLE;
     timeLeft = 0;
 
-    // 3. �ȼ� +1
+    // 3. 等级 +1
     a_level++;
-    
+
     if (type == BuildingType::BARRACKS) {
-        // ����Ҫ������ֱ������ army_limit�������� GameScene ���¼���
+        // 【重要】不再直接增加 army_limit，而是让 GameScene 重新计算
         auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
         if (gamescene) {
             gamescene->recalculateArmyLimit();
             CCLOG("=== Building: Barracks upgraded to level %d, army limit recalculated ===", a_level);
         }
     }
-    // 4. �����ġ���������ûص���
-    // ��ʱ��Ż�ִ�� GameScene ��д�� coin_limit += 1500 ����
+    // 4. 【核心】在这里调用回调！
+    // 这时候才会执行 GameScene 里写的 coin_limit += 1500 代码
     if (UpgradeCallback_coin) {
         UpgradeCallback_coin();
+    }
+
+    if (type == BuildingType::MINE || type == BuildingType::WATER) {
+        productionAmount = 50 * a_level;
     }
 
     log("Upgrade finished! Level is now %d", a_level);
@@ -523,7 +541,7 @@ void Building::finishUpgrade()
 
 void Building::createGroundEffect()
 {
-    // 1. ����Ѿ�������Ч�����Ƴ�����ֹ����
+    // 1. 如果已经存在特效，先移除，防止叠加
     if (groundEffectNode) {
         groundEffectNode->removeFromParent();
         groundEffectNode = nullptr;
@@ -532,24 +550,24 @@ void Building::createGroundEffect()
     if (this->type == BuildingType::WALL)
         return;
     if (groundSprite) {
-        // 3. ��ȡ�ߴ���Ϣ
-        Size buildingSize = this->getContentSize(); // ������ԭʼ��С
-        Size spriteSize = groundSprite->getContentSize(); // ͼƬ��ԭʼ��С
+        // 3. 获取尺寸信息
+        Size buildingSize = this->getContentSize(); // 建筑的原始大小
+        Size spriteSize = groundSprite->getContentSize(); // 图片的原始大小
 
-        // 4. ���ؼ����Զ�����ͼƬ����Ӧ��ͬ��С�Ľ���
-        // ����������Ľ����Ǵ�Ӫ���Ǳ�Ӫ�����ŵػ�ͼ�����Զ������ײ�
+        // 4. 【关键】自动拉伸图片以适应不同大小的建筑
+        // 这样无论你的建筑是大本营还是兵营，这张地基图都会自动铺满底部
         groundSprite->setScaleX(buildingSize.width / (spriteSize.width * 0.8));
         groundSprite->setScaleY(buildingSize.height / (spriteSize.height * 1.5));
 
-        // 5. ����λ�ã�����
-        // ��Ϊ�Ǽ��ڽ���(this)���ϵģ�����λ���ǽ��������ĵ�
+        // 5. 设置位置：居中
+        // 因为是加在建筑(this)身上的，所以位置是建筑的中心点
         groundSprite->setPosition(Vec2(buildingSize.width / 2, buildingSize.height / 2 - 50));
         groundSprite->getTexture()->setAliasTexParameters();
-        // 6. ��ӵ���������
-        // ZOrder -1 ��֤��ʾ�ڽ���ͼƬ�ĵײ�
+        // 6. 添加到建筑本身
+        // ZOrder -1 保证显示在建筑图片的底部
         this->addChild(groundSprite, -100);
 
-        // 7. ����ָ��
+        // 7. 保存指针
         groundEffectNode = groundSprite;
     }
     else {
@@ -565,34 +583,34 @@ void Building::removeGroundEffect()
     }
 }
 
-// ��������ֱ�����õȼ�����������Դ�����ڼ��ش浵��
+// 【新增】直接设置等级，不消耗资源（用于加载存档）
 void Building::setLevelDirectly(int level)
 {
     if (level < 1) level = 1;
 
-    // ��Ӫ���10������
+    // 大本营最高10级限制
     if (type == BuildingType::BASE && level > 10) {
         level = 10;
         CCLOG("=== Building: Town Hall max level is 10, setting to 10 ===");
     }
 
-    // ���õȼ�
+    // 设置等级
     a_level = level;
 
     CCLOG("=== Building: %s level set to %d (no resource cost) ===", buildingName.c_str(), a_level);
 }
 
-// ��������ֱ������״̬
+// 【新增】直接设置状态
 void Building::setStateDirectly(BuildingState newState)
 {
     state = newState;
 
-    // ����ǽ���ʥˮ�ռ�����״̬ΪREADY����ʾ���ռ����
+    // 如果是金矿或圣水收集器且状态为READY，显示可收集标记
     if ((type == BuildingType::MINE || type == BuildingType::WATER) && state == BuildingState::READY) {
         if (!readyIndicator) {
             readyIndicator = Sprite::create("ui/ready_indicator.png");
             if (!readyIndicator) {
-                // ���ͼƬ�����ڣ�����һ���򵥵ĺ�ɫ��̾��
+                // 如果图片不存在，创建一个简单的红色感叹号
                 readyIndicator = Sprite::create();
                 auto label = Label::createWithTTF("!", "fonts/Marker Felt.ttf", 72);
                 label->setColor(Color3B::RED);
@@ -605,7 +623,7 @@ void Building::setStateDirectly(BuildingState newState)
         }
     }
     else if (readyIndicator) {
-        // ���״̬����READY���Ƴ����ռ����
+        // 如果状态不是READY，移除可收集标记
         readyIndicator->removeFromParent();
         readyIndicator = nullptr;
     }
@@ -613,7 +631,7 @@ void Building::setStateDirectly(BuildingState newState)
     CCLOG("=== Building: %s state set to %d ===", buildingName.c_str(), (int)state);
 }
 
-// ����������������ʣ��ʱ��
+// 【新增】设置升级剩余时间
 void Building::setUpgradeTimeLeft(float time)
 {
     timeLeft = time;
@@ -623,7 +641,7 @@ void Building::setUpgradeTimeLeft(float time)
     CCLOG("=== Building: %s upgrade time left set to %.2f ===", buildingName.c_str(), timeLeft);
 }
 
-// ����������������ʣ��ʱ��
+// 【新增】设置生产剩余时间
 void Building::setProductionTimeLeft(float time)
 {
     productionTimeLeft = time;
@@ -633,28 +651,28 @@ void Building::setProductionTimeLeft(float time)
     CCLOG("=== Building: %s production time left set to %.2f ===", buildingName.c_str(), productionTimeLeft);
 }
 
-// �������������ݳ�ʼ�����������ڼ��ش浵��
+// 【新增】从数据初始化建筑（用于加载存档）
 void Building::initFromSaveData(int level, BuildingState savedState, float upgradeTimeLeft, float productionTimeLeft)
 {
-    // ���õȼ�
+    // 设置等级
     setLevelDirectly(level);
 
-    // ����״̬
+    // 设置状态
     setStateDirectly(savedState);
 
-    // ��������ʣ��ʱ��
+    // 设置升级剩余时间
     if (savedState == BuildingState::UPGRADING) {
         setUpgradeTimeLeft(upgradeTimeLeft);
     }
 
-    // ��������ʣ��ʱ��
+    // 设置生产剩余时间
     if (type == BuildingType::MINE || type == BuildingType::WATER) {
         if (savedState == BuildingState::PRODUCING) {
             setProductionTimeLeft(productionTimeLeft);
         }
         else if (savedState == BuildingState::READY) {
-            // ����ǿ��ռ�״̬��ȷ���п��ռ����
-            finishProduction(); // ��ᴴ�����ռ����
+            // 如果是可收集状态，确保有可收集标记
+            finishProduction(); // 这会创建可收集标记
         }
     }
 
