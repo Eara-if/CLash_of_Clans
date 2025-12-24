@@ -164,7 +164,7 @@ bool HelloWorld::init()
     }
     // 在 title 标签代码下方添加
     auto editBox = EditBox::create(Size(300, 60), Scale9Sprite::create("CloseNormal.png")); // 暂时借用一个图片做背景
-    editBox->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2 + 150));
+    editBox->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2 + 300));
     editBox->setFontSize(30);
     editBox->setFontColor(Color3B::BLACK);
     editBox->setPlaceHolder("Enter Username:");
@@ -175,7 +175,7 @@ bool HelloWorld::init()
 
     // 密码框 (复制用户名框的代码，修改位置和 Placeholder)
     auto passwordBox = EditBox::create(Size(300, 60), Scale9Sprite::create("CloseNormal.png"));
-    passwordBox->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2 + 80));
+    passwordBox->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2 + 200));
     passwordBox->setInputFlag(EditBox::InputFlag::PASSWORD); // 设置为密码模式（显示星号）
     passwordBox->setPlaceHolder("Enter Password:");
     passwordBox->setName("password_input");
