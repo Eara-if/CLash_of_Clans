@@ -42,6 +42,8 @@ public:
     // implement the "static create()" method manually
     void HelloWorld::startNewGame();
     std::string _currentUsername; // 记录当前登录名
+    // 本地进入新游戏
+    void menuLocalNewGame(cocos2d::Ref* pSender);
     CREATE_FUNC(HelloWorld);
 };
 

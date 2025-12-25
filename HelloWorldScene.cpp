@@ -226,6 +226,19 @@ bool HelloWorld::init()
     startmenu->setPosition(Vec2::ZERO);
     this->addChild(startmenu, 1);
 
+    auto localNewGameLabel = Label::createWithTTF("LOCAL NEW GAME", "fonts/Marker Felt.ttf", 40);
+    localNewGameLabel->setTextColor(Color4B::YELLOW);
+    localNewGameLabel->enableOutline(Color4B::BLACK, 2);
+
+    auto localNewGameItem = MenuItemLabel::create(localNewGameLabel,
+        CC_CALLBACK_1(HelloWorld::menuLocalNewGame, this));
+
+    // 放在 Login 按钮下方
+    localNewGameItem->setPosition(Vec2(origin.x + visibleSize.width / 2, buttonStartY - 80));
+
+    auto localMenu = Menu::create(localNewGameItem, NULL);
+    localMenu->setPosition(Vec2::ZERO);
+    this->addChild(localMenu, 1);
     return true;
 }
 
@@ -393,4 +406,37 @@ void HelloWorld::loginToServer(std::string username) {
 
     HttpClient::getInstance()->send(request);
     request->release();
+}
+void HelloWorld::menuLocalNewGame(Ref* pSender)
+{
+    log("Starting Local New Game (Offline Mode)...");
+
+    // 1. 重置所有全局资源数据
+    coin_count = 5000;
+    water_count = 5000;
+    gem_count = 500;
+
+    coin_limit = 5000;
+    water_limit = 5000;
+    gem_limit = 5000;
+    army_limit = 10; // 初始兵力上限
+
+    // 2. 彻底清空建筑容器
+    // 注意：必须先从父节点移除，再清空容器，防止野指针
+    for (auto b : g_allPurchasedBuildings) {
+        if (b && b->getParent()) {
+            b->removeFromParent();
+        }
+    }
+    g_allPurchasedBuildings.clear();
+
+    // 3. 设置特殊的本地用户名
+    // 这可以让 GameScene 知道现在是离线模式
+    g_currentUsername = "LocalPlayer";
+
+    // 4. (可选) 如果你想让“新游戏”覆盖掉之前的本地存档，可以在这里删除旧存档
+    // SaveGame::getInstance()->deleteSaveFile(); 
+
+    // 5. 直接进入游戏场景，不经过 loginToServer
+    this->startNewGame();
 }

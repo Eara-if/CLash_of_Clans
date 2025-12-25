@@ -623,7 +623,22 @@ void GameScene::onTouchEnded(Touch* touch, Event* event)
 void GameScene::menuBackCallback(Ref* pSender)
 {
     log("Back button clicked! Syncing to cloud before exit...");
+    extern std::string g_currentUsername;
+    if (this->_currentSceneOwner == g_currentUsername) {
+        SaveGame::getInstance()->saveGameState();
+        log("Local save executed.");
+    }
 
+    // 2. [新增] 检查是否为离线模式
+    // 如果是我们在 HelloWorld 里设置的 "LocalPlayer"，直接退出，不联网
+    if (g_currentUsername == "LocalPlayer") {
+        log("Offline Mode: Skipping cloud sync.");
+
+        g_allPurchasedBuildings.clear(); // 清理内存
+        auto scene = HelloWorld::createScene();
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
+        return;
+    }
     // --- 权限检查 (防止访问别人家时点返回把别人家的数据存到自己名下) ---
     extern std::string g_currentUsername;
     if (this->_currentSceneOwner != g_currentUsername) {

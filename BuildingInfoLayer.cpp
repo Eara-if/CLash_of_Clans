@@ -37,7 +37,7 @@ bool BuildingInfoLayer::init()
         bg->setColor(Color3B::WHITE);
     }
     bg->getTexture()->setAliasTexParameters();
-    bg->setScale(4.0f);
+    bg->setScale(5.0f);
     bg->setPosition(origin.x + visibleSize.width / 2, origin.y + visibleSize.height / 2);
     this->addChild(bg, 0);
 
