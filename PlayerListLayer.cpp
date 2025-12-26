@@ -20,9 +20,11 @@ bool PlayerListLayer::init()
     auto bgLayer = LayerColor::create(Color4B(0, 0, 0, 150));
     this->addChild(bgLayer);
 
+    // --- 触摸监听 (拦截点击) ---
     auto listener = EventListenerTouchOneByOne::create();
     listener->setSwallowTouches(true);
     listener->onTouchBegan = [=](Touch* t, Event* e) {
+        // ... (保持你原有的逻辑) ...
         Vec2 pos = _sidebarNode->convertToNodeSpace(t->getLocation());
         Rect rect(0, 0, _sidebarNode->getContentSize().width, _sidebarNode->getContentSize().height);
         if (!rect.containsPoint(pos)) {
@@ -31,6 +33,48 @@ bool PlayerListLayer::init()
         return true;
         };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+
+    // --- 鼠标监听 (拦截滚轮) ---
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseScroll = [=](Event* event) {
+        EventMouse* e = (EventMouse*)event;
+        float scrollY = e->getScrollY(); // 获取滚轮方向：+1(向上推) 或 -1(向下滚)
+
+        // 只有当列表存在，且内容高度超过显示区域时，才执行滚动
+        if (_listView) {
+            auto inner = _listView->getInnerContainer();
+            float contentHeight = inner->getContentSize().height;
+            float viewHeight = _listView->getContentSize().height;
+
+            if (contentHeight > viewHeight) {
+                // 1. 获取当前内部容器的位置 Y
+                float currentY = inner->getPositionY();
+
+                // 2. 计算滚动速度 (30.0f 是灵敏度，可调整)
+                // 滚轮向下滚 (scrollY < 0)，内容应该向上跑，让我们看到下面的条目 -> Y 变大
+                // 滚轮向上推 (scrollY > 0)，内容应该向下跑，让我们看到上面的条目 -> Y 变小
+                float step = 20.0f;
+                float newY = currentY + (scrollY * step);
+
+                // 3. 边界限制 (防止滚出屏幕外)
+                // Cocos ScrollView 的内部容器 Y 坐标范围通常是 [viewHeight - contentHeight, 0]
+                float minY = viewHeight - contentHeight;
+                float maxY = 0.0f;
+
+                // 修正坐标，确保不越界
+                if (newY < minY) newY = minY;
+                if (newY > maxY) newY = maxY;
+
+                // 4. 应用新位置
+                inner->setPositionY(newY);
+            }
+        }
+
+        // 【关键】停止事件传播，防止底下的地图缩放
+        event->stopPropagation();
+        };
+
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
 
     // 2. 侧边栏背景
     float sidebarWidth = 400.0f;

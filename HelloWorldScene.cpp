@@ -275,6 +275,7 @@ void HelloWorld::menuGotoNextScene(Ref* pSender)
 // ��������������Ϸ
 void HelloWorld::menuContinueGame(Ref* pSender)
 {
+    g_currentUsername = "LocalPlayer";
     log("Continue game...");
 
     // ���Լ��ش浵
