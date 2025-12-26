@@ -23,7 +23,11 @@ public:
     virtual bool init();
     virtual void update(float dt) override;
     CREATE_FUNC(BattleScene);
-
+    // 增加一个枚举或布尔值来区分模式
+    enum class BattleMode {
+        CAMPAIGN, // PVE 关卡
+        PVP       // 攻打好友
+    };
 
     // ��ʿ�� AI ʹ�õĹ����ӿ�
     cocos2d::Vector<EnemyBuilding*>& getTowers() { return _towers; }
@@ -40,7 +44,7 @@ private:
     cocos2d::TMXTiledMap* _tileMap;
     std::string _mapFileName; // �����������ڴ洢Ҫ���صĵ�ͼ�ļ���
     void setMapFileName(const std::string& fileName); // �����������õ�ͼ�ļ���
-
+    BattleMode _currentMode; // 当前模式
     // ��Ϸ�����б�
     cocos2d::Vector<EnemyBuilding*> _towers; // ���з�����
     EnemyBuilding* _base;                  // ��Ӫ

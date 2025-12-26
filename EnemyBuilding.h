@@ -19,6 +19,7 @@ public:
     // totalHp: ��Ѫ�� (���� 3��Ѫ��ÿ��5Ѫ����Ѫ������15)
     // damagePerNotch: ��һ��Ѫ��Ҫ���˺�ֵ (���ᵽ�� 5 �� 8)
     // �޸� create �������������� attack �� range
+    void setHealthBarScale(float s);
     static EnemyBuilding* create(const std::string& filename, const std::string& hpBarFilename, int totalHp, int damagePerNotch, int attack, float range);
 
     // �޸� init ��������

@@ -13,9 +13,11 @@ class SaveGame
 public:
     // ����ģʽ��ȡʵ��
     static SaveGame* getInstance();
-    bool loadFromRemoteString(const std::string& jsonData);
+    std::string SaveGame::getSpecificBuildingsJson(const cocos2d::Vector<Building*>& buildings);
     // 获取当前游戏状态的 JSON 字符串（用于上传服务器）
     std::string getGameStateAsJsonString();
+    // 修改声明：增加 bool isMyData，默认为 true（为了兼容旧代码，不传参默认当成自己）
+    bool loadFromRemoteString(const std::string& jsonData, bool isMyData = true);
 
     // ������Ϸ״̬
     bool saveGameState(const std::string& filename = "game_save.json");

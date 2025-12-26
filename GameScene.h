@@ -52,6 +52,8 @@ public:
     void recalculateArmyLimit();
 
     void addShopButton();
+    void addAttackButton();
+    void menuAttackCallback(cocos2d::Ref* pSender);
     // ��ʼ������
     virtual bool init();
     // ��������дonEnter����

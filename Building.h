@@ -24,7 +24,24 @@ public:
         else if (name == "cannon.png") {
             _type = BuildingType::CANNON;
         }
-        // ...
+		else if (name == "Mine.png") {
+			_type = BuildingType::MINE;
+		}
+		else if (name == "waterwell.png") {
+			_type = BuildingType::WATER;
+		}
+		else if (name == "TilesetTowers.png") {
+			_type = BuildingType::TOWER;
+		}
+		else if (name == "fence.png") {
+			_type = BuildingType::WALL;
+		}
+		else if (name == "BarGold.png") {
+			_type = BuildingType::GOLD_STORAGE;
+		}
+		else if (name == "Water.png") {
+			_type = BuildingType::WATER_STORAGE;
+		}
     }
     BuildingType getType() const { return _type; }
     BuildingType getType() { return type; }

@@ -67,16 +67,16 @@ void DataManager::clearArmy()
 }
 
 
-// ����������ȡ��Ӫ�ȼ�
 int DataManager::getTownHallLevel()
 {
-    // �������н������ҵ���Ӫ
+    // 如果你在 BattleScene 战斗中调用了这个，由于 g_allPurchasedBuildings 
+    // 应该只保存“我方”建筑，所以这里应该始终返回我方真正的等级。
     for (auto& building : g_allPurchasedBuildings) {
         if (building && building->getType() == BuildingType::BASE) {
             return building->getLevel();
         }
     }
-    return 1; // ���û���ҵ���Ӫ��Ĭ��1��
+    return 1;
 }
 
 // ����������齨����������

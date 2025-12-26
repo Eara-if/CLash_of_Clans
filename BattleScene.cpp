@@ -76,7 +76,7 @@ void BattleScene::setupBattle(int levelIndex, std::string pvpJsonData)
         this->loadLevelCampaign(levelIndex);
     }
     else {
-        _mapFileName = "BaseMap.tmx";
+        _mapFileName = "Grass.tmx";
         this->loadLevelPVP(pvpJsonData);
     }
 
@@ -184,9 +184,23 @@ void BattleScene::menuBackToGameScene(Ref* pSender)
         _isGameOver = false;
         _isGamePaused = false;
     }
+    // 1. 停止战斗音乐
+    AudioEngine::stopAll();
 
-    // 调用带参数的 createScene，传入 nullptr
-    auto scene = GameScene::createScene(nullptr);
+
+    // --- 【修复4】 关键：告诉 GameScene 重新加载自己的数据 ---
+    // 假设 SaveGame 有一个方法是从本地加载数据，或者从 DataManager 恢复
+    // 你需要调用类似 loadPlayerData() 的方法
+
+    // 重新从服务器请求【我自己的数据】
+    extern std::string g_currentUsername;
+    auto scene = GameScene::create();
+    auto gameLayer = static_cast<GameScene*>(scene);
+
+    // 关键：这里会重新触发 loadOtherPlayerData(自己的名字)
+    // 此时 isMe 为 true，会清空全局变量并重新从服务器 JSON 填充
+    gameLayer->loadOtherPlayerData(g_currentUsername);
+
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }
 
@@ -539,11 +553,7 @@ void BattleScene::loadLevelCampaign(int levelIndex)
             float y = dict["y"].asFloat();
             float w = dict["width"].asFloat();
             float h = dict["height"].asFloat();
-            if (dict["fileName"].asString() == "Tree.png"
-                || dict["fileName"].asString() == "Tree1.png"
-                || dict["fileName"].asString() == "Tree2.png") {
-                y += 100;
-            }
+
             // A. 处理禁放区（除了炸弹以外的所有建筑/障碍物区域）
             if (name != "boom") {
                 // 将地图局部坐标转换为世界坐标，用于放置士兵时的碰撞检测
@@ -600,7 +610,8 @@ void BattleScene::loadLevelCampaign(int levelIndex)
                 if (sprite) {
                     sprite->setAnchorPoint(Vec2::ZERO);
                     // 树木等装饰物向上偏移一点，视觉效果更好
-                    sprite->setPosition(x, y);
+                    float yOffset = (path.find("Tree") != std::string::npos) ? 100.0f : 0.0f;
+                    sprite->setPosition(x, y + yOffset);
 
                     // 设置缩放
                     if (dict.count("width") && dict.count("height")) {
@@ -615,55 +626,137 @@ void BattleScene::loadLevelCampaign(int levelIndex)
 }
 void BattleScene::loadLevelPVP(const std::string& jsonContent)
 {
-    // 1. 加载基础地图
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+
+    // 1. 【创建地图】
     _tileMap = TMXTiledMap::create(_mapFileName);
+    if (!_tileMap) {
+        log("Error: Map not found!");
+        return;
+    }
+
+    // 计算缩放比例，保持与 GameScene 逻辑一致
+    float scaleFactor = visibleSize.height / _tileMap->getContentSize().height;
+    _tileMap->setScale(scaleFactor);
+    _tileMap->setAnchorPoint(Vec2::ZERO);
+    _tileMap->setPosition(Vec2::ZERO);
     this->addChild(_tileMap, -1);
+
+    // ==========================================
+    // 【问题1 修复】：加载地图装饰物/障碍物 (树木等)
+    // ==========================================
+    auto objectGroup = _tileMap->getObjectGroup("Objects");
+    if (objectGroup) {
+        ValueVector objects = objectGroup->getObjects();
+        for (const auto& v : objects) {
+            ValueMap dict = v.asValueMap();
+            if (dict.find("fileName") != dict.end()) {
+                std::string path = dict["fileName"].asString();
+                auto sprite = Sprite::create(path);
+                if (sprite) {
+                    _tileMap->addChild(sprite, 1);
+                    // 注意：这里的 addObstacle 需要处理坐标逻辑，暂按原逻辑
+                    sprite->setAnchorPoint(Vec2::ZERO);
+                    float ox = dict["x"].asFloat();
+                    float oy = dict["y"].asFloat();
+                    sprite->setPosition(ox, oy + 150); // 保持你 GameScene 的 +150 偏移
+
+                    if (dict.find("width") != dict.end() && dict.find("height") != dict.end()) {
+                        float w = dict["width"].asFloat();
+                        float h = dict["height"].asFloat();
+                        sprite->setScaleX(w / sprite->getContentSize().width);
+                        sprite->setScaleY(h / sprite->getContentSize().height);
+                    }
+                    sprite->setLocalZOrder(10000 - (int)oy);
+                }
+            }
+        }
+    }
+    // --- 【新增】：清空当前战场的敌方容器，防止数据残留 ---
+    _towers.clear();
+    _forbiddenRects.clear();
+    _base = nullptr;
 
     // 2. 解析 JSON
     rapidjson::Document doc;
     doc.Parse(jsonContent.c_str());
-
     if (doc.HasParseError() || !doc.HasMember("buildings")) return;
 
     const rapidjson::Value& buildings = doc["buildings"];
+
     for (auto& b : buildings.GetArray()) {
+        if (!b.HasMember("type") || !b.HasMember("pos_x") || !b.HasMember("pos_y")) continue;
+
         int typeInt = b["type"].GetInt();
-        float x = b["x"].GetFloat();
-        float y = b["y"].GetFloat();
-        int level = b["level"].GetInt();
+        float x = b["pos_x"].GetFloat();
+        float y = b["pos_y"].GetFloat();
+        int level = b.HasMember("level") ? b["level"].GetInt() : 1;
 
         BuildingType bType = static_cast<BuildingType>(typeInt);
-
-        // 3. 根据类型调用 EnemyBuilding::create
-        // 这里的血量和攻击力，你可以根据 level 动态计算
         EnemyBuilding* eb = nullptr;
 
+        // 根据类型创建建筑
         if (bType == BuildingType::BASE) {
-            eb = EnemyBuilding::create("map/buildings/Base.png", "ui/Heart2.png", 1000 + level * 200, 250, 0, 0);
+            eb = EnemyBuilding::create("House.png", "ui/Heart2.png", 200 + level * 10, 250, 0, 0);
             _base = eb;
-		}
-		else if (bType == BuildingType::TOWER) {
-			eb = EnemyBuilding::create("map/buildings/TilesetTowers.png", "ui/Heart2.png", 600 + level * 150, 150, 15, 250);
-			_towers.pushBack(eb);
-		}
-        else if (bType == BuildingType::CANNON) {
-            eb = EnemyBuilding::create("map/buildings/Cannon1.png", "ui/Heart2.png", 500 + level * 100, 125, 20, 200);
+        }
+        else if (bType == BuildingType::TOWER) {
+            eb = EnemyBuilding::create("\TilesetTowers.png", "ui/Heart2.png", 150 + level * 5, 150, 15, 250);
             _towers.pushBack(eb);
-		}
-		else if (bType == BuildingType::WALL) {
-			eb = EnemyBuilding::create("map/buildings/fence.png", "", 300 + level * 50, 75, 0, 0);
-			_towers.pushBack(eb);
-		}
-        // ... 其他类型 ...
+        }
+        else if (bType == BuildingType::CANNON) {
+            eb = EnemyBuilding::create("Cannon1.png", "ui/Heart2.png", 100 + level * 5, 125, 20, 200);
+            _towers.pushBack(eb);
+        }
+        else if (bType == BuildingType::WALL) {
+            eb = EnemyBuilding::create("fence.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
+            _towers.pushBack(eb);
+        }
+        else if (bType == BuildingType::BARRACKS) {
+            eb = EnemyBuilding::create("junying.png", "ui/Heart2.png", 150 + level * 5, 50, 0, 0);
+            _towers.pushBack(eb);
+        }
+        else if (bType == BuildingType::WATER) {
+            eb = EnemyBuilding::create("waterwell.png", "ui/Heart2.png", 50 + level * 3, 90, 0, 0);
+            _towers.pushBack(eb);
+        }
+        else if (bType == BuildingType::MINE) {
+            eb = EnemyBuilding::create("Mine.png", "ui/Heart2.png", 50 + level * 3, 100, 0, 0);
+            _towers.pushBack(eb);
+        }
 
         if (eb) {
-            eb->setPosition(x, y);
+            eb->setScale(0.5f);
+            eb->setPosition(Vec2(x, y));
+
+            // 【重要】：必须 addChild 到 _tileMap 而不是 this
+            // 这样建筑才会跟随地图坐标系统，不会出现在屏幕右上角
             _tileMap->addChild(eb, 3);
 
-            // 别忘了把建筑位置加入禁放区
-            Rect worldRect(x - 50, y - 50, 100, 100); // 粗略计算，建议根据图片大小
+            if (bType != BuildingType::BASE) {
+                _towers.pushBack(eb);
+            }
+
+            // ==========================================
+            // 【问题3 修复】：计算世界坐标下的禁放区
+            // ==========================================
+            // 建筑在屏幕上的实际位置 = 地图位置 + (建筑在地图上的相对位置 * 地图缩放)
+            Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
+
+            // 禁放区的大小也要随地图缩放
+            float rectSize = 100.0f * _tileMap->getScale();
+            Rect worldRect(worldPos.x - rectSize / 2, worldPos.y - rectSize / 2, rectSize, rectSize);
+
             _forbiddenRects.push_back(worldRect);
         }
+    }
+    // --- 【修复3】 防止秒胜 ---
+    if (!_base) {
+        log("CRITICAL: No Base found in PVP data! Game will end immediately.");
+        // 可以在这里手动创建一个假基地防止秒胜，或者提示数据错误
+	}
+    else {
+        log("PVP Base loaded successfully.");
     }
 }
 

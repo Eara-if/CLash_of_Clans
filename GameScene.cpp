@@ -373,19 +373,33 @@ bool GameScene::init()
     mygem->print(this);
     _gemTextLabel = this->showText("Gem " + std::to_string(gem_count), origin.x + visibleSize.width - 370, origin.y + visibleSize.height - 182, Color4B::WHITE);
 
-    // 6. 【功能按钮】
+    // 6. 【功能按钮逻辑分支】
     this->scheduleOnce([=](float dt) {
-        this->addShopButton();
-        this->addSaveButton();
-        }, 0, "setup_ui_key");
+        extern std::string g_currentUsername;
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // Back 按钮 (左下角)
-    auto backItem = MenuItemFont::create("Back", CC_CALLBACK_1(GameScene::menuBackCallback, this));
-    backItem->setColor(Color3B::YELLOW);
-    backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20, origin.y + backItem->getContentSize().height / 2 + 20));
-    auto menu = Menu::create(backItem, NULL);
-    menu->setPosition(Vec2::ZERO);
-    this->addChild(menu, 100);
+        // 判定：如果是自己的家 (业主等于当前登录用户)
+        if (_currentSceneOwner == g_currentUsername) {
+            // 显示原本的商店和保存按钮
+            this->addShopButton();
+            this->addSaveButton();
+
+            // 在左下角添加原本的 Back 按钮
+            auto backItem = MenuItemFont::create("Back(Save to Cloud)", CC_CALLBACK_1(GameScene::menuBackCallback, this));
+            backItem->setColor(Color3B::YELLOW);
+            backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20,
+                origin.y + backItem->getContentSize().height / 2 + 20));
+
+            auto menu = Menu::create(backItem, NULL);
+            menu->setPosition(Vec2::ZERO);
+            this->addChild(menu, 100);
+        }
+        else {
+            // --- 拜访模式：隐藏商店/保存/返回，显示 ATTACK 按钮 ---
+            this->addAttackButton();
+        }
+        }, 0, "setup_ui_key");
 
     // 7. 【交互监听】
     isMapDragging = false;
@@ -969,7 +983,7 @@ void GameScene::addSaveButton() {
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
     // �������水ť
-    auto saveLabel = Label::createWithTTF("SAVE GAME", "fonts/Marker Felt.ttf", 28);
+    auto saveLabel = Label::createWithTTF("SAVE GAME \n(Save to local device)", "fonts/Marker Felt.ttf", 28);
     saveLabel->setColor(Color3B::GREEN);
     saveLabel->enableOutline(Color4B::BLACK, 2);
 
@@ -1128,7 +1142,7 @@ void GameScene::setupLeftPanel() {
 
             // --- 新增：在列表最上方添加“回到自己家”的按钮 ---
             extern std::string g_currentUsername;
-            auto homeLabel = Label::createWithTTF(">>> MY HOME <<<", "fonts/Marker Felt.ttf", 20);
+            auto homeLabel = Label::createWithTTF("MY HOME", "fonts/Marker Felt.ttf", 20);
             homeLabel->setColor(Color3B::YELLOW); // 用黄色区分
             auto homeItem = MenuItemLabel::create(homeLabel, [=](Ref* sender) {
                 log("Returning to own home: %s", g_currentUsername.c_str());
@@ -1172,31 +1186,76 @@ void GameScene::loadOtherPlayerData(std::string targetUsername) {
         if (response && response->isSucceed()) {
             std::vector<char>* buffer = response->getResponseData();
             std::string res(buffer->begin(), buffer->end());
-
             rapidjson::Document doc;
             doc.Parse(res.c_str());
 
             if (doc.HasMember("data") && doc["data"].IsString()) {
                 std::string saveData = doc["data"].GetString();
 
-                // 1. 彻底清空全局建筑容器（这是解决重叠的关键）
-                g_allPurchasedBuildings.clear();
+                extern std::string g_currentUsername;
+                bool isMe = (targetUsername == g_currentUsername);
 
-                // 2. 告诉 SaveGame 重新开始（重置它内部的变量）
-                SaveGame::getInstance()->loadFromRemoteString(saveData);
-
-                auto scene = GameScene::create();
-                // 找到新场景对象，并标记它现在属于谁
-                auto gameLayer = static_cast<GameScene*>(scene);
-                gameLayer->_currentSceneOwner = targetUsername;
-
-                // 4. 跳转
+                // 直接跳转到 BattleScene，把好友的 JSON 传过去
+                auto scene = BattleScene::createScene(0, saveData);
                 Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 
-                log("Now viewing %s's home", targetUsername.c_str());
+                log("Switching to BattleScene to view %s's base", targetUsername.c_str());
+                
             }
         }
         });
     HttpClient::getInstance()->send(request);
-    request->release();
+}
+
+void GameScene::addAttackButton() {
+    extern std::string g_currentUsername;
+    // 只有在别人家时才显示
+    if (_currentSceneOwner != g_currentUsername && !_currentSceneOwner.empty()) {
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+
+        // 1. 创建攻击按钮 (右下角)
+        auto attackLabel = Label::createWithTTF("ATTACK!", "fonts/Marker Felt.ttf", 36);
+        attackLabel->setTextColor(Color4B::RED);
+        attackLabel->enableOutline(Color4B::BLACK, 2);
+
+        auto attackItem = MenuItemLabel::create(attackLabel, CC_CALLBACK_1(GameScene::menuAttackCallback, this));
+        // 位置放在原本 Save 按钮的地方
+        attackItem->setPosition(Vec2(origin.x + visibleSize.width - 150, origin.y + 100));
+
+        // 2. 创建一个“退出拜访”按钮 (左下角)，替代原本被隐藏的 Back
+        auto returnLabel = Label::createWithTTF("Return Home", "fonts/Marker Felt.ttf", 26);
+        returnLabel->setColor(Color3B::WHITE);
+        auto returnItem = MenuItemLabel::create(returnLabel, [=](Ref* sender) {
+            // 调用您已有的加载函数回到自己家
+            this->loadOtherPlayerData(g_currentUsername);
+            });
+        returnItem->setPosition(Vec2(origin.x + 100, origin.y + 50));
+
+        auto menu = Menu::create(attackItem, returnItem, NULL);
+        menu->setPosition(Vec2::ZERO);
+        this->addChild(menu, 200);
+    }
+}
+
+void GameScene::menuAttackCallback(Ref* pSender) {
+    log("Attacking player: %s", _currentSceneOwner.c_str());
+
+    // 1. 获取当前好友场景的建筑数据 (转为 JSON 字符串)
+    // 这里的逻辑应类似于 SaveGame::getGameStateAsJsonString()，
+    // 但它是针对当前 _allBuildings 容器中的实时建筑
+    std::string pvpData = SaveGame::getInstance()->getGameStateAsJsonString();
+
+    // 关键修复：检查数据是否有效，防止传给 BattleScene 一个空的 JSON
+    if (pvpData.empty() || pvpData == "{\"buildings\":[]}") {
+        log("Error: Target house has no buildings to attack!");
+        return;
+    }
+
+    // 2. 停止背景音乐并切换到战斗场景
+    AudioEngine::stopAll();
+
+    // 传入 levelIndex 为 0 表示 PVP 模式，并传入好友的建筑数据
+    auto scene = BattleScene::createScene(0, pvpData);
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
 }

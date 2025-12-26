@@ -445,7 +445,8 @@ void SaveGame::listSaveFiles()
     //     CCLOG("File: %s", file.c_str());
     // }
 }
-bool SaveGame::loadFromRemoteString(const std::string& jsonData)
+bool SaveGame::loadFromRemoteString(const std::string& jsonData, bool isMyData)
+
 {
     CCLOG("=== SaveGame: Starting remote load process ===");
 
@@ -462,45 +463,64 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData)
         return false;
     }
 
-    // --- 1. 恢复关卡进度 (同步到本地缓存) ---
-        // 关键点：服务器传回什么，我们就强制本地 CurrentLevel 变为什么
-    if (document.HasMember("currentLevel") && document["currentLevel"].IsInt()) {
-        int levelFromServer = document["currentLevel"].GetInt();
-        this->_currentLevel = levelFromServer;
+    // --- 1. 恢复关卡进度 ---
+        // 只有当 isMyData 为 true 时，才修改本地的 UserDefault 和 DataManager
+    if (isMyData) {
+        if (document.HasMember("currentLevel") && document["currentLevel"].IsInt()) {
+            int levelFromServer = document["currentLevel"].GetInt();
+            this->_currentLevel = levelFromServer;
 
-        // 更新本地 UserDefault 记录，这会影响 BattleScene 的关卡选择
-        UserDefault::getInstance()->setIntegerForKey("CurrentLevel", levelFromServer);
-        // 如果你的 DataManager 使用的是 max_level_unlocked，也一并同步
-        DataManager::getInstance()->setMaxLevelUnlocked(levelFromServer);
+            // 只有是自己的数据，才覆盖本地记录
+            UserDefault::getInstance()->setIntegerForKey("CurrentLevel", levelFromServer);
+            DataManager::getInstance()->setMaxLevelUnlocked(levelFromServer);
+            UserDefault::getInstance()->flush();
 
-        UserDefault::getInstance()->flush();
-        CCLOG("=== SaveGame: Syncing Level from Server: %d ===", levelFromServer);
+            CCLOG("=== SaveGame: Syncing Level from Server: %d ===", levelFromServer);
+        }
+
+        // 恢复最大解锁关卡
+        if (document.HasMember("max_level_unlocked")) {
+            DataManager::getInstance()->setMaxLevelUnlocked(document["max_level_unlocked"].GetInt());
+        }
+    }
+    else {
+        CCLOG("=== SaveGame: Visiting mode - Skipping Level Sync ===");
     }
 
-    // --- 1. 恢复资源 ---
-    if (document.HasMember("coin_count")) coin_count = document["coin_count"].GetInt();
-    if (document.HasMember("water_count")) water_count = document["water_count"].GetInt();
-    if (document.HasMember("gem_count")) gem_count = document["gem_count"].GetInt();
-    if (document.HasMember("coin_limit")) coin_limit = document["coin_limit"].GetInt();
-    if (document.HasMember("water_limit")) water_limit = document["water_limit"].GetInt();
-    if (document.HasMember("gem_limit")) gem_limit = document["gem_limit"].GetInt();
-
-    // --- 2. 恢复关卡进度 ---
-    if (document.HasMember("max_level_unlocked")) {
-        DataManager::getInstance()->setMaxLevelUnlocked(document["max_level_unlocked"].GetInt());
+    // --- 2. 恢复资源 (关键修改) ---
+    // 只有是玩家自己的数据，才更新全局资源变量
+    if (isMyData) {
+        if (document.HasMember("coin_count")) coin_count = document["coin_count"].GetInt();
+        if (document.HasMember("water_count")) water_count = document["water_count"].GetInt();
+        if (document.HasMember("gem_count")) gem_count = document["gem_count"].GetInt();
+        if (document.HasMember("coin_limit")) coin_limit = document["coin_limit"].GetInt();
+        if (document.HasMember("water_limit")) water_limit = document["water_limit"].GetInt();
+        if (document.HasMember("gem_limit")) gem_limit = document["gem_limit"].GetInt();
+        CCLOG("=== SaveGame: Resources synced for Player ===");
+    }
+    else {
+        // 如果是加载别人的数据，资源变量保持不变，或者你可以在 UI 上显示别人的资源（可选）
+        CCLOG("=== SaveGame: Visiting mode - Skipping Resource Sync ===");
     }
 
     // --- 3. 彻底清理旧建筑 ---
+        // 注意：如果是去攻击别人，我们清理的是“当前显示”的建筑，
+        // 但千万不要让别人的建筑进入 g_allPurchasedBuildings。
     for (auto& building : g_allPurchasedBuildings) {
         if (building && building->getParent()) {
             building->removeFromParent();
         }
     }
-    g_allPurchasedBuildings.clear();
+    // 只有自己的数据才清空全局列表，如果是加载别人的数据，全局列表应该保留（暂存在内存中）
+    if (isMyData) {
+        g_allPurchasedBuildings.clear();
+    }
 
-    // --- 4. 恢复建筑 (核心补全) ---
+    // --- 4. 恢复建筑 ---
     if (document.HasMember("buildings") && document["buildings"].IsArray()) {
         const rapidjson::Value& buildingsArray = document["buildings"];
+        // 获取当前正在运行的场景，以便非本人数据时可以将建筑挂载上去
+        auto runningScene = Director::getInstance()->getRunningScene();
         for (rapidjson::SizeType i = 0; i < buildingsArray.Size(); i++) {
             const rapidjson::Value& bData = buildingsArray[i];
 
@@ -515,12 +535,19 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData)
             float productionTimeLeft = bData.HasMember("production_time_left") ? bData["production_time_left"].GetFloat() : 0;
             std::string bName = bData.HasMember("name") ? bData["name"].GetString() : "Building";
 
-            // 根据类型选择图片 (这里复用你 loadGameState 里的 switch 逻辑)
+            // 图片选择逻辑
             std::string filename = "House.png";
-            if (type == BuildingType::BARRACKS) filename = "junying.png";
+            if (type == BuildingType::BASE) {
+                filename = "House.png"; // 或者你项目里的 "House.png"，请确保路径正确
+            }
+            else if (type == BuildingType::BARRACKS) filename = "junying.png";
             else if (type == BuildingType::MINE) filename = "Mine.png";
             else if (type == BuildingType::WATER) filename = "waterwell.png";
-            // ... (其他类型保持一致)
+            else if (type == BuildingType::TOWER) filename = "TilesetTowers.png";
+            else if (type == BuildingType::CANNON) filename = "Cannon1.png"; // 补上加农炮
+            else if (type == BuildingType::WALL) filename = "fence.png";
+            else if (type == BuildingType::GOLD_STORAGE) filename = "BarGold.png";
+            else if (type == BuildingType::WATER_STORAGE) filename = "Water.png";
 
             auto newBuilding = Building::create(filename, Rect::ZERO, bName, 300, type);
             if (newBuilding) {
@@ -528,32 +555,74 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData)
                 newBuilding->setScale(0.5f);
                 newBuilding->initFromSaveData(savedLevel, savedState, upgradeTimeLeft, productionTimeLeft);
 
-                // 重新绑定回调（这步很重要，否则加载出来的建筑点击升级没反应）
+                // 重新绑定回调
                 newBuilding->setOnUpgradeCallback([=]() {
-                    if (type == BuildingType::BASE) { coin_limit += 1500; water_limit += 1500; }
-                    else if (type == BuildingType::BARRACKS) { army_limit += 10; }
-                    auto scene = Director::getInstance()->getRunningScene();
-                    auto gameScene = dynamic_cast<GameScene*>(scene);
-                    if (gameScene) gameScene->updateResourceDisplay();
-                    });
+                    // 【注意】这里回调里的 limit 增加也需要判断 isMyData
+                    // 但通常如果你在访问别人的基地，你应该禁用升级按钮的交互
+                    if (isMyData) {
+                        if (type == BuildingType::BASE) { coin_limit += 1500; water_limit += 1500; }
+                        else if (type == BuildingType::BARRACKS) { army_limit += 10; }
 
-                g_allPurchasedBuildings.pushBack(newBuilding);
+                        auto scene = Director::getInstance()->getRunningScene();
+                        auto gameScene = dynamic_cast<GameScene*>(scene);
+                        if (gameScene) gameScene->updateResourceDisplay();
+                    }
+                    });
+                if (isMyData) {
+                    // 【关键点1】：如果是自己的数据，进入全局列表
+                    g_allPurchasedBuildings.pushBack(newBuilding);
+                    // 注意：这里不需要手动 addChild，因为 GameScene 会负责显示 g_allPurchasedBuildings
+                }
+                else {
+                    auto scene = Director::getInstance()->getRunningScene();
+                    if (scene) scene->addChild(newBuilding, 3);
+                }
             }
         }
     }
 
     // --- 5. 恢复军队 ---
-    if (document.HasMember("army") && document["army"].IsArray()) {
-        DataManager::getInstance()->clearArmy();
-        const rapidjson::Value& armyArray = document["army"];
-        for (rapidjson::SizeType i = 0; i < armyArray.Size(); i++) {
-            const rapidjson::Value& troopData = armyArray[i];
-            DataManager::getInstance()->setTroopCount(troopData["type"].GetString(), troopData["count"].GetInt());
+    // 只有是玩家自己的数据，才恢复到 DataManager 内存单例中
+    if (isMyData) {
+        if (document.HasMember("army") && document["army"].IsArray()) {
+            DataManager::getInstance()->clearArmy();
+            const rapidjson::Value& armyArray = document["army"];
+            for (rapidjson::SizeType i = 0; i < armyArray.Size(); i++) {
+                DataManager::getInstance()->setTroopCount(armyArray[i]["type"].GetString(), armyArray[i]["count"].GetInt());
+            }
         }
+        CCLOG("=== SaveGame: Army synced for Player ===");
+    }
+    else {
+        CCLOG("=== SaveGame: Visiting mode - Skipping Army Sync ===");
     }
 
     CCLOG("=== SaveGame: Remote game state loaded successfully! ===");
     return true;
+}
+
+// SaveGame.cpp
+std::string SaveGame::getSpecificBuildingsJson(const cocos2d::Vector<Building*>& buildings) {
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
+
+    rapidjson::Value buildingsArray(rapidjson::kArrayType);
+    for (auto b : buildings) {
+        rapidjson::Value bObj(rapidjson::kObjectType);
+        bObj.AddMember("type", (int)b->getType(), allocator);
+        bObj.AddMember("level", b->getLevel(), allocator);
+        bObj.AddMember("pos_x", b->getPositionX(), allocator);
+        bObj.AddMember("pos_y", b->getPositionY(), allocator);
+        // ... 其他必要字段 ...
+        buildingsArray.PushBack(bObj, allocator);
+    }
+    doc.AddMember("buildings", buildingsArray, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
 }
 
 std::string SaveGame::getGameStateAsJsonString() {
