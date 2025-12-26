@@ -33,6 +33,9 @@ public:
 
     void setType(EnemyType type) { _type = type; }
     EnemyType getType() const { return _type; }
+    // 1. 添加设置类型的方法
+    void setEnemyType(EnemyType type) { _type = type; }
+
 
 private:
     // �����������䵼��
@@ -55,7 +58,7 @@ private:
     void updateHealthBar();
     // ���������������ű�ը��Ч�ĺ���
     void playExplosionEffect();
-    EnemyType _type = EnemyType::TOWER; 
+    EnemyType _type = EnemyType::TOWER;
 };
 
 #endif

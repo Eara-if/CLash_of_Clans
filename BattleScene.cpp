@@ -699,44 +699,47 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
         BuildingType* ea = nullptr;
         // 根据类型创建建筑
         if (bType == EnemyType::BASE) {
-            eb = EnemyBuilding::create("House.png", "ui/Heart2.png", 200 + level * 10, 250, 0, 0);
+            eb = EnemyBuilding::create("House.png", "ui/Heart2.png", 200 + level * 10, 50, 0, 0);
             _base = eb;
         }
         else if (bType == EnemyType::TOWER) {
-            eb = EnemyBuilding::create("TilesetTowers.png", "ui/Heart2.png", 150 + level * 5, 150, 15, 250);
+            eb = EnemyBuilding::create("TilesetTowers.png", "ui/Heart2.png", 200 + level * 5, 50, 15, 250);
             _towers.pushBack(eb);
         }
         else if (bType == EnemyType::CANNON) {
-            eb = EnemyBuilding::create("Cannon.png", "ui/Heart2.png", 100 + level * 5, 125, 20, 200);
+            eb = EnemyBuilding::create("Cannon.png", "ui/Heart2.png", 100 + level * 5, 25, 20, 200);
+            eb->setEnemyType(EnemyType::CANNON);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::WALL) {
-            eb = EnemyBuilding::create("fence.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
+            eb = EnemyBuilding::create("fence.png", "ui/Heart2.png", 60 + level * 3, 15, 0, 0);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::BARRACKS) {
-            eb = EnemyBuilding::create("junying.png", "ui/Heart2.png", 150 + level * 5, 50, 0, 0);
+            eb = EnemyBuilding::create("junying.png", "ui/Heart2.png", 200 + level * 5, 50, 0, 0);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::WATER) {
-            eb = EnemyBuilding::create("waterwell.png", "ui/Heart2.png", 50 + level * 3, 90, 0, 0);
+            eb = EnemyBuilding::create("waterwell.png", "ui/Heart2.png", 60 + level * 3, 15, 0, 0);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::MINE) {
-            eb = EnemyBuilding::create("Mine.png", "ui/Heart2.png", 50 + level * 3, 100, 0, 0);
+            eb = EnemyBuilding::create("Mine.png", "ui/Heart2.png", 60 + level * 3, 15, 0, 0);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::WATER_STORAGE) {
-            eb = EnemyBuilding::create("Water.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
+            eb = EnemyBuilding::create("Water.png", "ui/Heart2.png", 60 + level * 3, 15, 0, 0);
             _towers.pushBack(eb);
         }
         else if (bTypeEnum == BuildingType::GOLD_STORAGE) {
-            eb = EnemyBuilding::create("BarGold.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
+            eb = EnemyBuilding::create("BarGold.png", "ui/Heart2.png", 60 + level * 3, 15, 0, 0);
             _towers.pushBack(eb);
         }
 
         if (eb) {
-            eb->setScale(0.5f);
+            eb->setType(bType);
+
+            eb->setScale(0.6f);
             eb->setPosition(Vec2(x, y));
 
             // 【重要】：必须 addChild 到 _tileMap 而不是 this
@@ -754,7 +757,7 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
             Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
 
             // 禁放区的大小也要随地图缩放
-            float rectSize = 100.0f * _tileMap->getScale();
+            float rectSize = 150.0f * _tileMap->getScale();
             Rect worldRect(worldPos.x - rectSize / 2, worldPos.y - rectSize / 2, rectSize, rectSize);
 
             _forbiddenRects.push_back(worldRect);
