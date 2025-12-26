@@ -15,7 +15,19 @@ enum class BuildingType {
     WALL,           // 城墙
     UNKNOWN
 };
-
+enum class EnemyType {
+    BASE = 0,       // 大本营 (原 TOWN_HALL)
+    BARRACKS,       // 兵营
+    MINE,           // 金矿
+    WATER,          // 圣水收集器
+    DEFENSE,        // 防御建筑
+    GOLD_STORAGE,   // 金库
+    WATER_STORAGE,  // 圣水库
+    CANNON,         // 加农炮
+    TOWER,          // 弓箭塔
+    WALL,           // 城墙
+    UNKNOWN
+};
 enum class BuildingState {
     IDLE,       // ����
     UPGRADING,   // ��������

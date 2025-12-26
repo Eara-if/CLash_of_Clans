@@ -544,7 +544,8 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData, bool isMyData)
             else if (type == BuildingType::MINE) filename = "Mine.png";
             else if (type == BuildingType::WATER) filename = "waterwell.png";
             else if (type == BuildingType::TOWER) filename = "TilesetTowers.png";
-            else if (type == BuildingType::CANNON) filename = "Cannon1.png"; // 补上加农炮
+            else if (type == BuildingType::DEFENSE) filename = "TilesetTowers.png";
+            else if (type == BuildingType::CANNON) filename = "Cannon.png"; // 补上加农炮
             else if (type == BuildingType::WALL) filename = "fence.png";
             else if (type == BuildingType::GOLD_STORAGE) filename = "BarGold.png";
             else if (type == BuildingType::WATER_STORAGE) filename = "Water.png";
@@ -583,18 +584,24 @@ bool SaveGame::loadFromRemoteString(const std::string& jsonData, bool isMyData)
 
     // --- 5. 恢复军队 ---
     // 只有是玩家自己的数据，才恢复到 DataManager 内存单例中
+   // --- 5. 恢复军队 ---
+    // 只有是玩家自己的数据，才恢复到 DataManager 内存单例中
     if (isMyData) {
+        // 【修正】：无论服务器有没有数据，先清空本地内存中的旧数据！
+        // 这样如果是新账号（没有 army 字段），本地数据就会正确变成 0。
+        DataManager::getInstance()->clearArmy();
+
         if (document.HasMember("army") && document["army"].IsArray()) {
-            DataManager::getInstance()->clearArmy();
             const rapidjson::Value& armyArray = document["army"];
             for (rapidjson::SizeType i = 0; i < armyArray.Size(); i++) {
-                DataManager::getInstance()->setTroopCount(armyArray[i]["type"].GetString(), armyArray[i]["count"].GetInt());
+                DataManager::getInstance()->setTroopCount(
+                    armyArray[i]["type"].GetString(),
+                    armyArray[i]["count"].GetInt()
+                );
             }
         }
-        CCLOG("=== SaveGame: Army synced for Player ===");
-    }
-    else {
-        CCLOG("=== SaveGame: Visiting mode - Skipping Army Sync ===");
+        CCLOG("=== SaveGame: Army synced for Player (Cleared and Reloaded) ===");
+
     }
 
     CCLOG("=== SaveGame: Remote game state loaded successfully! ===");

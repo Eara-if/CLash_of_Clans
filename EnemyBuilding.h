@@ -1,15 +1,9 @@
 #ifndef __ENEMY_BUILDING_H__
 #define __ENEMY_BUILDING_H__
-
+#include"SharedData.h"
 #include "cocos2d.h"
 // 2. ��������ǰ�����������߱����� Soldier ��һ���࣬����ϸ�ڵȻ����˵
 class Soldier;
-enum class EnemyType {
-    BASE,   // ��Ӫ
-    TOWER,  // ������ (�ṥ��)
-    WALL,   // դ��/ǽ (���ṥ�������赲�ƶ�)
-    CANNON  // 【新增】加农炮
-};
 class EnemyBuilding : public cocos2d::Sprite
 {
 public:

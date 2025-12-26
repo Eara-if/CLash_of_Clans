@@ -720,30 +720,45 @@ void Building::setProductionTimeLeft(float time)
 // 【新增】从数据初始化建筑（用于加载存档）
 void Building::initFromSaveData(int level, BuildingState savedState, float upgradeTimeLeft, float productionTimeLeft)
 {
-    // 设置等级
+    // 1. 设置等级
     setLevelDirectly(level);
 
-    // 设置状态
+    // 2. 设置状态
     setStateDirectly(savedState);
 
-    // 设置升级剩余时间
+    // 3. 设置升级剩余时间
     if (savedState == BuildingState::UPGRADING) {
         setUpgradeTimeLeft(upgradeTimeLeft);
     }
 
-    // 设置生产剩余时间
+    // 4. 设置生产相关逻辑
     if (type == BuildingType::MINE || type == BuildingType::WATER) {
+
         if (savedState == BuildingState::PRODUCING) {
-            setProductionTimeLeft(productionTimeLeft);
+            // 【懒人修改法】
+            // 如果你不想算复杂的时间，只要是在生产中，加载时直接算它生产完成了！
+            // 这样既解决了离线问题，又解决了卡住问题，玩家也会很开心。
+            this->state = BuildingState::PRODUCING; // 先假装它在生产
+            this->finishProduction(); // 然后立刻完成
         }
         else if (savedState == BuildingState::READY) {
-            // 如果是可收集状态，确保有可收集标记
-            finishProduction(); // 这会创建可收集标记
+            // 【核心修复】
+            // 如果存档里已经是 READY，不要调用 finishProduction() (因为它会因为状态不对被拦截)
+            // 而是直接手动设置这一项：
+            this->isReadyToCollect = true;
+
+            // 确保图标显示出来 (setStateDirectly 里虽然有写，但双重保险)
+            if (!readyIndicator) {
+                // 借用 setStateDirectly 的逻辑或者 finishProduction 的一部分逻辑刷新UI
+                // 为了简单，我们手动触发一次状态刷新
+                this->setStateDirectly(BuildingState::IDLE); // 先重置
+                this->setStateDirectly(BuildingState::READY); // 再设为 READY，这会触发图标创建
+            }
         }
     }
 
-    CCLOG("=== Building: %s initialized from save data - Level:%d, State:%d ===",
-        buildingName.c_str(), level, (int)savedState);
+    CCLOG("=== Building: %s initialized - ReadyToCollect: %s ===",
+        buildingName.c_str(), isReadyToCollect ? "YES" : "NO");
 }
 
 // 获取储存器增加的容量

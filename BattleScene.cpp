@@ -693,36 +693,45 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
         float y = b["pos_y"].GetFloat();
         int level = b.HasMember("level") ? b["level"].GetInt() : 1;
 
-        BuildingType bType = static_cast<BuildingType>(typeInt);
+        EnemyType bType = static_cast<EnemyType>(typeInt);
         EnemyBuilding* eb = nullptr;
-
+        BuildingType bTypeEnum = static_cast<BuildingType>(typeInt);
+        BuildingType* ea = nullptr;
         // 根据类型创建建筑
-        if (bType == BuildingType::BASE) {
+        if (bType == EnemyType::BASE) {
             eb = EnemyBuilding::create("House.png", "ui/Heart2.png", 200 + level * 10, 250, 0, 0);
             _base = eb;
         }
-        else if (bType == BuildingType::TOWER) {
-            eb = EnemyBuilding::create("\TilesetTowers.png", "ui/Heart2.png", 150 + level * 5, 150, 15, 250);
+        else if (bType == EnemyType::TOWER) {
+            eb = EnemyBuilding::create("TilesetTowers.png", "ui/Heart2.png", 150 + level * 5, 150, 15, 250);
             _towers.pushBack(eb);
         }
-        else if (bType == BuildingType::CANNON) {
-            eb = EnemyBuilding::create("map/buildings/Cannon1.png", "ui/Heart2.png", 100 + level * 5, 125, 20, 200);
+        else if (bType == EnemyType::CANNON) {
+            eb = EnemyBuilding::create("Cannon.png", "ui/Heart2.png", 100 + level * 5, 125, 20, 200);
             _towers.pushBack(eb);
         }
-        else if (bType == BuildingType::WALL) {
+        else if (bTypeEnum == BuildingType::WALL) {
             eb = EnemyBuilding::create("fence.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
             _towers.pushBack(eb);
         }
-        else if (bType == BuildingType::BARRACKS) {
+        else if (bTypeEnum == BuildingType::BARRACKS) {
             eb = EnemyBuilding::create("junying.png", "ui/Heart2.png", 150 + level * 5, 50, 0, 0);
             _towers.pushBack(eb);
         }
-        else if (bType == BuildingType::WATER) {
+        else if (bTypeEnum == BuildingType::WATER) {
             eb = EnemyBuilding::create("waterwell.png", "ui/Heart2.png", 50 + level * 3, 90, 0, 0);
             _towers.pushBack(eb);
         }
-        else if (bType == BuildingType::MINE) {
+        else if (bTypeEnum == BuildingType::MINE) {
             eb = EnemyBuilding::create("Mine.png", "ui/Heart2.png", 50 + level * 3, 100, 0, 0);
+            _towers.pushBack(eb);
+        }
+        else if (bTypeEnum == BuildingType::WATER_STORAGE) {
+            eb = EnemyBuilding::create("Water.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
+            _towers.pushBack(eb);
+        }
+        else if (bTypeEnum == BuildingType::GOLD_STORAGE) {
+            eb = EnemyBuilding::create("BarGold.png", "ui/Heart2.png", 50 + level * 3, 75, 0, 0);
             _towers.pushBack(eb);
         }
 
@@ -734,7 +743,7 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
             // 这样建筑才会跟随地图坐标系统，不会出现在屏幕右上角
             _tileMap->addChild(eb, 3);
 
-            if (bType != BuildingType::BASE) {
+            if (bType != EnemyType::BASE) {
                 _towers.pushBack(eb);
             }
 

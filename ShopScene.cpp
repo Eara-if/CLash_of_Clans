@@ -844,6 +844,7 @@ bool ShopScene::purchaseItem(ShopItemType type) {
                         filename = "TilesetTowers.png";
                         buildingName = "Archer Tower";
                         buildingtype = BuildingType::DEFENSE;
+                        buildingtype = BuildingType::TOWER;
                         buildingbasecost = 300;
                         break;
                     case ShopItemType::CANNON:
