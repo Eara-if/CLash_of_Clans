@@ -550,23 +550,56 @@ void Building::finishUpgrade()
     // 3. 等级 +1
     a_level++;
 
-    if (type == BuildingType::BARRACKS) {
-        // 【重要】不再直接增加 army_limit，而是让 GameScene 重新计算
-        auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
-        if (gamescene) {
-            gamescene->recalculateArmyLimit();
-            CCLOG("=== Building: Barracks upgraded to level %d, army limit recalculated ===", a_level);
+    // 【新增】根据建筑类型处理不同的升级效果
+    switch (type) {
+        case BuildingType::BARRACKS: {
+            // 兵营：重新计算军队上限
+            auto gamescene = dynamic_cast<GameScene*>(Director::getInstance()->getRunningScene());
+            if (gamescene) {
+                gamescene->recalculateArmyLimit();
+                CCLOG("=== Building: Barracks upgraded to level %d, army limit recalculated ===", a_level);
+            }
+            break;
+        }
+
+        case BuildingType::GOLD_STORAGE: {
+            // 金币储存器：增加金币上限
+            coin_limit += 1500; // 每级增加1500容量
+            CCLOG("=== Building: Gold Storage upgraded to level %d, coin limit +1500 ===", a_level);
+            break;
+        }
+
+        case BuildingType::WATER_STORAGE: {
+            // 圣水储存器：增加圣水上限
+            water_limit += 1500; // 每级增加1500容量
+            CCLOG("=== Building: Water Storage upgraded to level %d, water limit +1500 ===", a_level);
+            break;
+        }
+
+        case BuildingType::BASE: {
+            // 大本营：同时增加两种资源上限（已有逻辑）
+            coin_limit += 1500;
+            water_limit += 1500;
+            CCLOG("=== Building: Town Hall upgraded to level %d, both limits +1500 ===", a_level);
+            break;
+        }
+
+        case BuildingType::MINE:
+        case BuildingType::WATER: {
+            // 生产建筑：增加生产量
+            productionAmount = 50 * a_level;
+            CCLOG("=== Building: Production building upgraded to level %d, production +%d ===",
+                a_level, productionAmount);
+            break;
         }
     }
+
     // 4. 【核心】在这里调用回调！
     // 这时候才会执行 GameScene 里写的 coin_limit += 1500 代码
     if (UpgradeCallback_coin) {
         UpgradeCallback_coin();
     }
 
-    if (type == BuildingType::MINE || type == BuildingType::WATER) {
-        productionAmount = 50 * a_level;
-    }
 
     log("Upgrade finished! Level is now %d", a_level);
 }
@@ -712,3 +745,15 @@ void Building::initFromSaveData(int level, BuildingState savedState, float upgra
     CCLOG("=== Building: %s initialized from save data - Level:%d, State:%d ===",
         buildingName.c_str(), level, (int)savedState);
 }
+
+// 获取储存器增加的容量
+int Building::getStorageCapacityIncrease() const
+{
+    // 根据建筑类型和等级计算增加的容量
+    // 这里假设每级增加1500容量（与大本营一致）
+    if (type == BuildingType::GOLD_STORAGE || type == BuildingType::WATER_STORAGE) {
+        return 1500 * a_level; // 每级增加1500容量
+    }
+    return 0;
+}
+

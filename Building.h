@@ -14,6 +14,9 @@ public:
     static Building* create(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int baseCost, BuildingType type);
     float getTimeLeft();
     virtual bool init(const std::string& filename, const cocos2d::Rect& rect, const std::string& name, int baseCost, BuildingType type);
+    // 新增：获取储存器增加的容量
+    int getStorageCapacityIncrease() const;
+
     void Building::setSpriteName(std::string name) {
         if (name == "House.png") {
             _type = BuildingType::BASE ;

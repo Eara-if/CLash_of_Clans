@@ -243,6 +243,11 @@ void GameScene::reloadBuildingsFromSave() {
         if (b->getParent()) b->removeFromParent();
     }
     _allBuildings.clear();
+    
+    // 【新增】重置资源上限为初始值（假设初始值为5000）
+    extern int coin_limit, water_limit;
+    coin_limit = 5000;
+    water_limit = 5000;
 
     // 2. 核心判断：存档容器到底有没有货？
     if (g_allPurchasedBuildings.empty()) {
@@ -264,6 +269,20 @@ void GameScene::reloadBuildingsFromSave() {
                 _allBuildings.pushBack(building);
                 this->addObstacle(building);
                 building->setPosition(building->getPosition());
+                // 【新增】根据建筑等级初始化资源上限
+                BuildingType type = building->getType();
+                int level = building->getLevel();
+
+                if (type == BuildingType::BASE) {
+                    coin_limit += 1500 * (level - 1); // 大本营1级不加，2级开始每级+1500
+                    water_limit += 1500 * (level - 1);
+                }
+                else if (type == BuildingType::GOLD_STORAGE) {
+                    coin_limit += 1500 * level; // 储存器每级都加
+                }
+                else if (type == BuildingType::WATER_STORAGE) {
+                    water_limit += 1500 * level; // 储存器每级都加
+                }
             }
         }
         log("reload: Successfully restored %d buildings.", (int)g_allPurchasedBuildings.size());
@@ -283,17 +302,52 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
 
     building->setOnUpgradeCallback([=]() {
 
-        if (type1 == BuildingType::BASE) {
-            extern int coin_limit, water_limit;
-            coin_limit += 1500;
-            water_limit += 1500;
-        }
-        // 2. ??????? -> ????????? (?????��??????? army_limit)
-        else if (type1 == BuildingType::BARRACKS) {
-            this->recalculateArmyLimit();
-            log("Barracks upgraded, army limit recalculated to %d", army_limit);
+        // 根据建筑类型处理不同的升级效果
+        switch (type1) {
+            case BuildingType::BASE: {
+                // 大本营：增加两种资源上限
+                extern int coin_limit, water_limit;
+                coin_limit += 1500;
+                water_limit += 1500;
+                CCLOG("=== GameScene: Town Hall upgraded, coin+%d water+%d ===",
+                    coin_limit, water_limit);
+                break;
+            }
+
+            case BuildingType::BARRACKS: {
+                // 兵营：重新计算军队上限
+                this->recalculateArmyLimit();
+                CCLOG("=== GameScene: Barracks upgraded, army limit recalculated ===");
+                break;
+            }
+
+            case BuildingType::GOLD_STORAGE: {
+                // 金币储存器：增加金币上限
+                extern int coin_limit;
+                coin_limit += 1500 * building->getLevel(); // 当前等级的总容量
+                CCLOG("=== GameScene: Gold Storage upgraded, coin limit +%d ===",
+                    1500 * building->getLevel());
+                break;
+            }
+
+            case BuildingType::WATER_STORAGE: {
+                // 圣水储存器：增加圣水上限
+                extern int water_limit;
+                water_limit += 1500 * building->getLevel(); // 当前等级的总容量
+                CCLOG("=== GameScene: Water Storage upgraded, water limit +%d ===",
+                    1500 * building->getLevel());
+                break;
+            }
+
+            case BuildingType::MINE:
+            case BuildingType::WATER: {
+                // 生产建筑：升级时不需要特殊处理，生产量在 Building 类中已更新
+                CCLOG("=== GameScene: Production building upgraded ===");
+                break;
+            }
         }
 
+        // 更新UI显示
         this->updateResourceDisplay();
         });
 
@@ -305,6 +359,18 @@ void GameScene::setbuilding(const std::string& filename, const cocos2d::Rect& re
     // ������������Ǳ�Ӫ�����¼����˿�����
     if (type1 == BuildingType::BARRACKS) {
         this->recalculateArmyLimit();
+    }
+
+    // 【新增】如果是储存器，初始化资源上限
+    if (type1 == BuildingType::GOLD_STORAGE) {
+        extern int coin_limit;
+        coin_limit += 1500; // 初始1级增加1500
+        CCLOG("=== GameScene: Gold Storage created, initial coin limit +1500 ===");
+    }
+    else if (type1 == BuildingType::WATER_STORAGE) {
+        extern int water_limit;
+        water_limit += 1500; // 初始1级增加1500
+        CCLOG("=== GameScene: Water Storage created, initial water limit +1500 ===");
     }
 
     // ���ؼ��޸ġ���ӵ�ȫ����������������ʱ�����ҵ�
