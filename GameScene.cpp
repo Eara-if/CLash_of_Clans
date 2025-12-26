@@ -10,266 +10,17 @@
 #include "json/document.h"
 #include "json/writer.h"
 #include "json/stringbuffer.h"
+#include"Resource.h"
+#include"PlayerListLayer.h"
 using namespace cocos2d::network;
 USING_NS_CC;
-extern int coin_count = 5000;
-extern int water_count = 5000;
-extern int gem_count = 500;
 
-extern int coin_limit = 5000;
-extern int water_limit = 5000;
-extern int gem_limit = 5000;
 extern std::string g_currentUsername;
 
-cocos2d::Vector<Building*> g_allPurchasedBuildings;// ????????????????????
+cocos2d::Vector<Building*> g_allPurchasedBuildings;// ???????????????????? 
 
 int army_limit = 0;
-class resource
-{
-public:
-    std::string filename = "";
-    int count = 0;
 
-    // ????????? 1??????????????????????????????????
-    // ??????????????????????????????????? Node*
-    virtual void print(Node* parentNode) {}; // ?�D????????????��
-    virtual void modify() {};
-    resource(int data) :count(data) {};
-    virtual ~resource() {}; // ?????��??????????????????�D??
-};
-
-class goldcoin : public resource
-{
-private:
-    cocos2d::Sprite* _displaySprite = nullptr;
-    Rect calculateRect() {
-        float start_x = 0;
-        float start_y = 63;
-        float tileWidth = 43;
-        float tileHeight = 10;
-
-        // ?????????????
-        if (coin_count > 0 && coin_count <= coin_limit / 4) {
-            start_x = 137;
-        }
-        else if (coin_count == 0) {
-            start_x = 182;
-        }
-        else if (coin_count > coin_limit / 4 && coin_count <= coin_limit / 2) {
-            start_x = 92;
-        }
-        else if (coin_count > coin_limit / 2 && coin_count <= coin_limit * 0.75) {
-            start_x = 47;
-        }
-        else if (coin_count > coin_limit * 0.75 && coin_count <= coin_limit) {
-            start_x = 2;
-        }
-
-        return Rect(start_x, start_y, tileWidth, tileHeight);
-    }
-public:
-
-    goldcoin() : resource(5000) {};
-    ~goldcoin() {};
-
-    void modify() override { // ?????��???? override ???????????????????
-        // ??????
-    }
-
-    // ?????????????????????????��????????????? Node*
-    void print(Node* parentNode) override {
-
-        // ?????? 2???????????????????
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-        filename = "ui/06.png";
-
-
-        Rect tileRect = this->calculateRect();
-
-        _displaySprite = Sprite::create(filename, tileRect);
-
-        // ??????
-        if (_displaySprite) {
-            _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
-
-            // ????��??
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 50);
-
-            // ??????????
-            parentNode->addChild(_displaySprite, 2);
-        }
-    }
-    void refresh() {
-        if (_displaySprite != nullptr) {
-            // 1. ??????? Rect (??? coin_count ???????)
-            Rect newRect = this->calculateRect();
-
-            // 2. ???????????????????????????????????
-            _displaySprite->setTextureRect(newRect);
-
-            // log("Coin icon refreshed!"); 
-        }
-    }
-    void update() {
-    }
-};
-class water : public resource
-{
-private:
-    cocos2d::Sprite* _displaySprite = nullptr;
-    Rect calculateRect() {
-        float start_x = 0;
-        float start_y = 19;
-        float tileWidth = 43;
-        float tileHeight = 10;
-
-        // ?????????????
-        if (water_count > 0 && water_count <= water_limit / 4) {
-            start_x = 137;
-        }
-        else if (water_count == 0) {
-            start_x = 182;
-        }
-        else if (water_count > water_limit / 4 && water_count <= water_limit / 2) {
-            start_x = 92;
-        }
-        else if (water_count > water_limit / 2 && water_count <= water_limit * 0.75) {
-            start_x = 47;
-        }
-        else if (water_count > water_limit * 0.75 && water_count <= water_limit) {
-            start_x = 2;
-        }
-
-        return Rect(start_x, start_y, tileWidth, tileHeight);
-    }
-public:
-    water() : resource(5000) {};
-    ~water() {};
-
-    void modify() override { // ?????��???? override ???????????????????
-        // ??????
-    }
-
-    void print(Node* parentNode) override {
-
-        // ?????? 2???????????????????
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-        filename = "ui/06.png";
-
-
-        Rect tileRect = this->calculateRect();
-
-        _displaySprite = Sprite::create(filename, tileRect);
-
-        // ??????
-        if (_displaySprite) {
-            _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
-
-            // ????��??
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 120);
-
-            // ??????????
-            parentNode->addChild(_displaySprite, 2);
-        }
-    }
-    void refresh() {
-        if (_displaySprite != nullptr) {
-            // 1. ??????? Rect (??? coin_count ???????)
-            Rect newRect = this->calculateRect();
-
-            // 2. ???????????????????????????????????
-            _displaySprite->setTextureRect(newRect);
-
-            // log("Coin icon refreshed!"); 
-        }
-    }
-
-    void update() {
-    }
-};
-class Gem : public resource
-{
-private:
-    cocos2d::Sprite* _displaySprite = nullptr;
-    Rect calculateRect() {
-        float start_x = 0;
-        float start_y = 34;
-        float tileWidth = 43;
-        float tileHeight = 10;
-
-        // ?????????????
-        if (gem_count > 0 && gem_count <= gem_limit / 4) {
-            start_x = 137;
-        }
-        else if (gem_count == 0) {
-            start_x = 182;
-        }
-        else if (gem_count > gem_limit / 4 && gem_count <= gem_limit / 2) {
-            start_x = 92;
-        }
-        else if (gem_count > gem_limit / 2 && gem_count <= gem_limit * 0.75) {
-            start_x = 47;
-        }
-        else if (gem_count > gem_limit * 0.75 && gem_count <= gem_limit) {
-            start_x = 2;
-        }
-
-        return Rect(start_x, start_y, tileWidth, tileHeight);
-    }
-public:
-    Gem() : resource(5000) {};
-    ~Gem() {};
-
-    void modify() override {
-    }
-
-
-    void print(Node* parentNode) override {
-
-        // ?????? 2???????????????????
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 origin = Director::getInstance()->getVisibleOrigin();
-
-        filename = "ui/06.png";
-
-
-        Rect tileRect = this->calculateRect();
-
-        _displaySprite = Sprite::create(filename, tileRect);
-
-        // ??????
-        if (_displaySprite) {
-            _displaySprite->getTexture()->setAliasTexParameters();
-            _displaySprite->setScale(6.0f); // ??? scaleAmount ???????????
-
-            // ????��??
-            _displaySprite->setPosition(origin.x + visibleSize.width - 150, origin.y + visibleSize.height - 182);
-
-            // ??????????
-            parentNode->addChild(_displaySprite, 2);
-        }
-    }
-    void refresh() {
-        if (_displaySprite != nullptr) {
-            // 1. ??????? Rect (??? coin_count ???????)
-            Rect newRect = this->calculateRect();
-
-            // 2. ???????????????????????????????????
-            _displaySprite->setTextureRect(newRect);
-
-            // log("Coin icon refreshed!"); 
-        }
-    }
-
-    void update() {
-    }
-};
 
 Scene* GameScene::createScene(Building* purchasedBuilding) {
     auto scene = GameScene::create(); // ???? GameScene ???
@@ -386,6 +137,7 @@ bool GameScene::init()
             this->addSaveButton();
 
             // 在左下角添加原本的 Back 按钮
+
             auto backItem = MenuItemFont::create("Back(Save to Cloud)", CC_CALLBACK_1(GameScene::menuBackCallback, this));
             backItem->setColor(Color3B::YELLOW);
             backItem->setPosition(Vec2(origin.x + backItem->getContentSize().width / 2 + 20,
@@ -396,8 +148,7 @@ bool GameScene::init()
             this->addChild(menu, 100);
         }
         else {
-            // --- 拜访模式：隐藏商店/保存/返回，显示 ATTACK 按钮 ---
-            this->addAttackButton();
+            
         }
         }, 0, "setup_ui_key");
 
@@ -415,11 +166,54 @@ bool GameScene::init()
     _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
 
     // 8. 【社交与自动保存逻辑】
-    this->setupLeftPanel(); // 加载左侧玩家列表
+    
+    if (g_currentUsername != "LocalPlayer") {
+        // 1. 创建文字标签 
+        auto label = Label::createWithTTF("FRIENDS", "fonts/Marker Felt.ttf", 30);
+        label->setColor(Color3B::WHITE);
+        label->enableOutline(Color4B::BLACK, 2); // 加个黑边让字更清晰
 
+        // 2. 创建点击事件
+        auto socialItem = MenuItemLabel::create(label, [=](Ref* sender) {
+            // A. 创建列表层
+            auto playerLayer = PlayerListLayer::create();
+
+            // B. 绑定回调函数：当列表里的某个人被点击时触发
+            playerLayer->setOnVisitCallback([=](std::string targetName) {
+
+                // 如果点击的是当前正在玩的人（自己），或者显示的是 My Home
+                if (targetName == g_currentUsername) {
+                    log("Loading my own home...");
+                    // 如果你已经在自己家，其实不需要重新加载，但为了逻辑统一，可以重载一次
+
+                }
+                else {
+                    log("Visiting neighbor: %s", targetName.c_str());
+                    // 加载别人的数据
+                    this->loadOtherPlayerData(targetName);
+                }
+                });
+
+            // C. 添加到场景 (ZOrder设为 1000 保证盖在所有东西上面)
+            this->addChild(playerLayer, 1000);
+
+            // D. 显示动画
+            playerLayer->show();
+            });
+
+        // 3. 设置按钮位置 
+        // 假设放在屏幕左侧，稍微靠上一点的位置 (x=80, y=高度-200)
+        // 你可以根据需要调整这个坐标
+        socialItem->setPosition(Vec2(origin.x + 120, origin.y + visibleSize.height - 200));
+
+        // 4. 加入菜单
+        auto menu = Menu::create(socialItem, NULL);
+        menu->setPosition(Vec2::ZERO);
+        this->addChild(menu, 200);
+    }
     // 只有在【自己家】才开启每 60 秒一次的自动保存
     if (_currentSceneOwner == g_currentUsername) {
-        this->schedule(CC_CALLBACK_1(GameScene::onAutoSave, this), 60.0f, "auto_save_key");
+        this->schedule(CC_CALLBACK_1(GameScene::onAutoSave, this), 10.0f, "auto_save_key");
         log("Auto-save ENABLED for: %s", _currentSceneOwner.c_str());
     }
     else {
@@ -1205,37 +999,6 @@ void GameScene::loadOtherPlayerData(std::string targetUsername) {
         }
         });
     HttpClient::getInstance()->send(request);
-}
-
-void GameScene::addAttackButton() {
-    extern std::string g_currentUsername;
-    // 只有在别人家时才显示
-    if (_currentSceneOwner != g_currentUsername && !_currentSceneOwner.empty()) {
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto origin = Director::getInstance()->getVisibleOrigin();
-
-        // 1. 创建攻击按钮 (右下角)
-        auto attackLabel = Label::createWithTTF("ATTACK!", "fonts/Marker Felt.ttf", 36);
-        attackLabel->setTextColor(Color4B::RED);
-        attackLabel->enableOutline(Color4B::BLACK, 2);
-
-        auto attackItem = MenuItemLabel::create(attackLabel, CC_CALLBACK_1(GameScene::menuAttackCallback, this));
-        // 位置放在原本 Save 按钮的地方
-        attackItem->setPosition(Vec2(origin.x + visibleSize.width - 150, origin.y + 100));
-
-        // 2. 创建一个“退出拜访”按钮 (左下角)，替代原本被隐藏的 Back
-        auto returnLabel = Label::createWithTTF("Return Home", "fonts/Marker Felt.ttf", 26);
-        returnLabel->setColor(Color3B::WHITE);
-        auto returnItem = MenuItemLabel::create(returnLabel, [=](Ref* sender) {
-            // 调用您已有的加载函数回到自己家
-            this->loadOtherPlayerData(g_currentUsername);
-            });
-        returnItem->setPosition(Vec2(origin.x + 100, origin.y + 50));
-
-        auto menu = Menu::create(attackItem, returnItem, NULL);
-        menu->setPosition(Vec2::ZERO);
-        this->addChild(menu, 200);
-    }
 }
 
 void GameScene::menuAttackCallback(Ref* pSender) {

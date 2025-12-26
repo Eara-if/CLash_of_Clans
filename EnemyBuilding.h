@@ -61,7 +61,7 @@ private:
     void updateHealthBar();
     // ���������������ű�ը��Ч�ĺ���
     void playExplosionEffect();
-    EnemyType _type = EnemyType::TOWER; // Ĭ��Ϊ��
+    EnemyType _type = EnemyType::TOWER; 
 };
 
 #endif

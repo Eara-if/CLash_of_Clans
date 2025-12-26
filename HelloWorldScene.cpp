@@ -152,7 +152,7 @@ bool HelloWorld::init()
 
     //////////////////////////////
     // 4. �����Ϸ����
-    auto title = Label::createWithTTF("CLASH OF COCO", "fonts/Marker Felt.ttf", 48);
+    auto title = Label::createWithTTF("CLASH OF COCO", "fonts/Marker Felt.ttf", 56);
     if (title != nullptr)
     {
         // ������Ļ�����м�
