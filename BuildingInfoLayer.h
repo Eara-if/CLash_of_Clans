@@ -1,5 +1,5 @@
-﻿#ifndef __BUILDING_INFO_LAYER_H__   //意味着此代码只会被编译一次，第二次时会跳过define-endif
-#define __BUILDING_INFO_LAYER_H__
+﻿#ifndef BUILDING_INFO_LAYER_H__   //意味着此代码只会被编译一次，第二次时会跳过define-endif
+#define BUILDING_INFO_LAYER_H__
 
 #include "cocos2d.h"
 #include <functional> 
