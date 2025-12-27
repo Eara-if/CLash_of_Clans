@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BUILDING_UPGRADE_LIMITS_H_
+#define BUILDING_UPGRADE_LIMITS_H_
 
 #include "cocos2d.h"      // 包含cocos2d游戏引擎头文件
 #include "Building.h"     // 包含建筑类型定义头文件
@@ -65,3 +66,5 @@ private:
     // 键：大本营等级，值：该等级解锁的信息描述
     std::map<int, std::string> townHallUnlockInfo_;
 };
+
+#endif

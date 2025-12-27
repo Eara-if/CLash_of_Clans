@@ -1,4 +1,7 @@
-﻿#include "cocos2d.h"
+﻿#ifndef RESOURCE_H_
+#define RESOURCE_H_
+
+#include "cocos2d.h"
 
 USING_NS_CC;
 extern int coin_count = 5000;
@@ -256,4 +259,5 @@ public:
     void update() {
     }
 };
-#pragma once
+
+#endif

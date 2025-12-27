@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GAME_SCENE_H_
+#define GAME_SCENE_H_
 
 #include "cocos2d.h"
 #include"Building.h"
@@ -71,3 +72,5 @@ public:
 
     CREATE_FUNC(GameScene);
 };
+
+#endif // GAME_SCENE_H_

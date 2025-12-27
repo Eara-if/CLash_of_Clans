@@ -1,5 +1,5 @@
-#pragma once
-
+#ifndef ENEMY_BUILDING_H_
+#define ENEMY_BUILDING_H_
 #include"SharedData.h"
 #include "cocos2d.h"
 // 2. ��������ǰ�����������߱����� Soldier ��һ���࣬����ϸ�ڵȻ����˵
@@ -60,3 +60,5 @@ private:
     void playExplosionEffect();
     EnemyType _type = EnemyType::TOWER;
 };
+
+#endif

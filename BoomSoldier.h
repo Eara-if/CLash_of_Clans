@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BOOM_SOLDIER_H_
+#define BOOM_SOLDIER_H_
 
 #include "Soldier.h"
 
@@ -18,3 +19,4 @@ private:
     const std::string WALK_ANIM_BASE = "anim/boom";
 };
 
+#endif // BOOM_SOLDIER_H_

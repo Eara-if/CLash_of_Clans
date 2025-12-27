@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BUILDING_H_
+#define BUILDING_H_
 
 #include "cocos2d.h"
 #include "SharedData.h"
@@ -118,3 +119,5 @@ private:
     cocos2d::Sprite* readyIndicator; // ���ռ���ʾ���
     cocos2d::Vec2 originalPos;
 };
+
+#endif

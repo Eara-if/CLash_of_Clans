@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AIRFORCE_SOLDIER_H_
+#define AIRFORCE_SOLDIER_H_
 
 #include "Soldier.h"
 
@@ -19,3 +20,5 @@ public:
     // 可选：重写攻击特效（如果需要发射东西，目前暂用基类近战逻辑）
     // virtual void attackTarget(EnemyBuilding* target) override; 
 };
+
+#endif

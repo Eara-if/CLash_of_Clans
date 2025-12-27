@@ -22,7 +22,8 @@
  THE SOFTWARE.
  ****************************************************************************/
 
-#pragma once
+#ifndef HELLOWORLD_SCENE_H_
+#define HELLOWORLD_SCENE_H_
 
 #include "cocos2d.h"
 
@@ -45,3 +46,5 @@ public:
     void menuLocalNewGame(cocos2d::Ref* pSender);
     CREATE_FUNC(HelloWorld);
 };
+
+#endif // HELLOWORLD_SCENE_H_

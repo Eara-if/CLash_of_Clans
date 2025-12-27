@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SHOP_SCENE_H_
+#define SHOP_SCENE_H_
 
 #include "cocos2d.h"
 #include "Building.h"
@@ -68,6 +69,7 @@ public:
     // 返回按钮回调
     void menuBackCallback(cocos2d::Ref* p_sender);
 
+    // Cocos2d-x的CREATE_FUNC宏，用于创建对象
     CREATE_FUNC(ShopScene);
 
     // 创建建筑信息标签
@@ -138,3 +140,5 @@ private:
     void handleStorageBuildingEffect(ShopItemType type);
     void returnToGameScene();
 };
+
+#endif

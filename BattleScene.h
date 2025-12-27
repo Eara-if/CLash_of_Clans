@@ -1,5 +1,6 @@
-#pragma once
-
+// BattleScene.h
+#ifndef BATTLE_SCENE_H_
+#define BATTLE_SCENE_H_
 #include "MapTrap.h"
 #include "cocos2d.h"
 #include "EnemyBuilding.h"
@@ -94,3 +95,4 @@ private:
     void menuBackToGameScene(cocos2d::Ref* pSender);
 };
 
+#endif // BATTLE_SCENE_H_
