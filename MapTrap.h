@@ -1,5 +1,4 @@
-#ifndef __MAP_TRAP_H__
-#define __MAP_TRAP_H__
+#pragma once
 
 #include "cocos2d.h"
 #include "Soldier.h"
@@ -22,5 +21,3 @@ private:
     void explode(const cocos2d::Vector<Soldier*>& soldiers); // ±¬Õ¨Âß¼­
     void playExplosionEffect(); // ²¥·ÅÌØÐ§
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __DATA_MANAGER_H__
-#define __DATA_MANAGER_H__
+#pragma once
 
 #include "cocos2d.h"
 #include <map>
@@ -51,5 +50,3 @@ private:
     std::map<std::string, int> _myArmy;
     int _maxLevelUnlocked = 1; // 默认只能打第 1 关
 };
-
-#endif

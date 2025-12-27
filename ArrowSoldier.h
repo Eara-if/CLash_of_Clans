@@ -1,5 +1,4 @@
-#ifndef __ARROW_SOLDIER_H__
-#define __ARROW_SOLDIER_H__
+#pragma once
 
 #include "Soldier.h"
 
@@ -18,4 +17,3 @@ private:
     const std::string WALK_ANIM_BASE = "anim/arrow";
 };
 
-#endif // __ARROW_SOLDIER_H__

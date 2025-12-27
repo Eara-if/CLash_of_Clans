@@ -1,5 +1,4 @@
-#ifndef __ORIGINAL_SOLDIER_H__
-#define __ORIGINAL_SOLDIER_H__
+#pragma once
 
 #include "Soldier.h"
 
@@ -17,5 +16,3 @@ private:
     // ¼ÙÉèÍ¼Æ¬Â·¾¶Îª anim/man1.png, anim/man2.png
     const std::string WALK_ANIM_BASE = "anim/man";
 };
-
-#endif // __ORIGINAL_SOLDIER_H__

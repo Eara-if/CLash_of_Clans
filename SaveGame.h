@@ -1,5 +1,4 @@
-#ifndef __SAVE_GAME_H__
-#define __SAVE_GAME_H__
+#pragma once
 
 #include "cocos2d.h"
 #include "Building.h"
@@ -43,5 +42,3 @@ private:
     void fillJsonDocument(rapidjson::Document& document);
     static SaveGame* _instance;
 };
-
-#endif // __SAVE_GAME_H__

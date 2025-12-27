@@ -1,5 +1,4 @@
-#ifndef __SHARED_DATA_H__
-#define __SHARED_DATA_H__
+#pragma once
 
 // 1. 统一建筑类型（不要再用字符串判断了，用这个枚举）
 enum class BuildingType {
@@ -49,5 +48,3 @@ struct BuildingData {
         : type(t), level(l), x(px), y(py), id(0) {
     }
 };
-
-#endif

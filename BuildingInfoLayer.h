@@ -1,5 +1,4 @@
-﻿#ifndef __BUILDING_INFO_LAYER_H__
-#define __BUILDING_INFO_LAYER_H__
+﻿#pragma once
 
 #include "cocos2d.h"
 #include <functional> // ����������������ڻص�
@@ -41,5 +40,3 @@ private:
     // ����������ʾ����Ҫ�󾯸�
     void showLockedWarning(const std::string& buildingName, int requiredTHLevel);
 };
-
-#endif

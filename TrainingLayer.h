@@ -1,5 +1,4 @@
-#ifndef __TRAINING_LAYER_H__
-#define __TRAINING_LAYER_H__
+#pragma once
 
 #include "cocos2d.h"
 
@@ -22,4 +21,3 @@ private:
     std::vector<cocos2d::Label*> _countLabels;
 };
 
-#endif#pragma once

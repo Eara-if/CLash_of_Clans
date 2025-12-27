@@ -1,5 +1,4 @@
-#ifndef __SOLDIER_H__
-#define __SOLDIER_H__
+#pragma once
 
 #include "cocos2d.h"
 #include <vector>
@@ -75,5 +74,3 @@ protected:
     // ���ؼ�������ȷ������������ virtual �ģ����������д
     virtual void attackTarget(EnemyBuilding* target);
 };
-
-#endif // __SOLDIER_H__

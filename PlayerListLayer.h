@@ -1,6 +1,4 @@
 #pragma once
-#ifndef __PLAYER_LIST_LAYER_H__
-#define __PLAYER_LIST_LAYER_H__
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
@@ -35,4 +33,3 @@ private:
     void onUserListRequestCompleted(cocos2d::network::HttpClient* client, cocos2d::network::HttpResponse* response);
 };
 
-#endif

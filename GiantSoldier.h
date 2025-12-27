@@ -1,5 +1,4 @@
-﻿#ifndef __GIANT_SOLDIER_H__
-#define __GIANT_SOLDIER_H__
+﻿#pragma once
 
 #include "Soldier.h"
 
@@ -20,5 +19,3 @@ private:
     // 巨人士兵特有的动画帧名
     const std::string WALK_ANIM_BASE = "anim/giant";
 };
-
-#endif // __GIANT_SOLDIER_H__
