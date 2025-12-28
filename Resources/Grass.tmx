@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="100" height="56" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="173">
+ <tileset firstgid="1" source="Grassland.tsx"/>
+ <tileset firstgid="5" source="TilesetNature.tsx"/>
+ <tileset firstgid="125" source="Example 3.tsx"/>
+ <layer id="12" name="2" width="100" height="56">
+  <data encoding="base64" compression="zlib">
+   eJztwwEJAAAMBKH7/qXXYyi4aqqqqqqqqqqqqqqqqqqqqqqqqqqqqvrsAcNTFeE=
+  </data>
+ </layer>
+ <layer id="13" name="1" width="100" height="56">
+  <data encoding="base64" compression="zlib">
+   eJztnEuOgzAQRCFs5hAs5v5Hcy4xsjRWOj0QbHc1/kyV9JRNYuF+2BgILMt7wuNFTnK/x9givZzVnC7aRfuhi75CHwxjz/NxzSjJ6UtkXV54ZFV8bfnb9p9J9ULtc9qDbL+E782OV80Q2xYynNzpAtGnmfByor3QQx7ynCDWKc7vHmOEHsq9eI0Rjgubj1RHhAv6qPcRHHzQhd0HYs7icdzOEzhnyd/SR72PuL46qil9zOGDLuhjFuijL+ijL+Taij76ALHe5dqKPmYFcX5OHz4+akMf9DEj+j4hfdAH8fUhnbTu32jwWnt/IH3wXlRfPrST1n0bFevxQzqhD/qYDZQPHj/sHuijH5DnH1xjYZ1YfWgPdNHWRwp92NE1RfgI9FGF1/WrQCf0MTio64ny93K+opM6H9b/tqc25Ced2HxY8+nZQXq5Rj/7gcjVs7V0csz+i5yrVlFThI9P46R1/3ti3459yHpaUvM+gNY1qcWy7fv214UeHx7zVs07GnJdIdvS7cl6o9qMaA+Rs/cpeLhAuqnlqAYtORoHaA8y6Zzmyk9pWtdRkvp5VdsS7ox1W1rXv8TTiLHsMyX99qz93ft0D0GMd/S+32J+GTHec3Sruf4sP58hbH8=
+  </data>
+ </layer>
+ <objectgroup id="4" name="Objects">
+  <object id="24" gid="6" x="20.788" y="209.758" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="25" gid="6" x="116.788" y="281.758" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="26" gid="6" x="212.788" y="189.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="27" gid="6" x="400.788" y="209.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="30" gid="6" x="774.788" y="209.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="31" gid="6" x="1146.79" y="205.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="32" gid="6" x="296.788" y="281.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="33" gid="6" x="-23.212" y="353.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="34" gid="6" x="152.788" y="353.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="35" name="tree1" gid="5" x="953.212" y="210.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="36" name="tree1" gid="5" x="583.212" y="208.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="37" gid="6" x="64.788" y="461.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="38" gid="6" x="1321.79" y="211.758" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="40" gid="6" x="1513.79" y="191.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="41" gid="6" x="1701.79" y="211.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="42" gid="6" x="2075.79" y="211.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="43" gid="6" x="2447.79" y="207.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="45" name="tree1" gid="5" x="2258.21" y="212.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="46" name="tree1" gid="5" x="1884.21" y="210.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="47" name="tree1" gid="5" x="-36.788" y="572.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="48" name="tree1" gid="5" x="163.212" y="572.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="49" gid="6" x="56.788" y="673.758" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="50" gid="6" x="8.788" y="1781.76" width="186.424" height="184.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="51" name="tree1" gid="5" x="207.212" y="1780.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="52" name="tree1" gid="5" x="-56.788" y="1656.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="53" name="tree1" gid="5" x="143.212" y="1656.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="54" gid="6" x="36.788" y="1509.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="56" name="tree1" gid="5" x="403.212" y="1772.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="57" gid="6" x="606.287" y="1778.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="58" gid="6" x="980.287" y="1778.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="59" gid="6" x="1352.29" y="1774.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="61" name="tree1" gid="5" x="1158.71" y="1779.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="62" name="tree1" gid="5" x="788.711" y="1777.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="63" gid="6" x="1527.29" y="1780.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="65" gid="6" x="1907.29" y="1780.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="66" name="tree1" gid="5" x="2082.25" y="1778.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="67" name="tree1" gid="5" x="1718.25" y="1782.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="68" name="tree1" gid="5" x="2278.25" y="1770.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="69" gid="6" x="2481.33" y="1776.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="70" gid="6" x="2855.33" y="1776.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="71" name="tree1" gid="5" x="2663.75" y="1775.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="72" name="tree1" gid="5" x="155.212" y="1424.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="74" gid="6" x="-15.212" y="1363.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="75" gid="6" x="80.788" y="1271.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="76" gid="6" x="-3.212" y="951.757" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="77" name="tree1" gid="5" x="-104.788" y="1062.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="78" name="tree1" gid="5" x="95.212" y="1062.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="79" gid="6" x="-11.212" y="1163.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="81" gid="6" x="138.788" y="807.457" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="82" name="tree1" gid="5" x="-50.252" y="808.847" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="91" gid="6" x="2944.79" y="322.955" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="92" name="tree1" gid="5" x="2843.21" y="433.349" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="93" name="tree1" gid="5" x="3043.21" y="433.349" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="94" gid="6" x="2936.79" y="534.956" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="95" name="tree1" gid="5" x="2843.21" y="1777.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="96" name="tree1" gid="5" x="3043.21" y="1777.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="97" gid="6" x="2936.79" y="1630.96" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="98" name="tree1" gid="5" x="3055.21" y="1545.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="99" gid="6" x="2884.79" y="1484.96" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="100" gid="6" x="3084.79" y="1376.96" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="101" gid="6" x="2944.79" y="1120.95" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="102" name="tree1" gid="5" x="2843.21" y="1231.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="103" name="tree1" gid="5" x="3043.21" y="1231.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="105" gid="6" x="2826.79" y="604.655" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="107" name="tree1" gid="5" x="2923.21" y="1368.15" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="110" gid="6" x="2815.79" y="189.955" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="112" name="tree1" gid="5" x="2998.21" y="190.349" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="113" name="tree1" gid="5" x="2624.21" y="212.349" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="114" name="tree1" gid="5" x="3060" y="1048.35" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="115" gid="6" x="2889.58" y="987.961" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="116" gid="6" x="3089.58" y="879.961" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="118" name="tree1" gid="5" x="2848" y="734.351" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="119" name="tree1" gid="5" x="3048" y="734.351" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="120" name="tree1" gid="5" x="2928" y="871.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="121" name="tree1" gid="5" x="3015.21" y="612.151" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="126" gid="6" x="128.503" y="145.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="127" name="tree1" gid="5" x="-65.075" y="150.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="129" gid="6" x="303.503" y="151.66" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="130" gid="6" x="495.503" y="131.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="131" gid="6" x="683.503" y="151.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="132" gid="6" x="1057.5" y="151.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="133" gid="6" x="1429.5" y="147.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="134" name="tree1" gid="5" x="1239.92" y="152.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="135" name="tree1" gid="5" x="865.923" y="150.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="138" name="tree1" gid="5" x="1605.92" y="128.25" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="139" gid="6" x="1993.29" y="145.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="140" name="tree1" gid="5" x="1799.71" y="150.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="141" gid="6" x="2168.29" y="151.66" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="142" gid="6" x="2360.29" y="131.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="143" gid="6" x="2548.29" y="151.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="144" gid="6" x="2922.29" y="151.659" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="146" name="tree1" gid="5" x="3104.71" y="152.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="147" name="tree1" gid="5" x="2730.71" y="150.053" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="149" gid="6" x="214.788" y="1579.76" width="186.424" height="184.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="152" gid="6" x="2835.18" y="1922.81" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="153" name="tree1" gid="5" x="3017.6" y="1923.2" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="154" gid="6" x="147.898" y="1878.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="155" name="tree1" gid="5" x="-45.6805" y="1882.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="156" gid="6" x="322.898" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="157" gid="6" x="514.898" y="1864.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="158" gid="6" x="702.898" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="159" gid="6" x="1076.89" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="160" gid="6" x="1448.89" y="1880.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="161" name="tree1" gid="5" x="1259.31" y="1884.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="162" name="tree1" gid="5" x="885.318" y="1882.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="163" name="tree1" gid="5" x="1625.31" y="1861.1" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="164" gid="6" x="2012.68" y="1878.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="165" name="tree1" gid="5" x="1819.1" y="1882.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="166" gid="6" x="2187.68" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="167" gid="6" x="2379.68" y="1864.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="168" gid="6" x="2567.68" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="169" gid="6" x="2941.68" y="1884.51" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+  <object id="170" name="tree1" gid="5" x="3124.1" y="1884.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="171" name="tree1" gid="5" x="2750.1" y="1882.9" width="185.576" height="183.697">
+   <properties>
+    <property name="fileName" value="Tree.png"/>
+   </properties>
+  </object>
+  <object id="172" gid="6" x="2796.79" y="1625.76" width="174.424" height="180.485">
+   <properties>
+    <property name="fileName" value="Tree1.png"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>

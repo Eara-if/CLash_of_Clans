@@ -1,0 +1,26 @@
+# 忽略编译生成的临时文件和垃圾文件
+bin/
+obj/
+temp/
+library/
+local/
+build/
+dist/
+*.apk
+*.ap_
+*.aab
+
+# Visual Studio 产生的垃圾
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.ncb
+Debug.win32/
+Release.win32/
+x64/
+
+# Cocos 具体忽略
+proj.win32/Debug.win32/
+proj.win32/Release.win32/
