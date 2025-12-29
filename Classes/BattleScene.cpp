@@ -633,7 +633,21 @@ void BattleScene::loadLevelCampaign(int levelIndex)
         }
 
         // --- 改进点 4：逻辑分支优化 ---
-        if (configMap.count(name)) {
+        if (name == "fence") {
+            auto& cfg = configMap[name];
+            int hp = dict.count("HP") ? dict["HP"].asInt() : cfg.hp;
+            int atk = dict.count("Attack") ? dict["Attack"].asInt() : cfg.atk;
+            auto eb = EnemyBuilding::create(cfg.img, "", hp, hp / 4, atk, cfg.range);
+            if (eb) {
+                eb->setEnemyType(cfg.type); // 修正：使用 setEnemyType 确保 AI 逻辑正确
+                eb->setPosition(x + w / 2, y + h / 2);
+                _tileMap->addChild(eb, cfg.zOrder);
+
+                if (cfg.type == EnemyType::BASE) _base = eb;
+                else _towers.pushBack(eb);
+            }
+        }
+        else if (configMap.count(name)) {
             // 建筑逻辑：通过配置表统一创建
             auto& cfg = configMap[name];
             int hp = dict.count("HP") ? dict["HP"].asInt() : cfg.hp;
@@ -649,6 +663,7 @@ void BattleScene::loadLevelCampaign(int levelIndex)
                 else _towers.pushBack(eb);
             }
         }
+        
         else if (name == "boom") {
             // 陷阱逻辑
             int damage = dict.count("Damage") ? dict["Damage"].asInt() : 1000;
