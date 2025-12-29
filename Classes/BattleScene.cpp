@@ -579,115 +579,117 @@ void BattleScene::hideVictoryPopup()
  */
 void BattleScene::loadLevelCampaign(int levelIndex)
 {
-    // 1. 加载 TMX 地图文件 (保持原样)
+    // 1. 加载 TMX 地图文件
     _mapFileName = StringUtils::format("Enemy_map%d.tmx", levelIndex);
     _tileMap = TMXTiledMap::create(_mapFileName);
+
     if (!_tileMap) {
+        log("CRITICAL ERROR: Map file %s not found in Resources!", _mapFileName.c_str());
+        // 保底逻辑：加载第一关地图，防止崩溃
         _tileMap = TMXTiledMap::create("Enemy_map1.tmx");
         if (!_tileMap) return;
     }
 
+    // 2. 地图居中放置
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
-    _tileMap->setPosition(origin + (visibleSize - _tileMap->getContentSize()) / 2);
+    float mapWidth = _tileMap->getContentSize().width;
+    float mapHeight = _tileMap->getContentSize().height;
+
+    _tileMap->setPosition(Vec2(
+        origin.x + (visibleSize.width - mapWidth) / 2,
+        origin.y + (visibleSize.height - mapHeight) / 2
+    ));
+
+    // 地图放在最底层
     this->addChild(_tileMap, -1);
 
+    // 3. 解析地图对象组，创建游戏对象
     auto objectGroup = _tileMap->getObjectGroup("object");
-    if (!objectGroup) return;
+    if (objectGroup) {
+        ValueVector objects = objectGroup->getObjects();
 
-    // --- 改进点 1：使用配置结构体管理建筑默认属性 ---
-    struct DefaultConfig {
-        EnemyType type;
-        std::string img;
-        int hp;
-        int atk;
-        float range;
-        int zOrder;
-    };
+        for (auto& v : objects) {
+            ValueMap dict = v.asValueMap();
+            std::string name = dict["name"].asString();
+            float x = dict["x"].asFloat();
+            float y = dict["y"].asFloat();
+            float w = dict["width"].asFloat();
+            float h = dict["height"].asFloat();
 
-    // 映射表：将 TMX 里的 name 映射到配置
-    std::map<std::string, DefaultConfig> configMap = {
-        {"Base",   {EnemyType::BASE,   "map/buildings/Base.png",          80, 0,  0.0f,   3}},
-        {"tower",  {EnemyType::TOWER,  "map/buildings/TilesetTowers.png", 50, 10, 250.0f, 3}},
-        {"cannon", {EnemyType::CANNON, "map/buildings/Cannon1.png",       50, 10, 250.0f, 3}},
-        {"fence",  {EnemyType::WALL,   "map/buildings/fence.png",         40, 0,  0.0f,   2}}
-    };
-
-    ValueVector objects = objectGroup->getObjects();
-    for (auto& v : objects) {
-        ValueMap dict = v.asValueMap();
-        std::string name = dict["name"].asString();
-        float x = dict["x"].asFloat(), y = dict["y"].asFloat();
-        float w = dict["width"].asFloat(), h = dict["height"].asFloat();
-
-        // --- 改进点 2：统一处理装饰物坐标偏移 ---
-        std::string fileName = dict.count("fileName") ? dict["fileName"].asString() : "";
-        if (fileName.find("Tree") != std::string::npos) {
-            y += 100;
-        }
-
-        // --- 改进点 3：统一处理禁止区域 (除陷阱外) ---
-        if (name != "boom") {
-            Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
-            _forbiddenRects.push_back(Rect(worldPos.x, worldPos.y, w, h));
-        }
-
-        // --- 改进点 4：逻辑分支优化 ---
-        if (name == "fence") {
-            auto& cfg = configMap[name];
-            int hp = dict.count("HP") ? dict["HP"].asInt() : cfg.hp;
-            int atk = dict.count("Attack") ? dict["Attack"].asInt() : cfg.atk;
-            auto eb = EnemyBuilding::create(cfg.img, "", hp, hp / 4, atk, cfg.range);
-            if (eb) {
-                eb->setEnemyType(cfg.type); // 修正：使用 setEnemyType 确保 AI 逻辑正确
-                eb->setPosition(x + w / 2, y + h / 2);
-                _tileMap->addChild(eb, cfg.zOrder);
-
-                if (cfg.type == EnemyType::BASE) _base = eb;
-                else _towers.pushBack(eb);
+            // 树木装饰物坐标偏移，优化视觉效果
+            if (dict["fileName"].asString() == "Tree.png" || dict["fileName"].asString() == "Tree1.png" || dict["fileName"].asString() == "Tree2.png") {
+                y += 100;
             }
-        }
-        else if (configMap.count(name)) {
-            // 建筑逻辑：通过配置表统一创建
-            auto& cfg = configMap[name];
-            int hp = dict.count("HP") ? dict["HP"].asInt() : cfg.hp;
-            int atk = dict.count("Attack") ? dict["Attack"].asInt() : cfg.atk;
 
-            auto eb = EnemyBuilding::create(cfg.img, "ui/Heart2.png", hp, hp / 4, atk, cfg.range);
-            if (eb) {
-                eb->setEnemyType(cfg.type); // 修正：使用 setEnemyType 确保 AI 逻辑正确
-                eb->setPosition(x + w / 2, y + h / 2);
-                _tileMap->addChild(eb, cfg.zOrder);
+            // A. 填充禁止区域列表（排除炸弹陷阱）
+            if (name != "boom") {
+                Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
+                Rect worldRect(worldPos.x, worldPos.y, w, h);
+                _forbiddenRects.push_back(worldRect);
+            }
 
-                if (cfg.type == EnemyType::BASE) _base = eb;
-                else _towers.pushBack(eb);
-            }
-        }
-        
-        else if (name == "boom") {
-            // 陷阱逻辑
-            int damage = dict.count("Damage") ? dict["Damage"].asInt() : 1000;
-            auto trap = MapTrap::create(Rect(x, y, w, h), damage);
-            if (trap) {
-                _tileMap->addChild(trap);
-                _traps.pushBack(trap);
-            }
-        }
-        else if (!fileName.empty()) {
-            // 纯装饰物逻辑
-            auto sprite = Sprite::create(fileName);
-            if (sprite) {
-                sprite->setAnchorPoint(Vec2::ZERO);
-                sprite->setPosition(x, y);
-                if (w > 0 && h > 0) {
-                    sprite->setScaleX(w / sprite->getContentSize().width);
-                    sprite->setScaleY(h / sprite->getContentSize().height);
+            // B. 创建敌方建筑与陷阱
+            if (name == "Base") {
+                int hp = dict.count("HP") ? dict["HP"].asInt() : 80;
+                _base = EnemyBuilding::create("map/buildings/Base.png", "ui/Heart2.png", hp, hp / 4, 0, 0.0f);
+                if (_base) {
+                    _base->setType(EnemyType::BASE);
+                    _base->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(_base, 3);
                 }
-                _tileMap->addChild(sprite, 2);
+            }
+            else if (name == "tower" || name == "cannon") {
+                int hp = dict.count("HP") ? dict["HP"].asInt() : 50;
+                int atk = dict.count("Attack") ? dict["Attack"].asInt() : 10;
+                float range = 250.0f;
+                std::string img = (name == "tower") ? "map/buildings/TilesetTowers.png" : "map/buildings/Cannon1.png";
+
+                auto building = EnemyBuilding::create(img, "ui/Heart2.png", hp, hp / 4, atk, range);
+                if (building) {
+                    building->setType(name == "tower" ? EnemyType::TOWER : EnemyType::CANNON);
+                    building->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(building, 3);
+                    _towers.pushBack(building);
+                }
+            }
+            else if (name == "fence") {
+                auto fence = EnemyBuilding::create("map/buildings/fence.png", "", 40, 10, 0, 0);
+                if (fence) {
+                    fence->setType(EnemyType::WALL);
+                    fence->setPosition(x + w / 2, y + h / 2);
+                    _tileMap->addChild(fence, 2);
+                    _towers.pushBack(fence);
+                }
+            }
+            else if (name == "boom") {
+                int damage = dict.count("Damage") ? dict["Damage"].asInt() : 1000;
+                auto trap = MapTrap::create(Rect(x, y, w, h), damage);
+                if (trap) {
+                    _tileMap->addChild(trap);
+                    _traps.pushBack(trap);
+                }
+            }
+            // C. 创建纯装饰物（树木等）
+            else if (dict.find("fileName") != dict.end()) {
+                std::string path = dict["fileName"].asString();
+                auto sprite = Sprite::create(path);
+                if (sprite) {
+                    sprite->setAnchorPoint(Vec2::ZERO);
+                    sprite->setPosition(x, y);
+
+                    // 根据地图对象大小缩放装饰物
+                    if (dict.count("width") && dict.count("height")) {
+                        sprite->setScaleX(dict["width"].asFloat() / sprite->getContentSize().width);
+                        sprite->setScaleY(dict["height"].asFloat() / sprite->getContentSize().height);
+                    }
+                    _tileMap->addChild(sprite, 2);
+                }
             }
         }
     }
 }
+
 /**
  * @brief      加载 PVP 关卡
  * @details    先加载 Grass.tmx 地图并缩放适配屏幕，解析地图装饰物；
@@ -766,6 +768,7 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
         int regen;                 // 回血量
         int attack;                // 攻击力
         float range;               // 攻击范围
+
     };
 
     // 步骤2：创建配置数组，填充所有建筑参数（后续新增建筑只需添加一行）
@@ -773,7 +776,7 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
         {EnemyType::BASE,          BuildingType::BASE,          "House.png",      "ui/Heart2.png", 200, 10, 50,  0,   0.0f},
         {EnemyType::TOWER,         BuildingType::TOWER,         "TilesetTowers.png", "ui/Heart2.png", 200, 5,  50,  15,  250.0f},
         {EnemyType::CANNON,        BuildingType::CANNON,        "Cannon.png",     "ui/Heart2.png", 100, 5,  25,  20,  200.0f},
-        {EnemyType::WALL,          BuildingType::WALL,          "fence.png",      "ui/Heart2.png", 60,  3,  15,  0,   0.0f},
+        {EnemyType::WALL,          BuildingType::WALL,          "fence.png",      "", 60,  3,  15,  0,   0.0f},
         {EnemyType::BARRACKS,      BuildingType::BARRACKS,      "junying.png",    "ui/Heart2.png", 200, 5,  50,  0,   0.0f},
         {EnemyType::WATER,         BuildingType::WATER,         "waterwell.png",  "ui/Heart2.png", 60,  3,  15,  0,   0.0f},
         {EnemyType::MINE,          BuildingType::MINE,          "Mine.png",       "ui/Heart2.png", 60,  3,  15,  0,   0.0f},
@@ -813,7 +816,7 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
         if (eb) {
             eb->setType(targetEnemyType);
             eb->setScale(0.6f);
-            eb->setPosition(Vec2(x, y));
+            eb->setPosition(Vec2(x, y ));
 
             // 将建筑添加到地图节点，跟随地图坐标系统
             _tileMap->addChild(eb, 3);
@@ -826,12 +829,6 @@ void BattleScene::loadLevelPVP(const std::string& jsonContent)
                 // 大本营单独赋值，不加入_towers
                 _base = eb;
             }
-
-            // 计算建筑对应的禁止区域（随地图缩放，与原有逻辑一致）
-            Vec2 worldPos = _tileMap->convertToWorldSpace(Vec2(x, y));
-            float rectSize = 150.0f * _tileMap->getScale();
-            Rect worldRect(worldPos.x - rectSize / 2, worldPos.y - rectSize / 2, rectSize, rectSize);
-            _forbiddenRects.push_back(worldRect);
         }
     }
 
