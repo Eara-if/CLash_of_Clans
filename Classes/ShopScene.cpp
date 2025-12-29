@@ -661,7 +661,7 @@ void ShopScene::createMenu()
     std::vector<ShopItem> firstRowInfos = {
         {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins", 1500, 500, 0, false},
         {ShopItemType::WATER_COLLECTOR, "Water Collector", "Produce water", 500, 1500, 0, false},
-        {ShopItemType::WALL, "Wall", "Protect your village", 1000, 0, 0, false},
+        {ShopItemType::WALL, "Wall", "Protect your village", 50, 0, 0, false},
         {ShopItemType::ARCHER_TOWER, "Archer Tower", "Defensive architecture", 2000, 1000, 0, false}
     };
 
@@ -731,7 +731,7 @@ ShopItem ShopScene::getShopItemInfo(ShopItemType type)
     std::vector<ShopItem> tempItems = {
         {ShopItemType::GOLD_MINE, "Gold Mine", "Produce coins every hour", 1500, 500, 0, false},
         {ShopItemType::WATER_COLLECTOR, "Water Collector", "Produce water every hour", 500, 1500, 0, false},
-        {ShopItemType::WALL, "Wall", "Protect your village", 1000, 0, 0, false},
+        {ShopItemType::WALL, "Wall", "Protect your village", 50, 0, 0, false},
         {ShopItemType::ARCHER_TOWER, "Archer Tower", "Defensive architecture", 2000, 1000, 0, false},
         {ShopItemType::CANNON, "Cannon", "Defensive architecture", 2500, 1500, 0, false},
         {ShopItemType::BARRACKS, "Barracks", "Train troops", 1200, 800, 0, false},
